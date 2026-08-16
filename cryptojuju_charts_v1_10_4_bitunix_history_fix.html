@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CryptoJuju Charts V1.10.4</title>
+<style>
+:root{--bg:#0b0e14;--panel:#111722;--panel2:#171f2d;--line:#263247;--text:#e9eef7;--muted:#8fa0b8;--accent:#6ea8fe;--green:#28c79a;--red:#f05d78}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;overflow:hidden}
+header{height:52px;display:flex;align-items:center;gap:7px;padding:6px 9px;border-bottom:1px solid var(--line);background:#0e131c}
+.brand{font-weight:850;margin-right:auto;white-space:nowrap}.brand span{color:var(--accent)}.ver{font-size:10px;color:var(--muted)}
+button,select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 8px}
+button{cursor:pointer}.layout button.active{border-color:var(--accent);background:#1c2940}
+#grid{height:calc(100vh - 52px);display:grid;gap:2px;background:var(--line)}
+#grid.one{grid-template-columns:1fr;grid-template-rows:1fr}#grid.two{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+#grid.four{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.card{min-width:0;min-height:0;background:var(--panel);position:relative;display:flex;flex-direction:column}
+.card.fullscreen{position:fixed;inset:0;z-index:100;display:flex!important}
+.toolbar{height:42px;display:flex;align-items:center;gap:5px;padding:5px;border-bottom:1px solid var(--line);overflow:auto;white-space:nowrap}
+.toolbar select{padding:5px 6px}.indBtn{margin-left:auto;border-color:#39527a}.fs{min-width:33px}
+.chartWrap{position:relative;flex:1;min-height:0}.chart{position:absolute;left:0;right:0;top:0;height:66%}
+.oscPane{position:absolute;left:0;right:0;bottom:0;height:34%;border-top:1px solid var(--line);background:#0f1520;display:none}
+.card.mom-on .chart{height:66%}
+.card.mom-on .oscPane{display:block}
+.card:not(.mom-on) .chart{height:100%}
+.momDash{position:absolute;z-index:7;right:8px;top:8px;font-size:10px;line-height:1.35;background:#171b23e8;border:1px solid #3a465b;border-radius:6px;color:#eef3fa;pointer-events:none;overflow:hidden;min-width:145px}
+.momDash table{border-collapse:collapse;width:100%}.momDash td{padding:3px 6px;border-bottom:1px solid #343a45}.momDash td:last-child{text-align:right}.momDash tr:last-child td{border-bottom:0}
+.momDash .head td{font-weight:800;background:#2456bd;text-align:left!important}
+.momDash .bull{color:#37d7a5}.momDash .bear{color:#ff7189}.momDash .warn{color:#ffb347}
+.momTitle{font-weight:800;color:#e9eef7}
+.watermark{position:absolute;z-index:4;left:12px;top:10px;pointer-events:none}
+.wmSymbol{font-size:17px;font-weight:800;color:#dfe8f5}.wmTf{font-size:12px;color:var(--muted);margin-left:6px}
+.ohlc{font-size:10px;color:#9fb0c6;margin-top:3px}
+.drawer{position:absolute;z-index:30;right:7px;top:45px;width:275px;max-width:calc(100vw - 14px);background:#121a26;border:1px solid var(--line);border-radius:10px;padding:10px;display:none;box-shadow:0 15px 40px #0009}
+.drawer.open{display:block}.drawer h3{font-size:14px;margin:2px 0 7px}.row{display:flex;align-items:center;gap:8px;padding:7px 2px}.row input{accent-color:var(--accent)}
+.hint{font-size:10px;color:var(--muted);padding:4px 8px;border-top:1px solid var(--line);display:flex;justify-content:space-between}
+@media(max-width:760px){
+ header{height:48px;padding:5px}.brand{font-size:13px}.ver{display:none}#grid{height:calc(100vh - 48px)}
+ .layout button{padding:6px}.resetText{display:none}
+ #grid.two{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+ .toolbar{height:38px;padding:3px;gap:3px}.toolbar select,.toolbar button{font-size:10px;padding:5px}
+ .wmSymbol{font-size:13px}.wmTf{font-size:10px}.ohlc{font-size:8px}
+ .watermark{left:7px;top:7px}.hint{font-size:8px;padding:3px 5px}
+}
+</style></head>
+<body>
+<header>
+ <div class="brand">Crypto<span>Juju</span> Charts <span class="ver">V1.10.4</span></div>
+ <div class="layout"><button data-l="one">▣</button><button data-l="two">▥</button><button data-l="four">▦</button></div>
+ <button id="reset">↻ <span class="resetText">Reset</span></button>
+</header>
+<main id="grid"></main>
+<script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+const syms=["BTCUSDT","ETHUSDT","XRPUSDT","SOLUSDT","BNBUSDT","ADAUSDT","DOGEUSDT","AVAXUSDT","LINKUSDT","DOTUSDT"];
+const frames={"1m":"1m","5m":"5m","15m":"15m","30m":"30m","1H":"1h","2H":"2h","4H":"4h","6H":"6h","12H":"12h","1D":"1d","1W":"1w"};
+const def=[{s:"BTCUSDT",f:"15m"},{s:"ETHUSDT",f:"1h"},{s:"XRPUSDT",f:"4h"},{s:"SOLUSDT",f:"1d"}];
+let cards=[],layout=localStorage.cjLayout13||"one";
+function ema(a,n){let k=2/(n+1),v=null,o=[];a.forEach(x=>{v=v===null?x.close:x.close*k+v*(1-k);o.push({time:x.time,value:v})});return o}
+function sma(a,n){let q=[],sum=0,o=[];a.forEach(x=>{q.push(x.close);sum+=x.close;if(q.length>n)sum-=q.shift();if(q.length===n)o.push({time:x.time,value:sum/n})});return o}
+
+function emaVals(a,n){let k=2/(n+1),v=null,o=[];for(let i=0;i<a.length;i++){let x=a[i];if(x==null){o.push(null);continue}v=v===null?x:x*k+v*(1-k);o.push(v)}return o}
+function smaVals(a,n){let q=[],sum=0,o=[];for(let x of a){if(x==null){q=[];sum=0;o.push(null);continue}q.push(x);sum+=x;if(q.length>n)sum-=q.shift();o.push(q.length===n?sum/n:null)}return o}
+function rsiVals(d,n){let o=Array(d.length).fill(null);if(d.length<=n)return o;let g=0,l=0;for(let i=1;i<=n;i++){let c=d[i].close-d[i-1].close;g+=Math.max(c,0);l+=Math.max(-c,0)}g/=n;l/=n;o[n]=l===0?100:100-(100/(1+g/l));for(let i=n+1;i<d.length;i++){let c=d[i].close-d[i-1].close;g=(g*(n-1)+Math.max(c,0))/n;l=(l*(n-1)+Math.max(-c,0))/n;o[i]=l===0?100:100-(100/(1+g/l))}return o}
+function stochVals(a,n){let o=Array(a.length).fill(null);for(let i=0;i<a.length;i++){if(a[i]==null||i<n-1)continue;let w=a.slice(i-n+1,i+1);if(w.some(x=>x==null))continue;let lo=Math.min(...w),hi=Math.max(...w);o[i]=hi===lo?0:100*(a[i]-lo)/(hi-lo)}return o}
+function percentRank(a,n){let o=Array(a.length).fill(null);for(let i=n-1;i<a.length;i++){let x=a[i];if(x==null)continue;let w=a.slice(i-n+1,i+1).filter(v=>v!=null);if(w.length<n)continue;let less=w.filter(v=>v<x).length;o[i]=100*less/(n-1)}return o}
+function pivotLow(a,i,l,r){if(i<l||i+r>=a.length||a[i]==null)return false;for(let j=i-l;j<=i+r;j++)if(j!==i&&a[j]!=null&&a[j]<=a[i])return false;return true}
+function pivotHigh(a,i,l,r){if(i<l||i+r>=a.length||a[i]==null)return false;for(let j=i-l;j<=i+r;j++)if(j!==i&&a[j]!=null&&a[j]>=a[i])return false;return true}
+function calcMomFusion(d){
+ const rsi=rsiVals(d,14),st=smaVals(stochVals(rsi,14),3);
+ let mom=d.map((x,i)=>i>=10?x.close-d[i-10].close:null),mn=percentRank(mom,100);
+ let raw=d.map((x,i)=>(rsi[i]==null||st[i]==null||mn[i]==null)?null:(rsi[i]+st[i]+mn[i])/3);
+ let comp=emaVals(raw,3),ef=ema(d,21).map(x=>x.value),es=ema(d,55).map(x=>x.value);
+ let bullLast=-999,bearLast=-999,sig=[], bullSignalBars=[],bearSignalBars=[];
+ for(let i=1;i<d.length;i++){if(comp[i]==null||comp[i-1]==null)continue;
+   let bull=comp[i-1]<=30&&comp[i]>30&&ef[i]>es[i]&&(i-bullLast>=5);
+   let bear=comp[i-1]>=70&&comp[i]<70&&ef[i]<es[i]&&(i-bearLast>=5);
+   if(bull){sig.push({i,type:"bull",text:"▲"});bullSignalBars.push(i);bullLast=i}
+   if(bear){sig.push({i,type:"bear",text:"▼"});bearSignalBars.push(i);bearLast=i}
+ }
+ let divs=[],lastLow=null,lastHigh=null,lastDiv="None",lastBullDiv=-999,lastBearDiv=-999;
+ for(let i=5;i<d.length-5;i++){
+   if(pivotLow(comp,i,5,5)){
+     if(lastLow && i-lastLow.i<=60){
+       let zone=comp[i]<=30||comp[lastLow.i]<=30;
+       if(zone&&d[i].low<d[lastLow.i].low&&comp[i]>comp[lastLow.i]){divs.push({a:lastLow.i,b:i,va:comp[lastLow.i],vb:comp[i],type:"regBull",text:"R+"});lastDiv="Reg Bull";lastBullDiv=i}
+       if(zone&&d[i].low>d[lastLow.i].low&&comp[i]<comp[lastLow.i]){divs.push({a:lastLow.i,b:i,va:comp[lastLow.i],vb:comp[i],type:"hidBull",text:"H+"});lastDiv="Hid Bull";lastBullDiv=i}
+     } lastLow={i};
+   }
+   if(pivotHigh(comp,i,5,5)){
+     if(lastHigh && i-lastHigh.i<=60){
+       let zone=comp[i]>=70||comp[lastHigh.i]>=70;
+       if(zone&&d[i].high>d[lastHigh.i].high&&comp[i]<comp[lastHigh.i]){divs.push({a:lastHigh.i,b:i,va:comp[lastHigh.i],vb:comp[i],type:"regBear",text:"R-"});lastDiv="Reg Bear";lastBearDiv=i}
+       if(zone&&d[i].high<d[lastHigh.i].high&&comp[i]>comp[lastHigh.i]){divs.push({a:lastHigh.i,b:i,va:comp[lastHigh.i],vb:comp[i],type:"hidBear",text:"H-"});lastDiv="Hid Bear";lastBearDiv=i}
+     } lastHigh={i};
+   }
+ }
+ let conf=[];
+ for(let i of bullSignalBars)if(i-lastBullDiv>=0&&i-lastBullDiv<=10)conf.push({i,type:"bull"});
+ for(let i of bearSignalBars)if(i-lastBearDiv>=0&&i-lastBearDiv<=10)conf.push({i,type:"bear"});
+ return {comp,sig,divs,conf,ef,es,lastDiv};
+}
+
+
+function candlePrefs(o){
+ return {
+  bull:o.el.querySelector('[data-x="bullColor"]')?.value||"#ffffff",
+  bear:o.el.querySelector('[data-x="bearColor"]')?.value||"#666666"
+ };
+}
+
+
+function rmaVals(a,n){
+ let o=Array(a.length).fill(null),seed=0;
+ if(a.length<n)return o;
+ for(let i=0;i<n;i++)seed+=a[i];
+ let v=seed/n;o[n-1]=v;
+ for(let i=n;i<a.length;i++){v=(v*(n-1)+a[i])/n;o[i]=v}
+ return o
+}
+function vectorEngine(d,tf="15m"){
+ const n=d.length,vol=d.map(x=>x.volume||0),rng=d.map(x=>Math.max(x.high-x.low,1e-12));
+ const av=rollingSmaNums(vol,20),vs=d.map((x,i)=>vol[i]*rng[i]),avs=rollingSmaNums(vs,20);
+ let tr=Array(n).fill(0);for(let i=0;i<n;i++)tr[i]=i===0?rng[i]:Math.max(rng[i],Math.abs(d[i].high-d[i-1].close),Math.abs(d[i].low-d[i-1].close));
+ const atr=rmaVals(tr,14);
+ let vectors=[],events=[],dir=0,entry=null,entryBar=null,pendingBull=-999999,pendingBear=-999999,lastExitBar=-999999;
+ const profiles={
+  "15m":{confirmWindow:5,minTradeBars:4,vol:1.56,spread:1.56,body:.63,atr:.86,close:.73,ema:34,split:true,reentryWait:0,exitScore:4},
+  "30m":{confirmWindow:4,minTradeBars:5,vol:1.66,spread:1.66,body:.655,atr:.91,close:.755,ema:50,split:true,reentryWait:1,exitScore:4},
+  "1h":{confirmWindow:5,minTradeBars:3,vol:1.55,spread:1.55,body:.60,atr:.81,close:.69,ema:34,split:true,reentryWait:0,exitScore:4},
+  // 4H / Daily intentionally keep the proven V1.9.1 always-in-trade behaviour.
+  "4h":{confirmWindow:5,minTradeBars:2,vol:1.50,spread:1.50,body:.60,atr:.80,close:.70,ema:21,split:false,reentryWait:0,exitScore:4},
+  "1d":{confirmWindow:5,minTradeBars:2,vol:1.50,spread:1.50,body:.60,atr:.80,close:.70,ema:21,split:false,reentryWait:0,exitScore:4}
+ };
+ const baseP=profiles[tf]||profiles["15m"];
+  let adapt=1;
+  if(tf==="30m"){
+   let rel=[];
+   for(let j=Math.max(20,n-180);j<n;j++)if(atr[j]!=null&&d[j].close>0)rel.push(atr[j]/d[j].close);
+   if(rel.length){rel.sort((a,b)=>a-b);let med=rel[Math.floor(rel.length/2)];const ref=.00175;adapt=Math.max(.88,Math.min(1.08,Math.pow(ref/Math.max(med,1e-8),.22)))}
+  }
+  const P={...baseP};
+  if(tf==="30m"){P.vol*=adapt;P.spread*=adapt;P.body*=Math.pow(adapt,.45);P.atr*=Math.pow(adapt,.65);P.close=Math.max(.72,Math.min(.78,P.close*Math.pow(adapt,.18)))}
+  const confirmWindow=P.confirmWindow,minTradeBars=P.minTradeBars;
+ const tfTrend=ema(d,P.ema).map(x=>x.value);
+ for(let i=0;i<n;i++){
+  if(av[i]==null||avs[i]==null||atr[i]==null)continue;
+  let x=d[i],body=Math.abs(x.close-x.open),bodyRatio=body/rng[i],relVol=av[i]>0?vol[i]/av[i]:0,relSpread=avs[i]>0?vs[i]/avs[i]:0;
+  let bullClose=(x.close-x.low)/rng[i],bearClose=(x.high-x.close)/rng[i],common=[relVol>=P.vol,relSpread>=P.spread,bodyRatio>=P.body,rng[i]>=atr[i]*P.atr];
+  let bullScore=common.filter(Boolean).length+(bullClose>=P.close?1:0),bearScore=common.filter(Boolean).length+(bearClose>=P.close?1:0);
+  let bull=x.close>x.open&&bullScore>=4,bear=x.close<x.open&&bearScore>=4;
+  if(bull||bear)vectors.push({i,type:bull?"bull":"bear"});
+  let strongBull=bull&&bullScore===5,strongBear=bear&&bearScore===5;
+  let validBull=bull&&(x.close>=tfTrend[i]||strongBull),validBear=bear&&(x.close<=tfTrend[i]||strongBear);
+  if(validBull&&!strongBull)pendingBull=i;if(validBear&&!strongBear)pendingBear=i;
+  let bullConfirm=pendingBull>=0&&i>pendingBull&&i-pendingBull<=confirmWindow&&x.close>d[i-1].high;
+  let bearConfirm=pendingBear>=0&&i>pendingBear&&i-pendingBear<=confirmWindow&&x.close<d[i-1].low;
+  let bullTrigger=strongBull||bullConfirm,bearTrigger=strongBear||bearConfirm;
+  if(i-pendingBull>confirmWindow)pendingBull=-999999;if(i-pendingBear>confirmWindow)pendingBear=-999999;
+
+  // V1.10.1: Bitunix Futures public WebSocket feed test for Android content:// (no REST/CORS proxy).
+  // An opposite valid vector can close a trade; a new trade still needs the full trigger.
+  if(P.split&&dir!==0){
+   let barsIn=i-entryBar;
+   let exitLong=dir===1&&barsIn>=minTradeBars&&validBear&&bearScore>=P.exitScore;
+   let exitShort=dir===-1&&barsIn>=minTradeBars&&validBull&&bullScore>=P.exitScore;
+   if(exitLong){
+    let ret=entry>0?(x.close-entry)/entry*100:null;
+    events.push({i,type:"exitLong",text:"EXIT LONG"});if(ret!=null)events.push({i,type:"perfHigh",text:`${ret.toFixed(2)}%`,win:ret>=0});
+    dir=0;entry=null;entryBar=null;lastExitBar=i;
+   }else if(exitShort){
+    let ret=entry>0?(entry-x.close)/entry*100:null;
+    events.push({i,type:"exitShort",text:"EXIT SHORT"});if(ret!=null)events.push({i,type:"perfLow",text:`${ret.toFixed(2)}%`,win:ret>=0});
+    dir=0;entry=null;entryBar=null;lastExitBar=i;
+   }
+  }
+
+  if(dir===0){
+   if(i-lastExitBar<P.reentryWait)continue;
+   if(bullTrigger){dir=1;entry=x.close;entryBar=i;events.push({i,type:"long",text:"LONG"});pendingBull=pendingBear=-999999}
+   else if(bearTrigger){dir=-1;entry=x.close;entryBar=i;events.push({i,type:"short",text:"SHORT"});pendingBull=pendingBear=-999999}
+   continue
+  }
+
+  // Legacy AIT reversal retained only for 4H / Daily.
+  if(!P.split){
+   let barsIn=i-entryBar;
+   if(dir===-1&&bullTrigger&&barsIn>=minTradeBars){let ret=entry>0?(entry-x.close)/entry*100:null;events.push({i,type:"exitShort",text:"EXIT SHORT"});if(ret!=null)events.push({i,type:"perfLow",text:`${ret.toFixed(2)}%`,win:ret>=0});events.push({i,type:"long",text:"LONG"});dir=1;entry=x.close;entryBar=i;pendingBull=pendingBear=-999999}
+   else if(dir===1&&bearTrigger&&barsIn>=minTradeBars){let ret=entry>0?(x.close-entry)/entry*100:null;events.push({i,type:"exitLong",text:"EXIT LONG"});if(ret!=null)events.push({i,type:"perfHigh",text:`${ret.toFixed(2)}%`,win:ret>=0});events.push({i,type:"short",text:"SHORT"});dir=-1;entry=x.close;entryBar=i;pendingBull=pendingBear=-999999}
+  }
+ }
+ return {vectors,events}
+}
+
+function renderVector(o){
+ let on=o.el.querySelector('[data-x="vector"]').checked;
+ o.vectorOn=on;
+ renderPriceLayers(o);
+}
+function renderPriceLayers(o){
+ let prefs=candlePrefs(o),speedOn=o.el.querySelector('[data-x="speed"]').checked,vectorOn=o.el.querySelector('[data-x="vector"]').checked;
+ let base;
+ if(speedOn)base=speedEngine(o.data,prefs).bars;
+ else base=o.data.map(x=>({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,color:x.close>=x.open?prefs.bull:prefs.bear,borderColor:x.close>=x.open?prefs.bull:prefs.bear,wickColor:x.close>=x.open?prefs.bull:prefs.bear}));
+ let markers=[];
+ if(vectorOn){
+   let v=vectorEngine(o.data,o.interval);
+   for(let q of v.vectors){
+     let c=q.type==="bull"?"#00e664":"#ff2d2d",b=base[q.i];
+     base[q.i]={...b,color:c,borderColor:c,wickColor:c};
+   }
+   for(let e of v.events){
+     let bull=e.type==="long"||e.type==="exitShort"||e.type==="perfLow";
+     let col=e.type.startsWith("exit")?"#ffdc28":e.type.startsWith("perf")?(e.win?"#00e664":"#ff2d2d"):(e.type==="long"?"#00e664":"#ff2d2d");
+     markers.push({time:o.data[e.i].time,position:bull?"belowBar":"aboveBar",color:col,shape:bull?"arrowUp":"arrowDown",text:e.text});
+   }
+ }
+ o.cs.setData(base);o.cs.setMarkers(markers.sort((a,b)=>a.time-b.time));
+}
+
+function rollingSmaNums(a,n){
+ let o=Array(a.length).fill(null),q=[],sum=0;
+ for(let i=0;i<a.length;i++){q.push(a[i]);sum+=a[i];if(q.length>n)sum-=q.shift();if(q.length===n)o[i]=sum/n}
+ return o
+}
+function speedEngine(d,prefs={bull:'#ffffff',bear:'#666666'}){
+ const n=d.length, vols=d.map(x=>x.volume||0), ranges=d.map(x=>Math.max(x.high-x.low,1e-12));
+ const av=rollingSmaNums(vols,20), ar=rollingSmaNums(ranges,20);
+ const e13=ema(d,13).map(x=>x.value),e50=ema(d,50).map(x=>x.value),e100=ema(d,100).map(x=>x.value),e200=ema(d,200).map(x=>x.value);
+ let bars=[],marks=[];
+ for(let i=0;i<n;i++){
+   let x=d[i],rng=ranges[i],vavg=av[i]??x.volume??1,ravg=ar[i]??rng;
+   let vp=(x.volume||0)/Math.max(vavg,1)*100, sp=rng/Math.max(ravg,1e-12)*100;
+   let bull=x.close>x.open,bear=x.close<x.open, high=vp>=200, mid=vp>=150;
+   let type= bull&&high?"bullHigh":bear&&high?"bearHigh":bull&&mid&&!high?"bullMid":bear&&mid&&!high?"bearMid":"normal";
+   let color=type==="bullHigh"?"#2deb2d":type==="bearHigh"?"#f51e1e":type==="bullMid"?"#1941dc":type==="bearMid"?"#d71edc":bull?prefs.bull:prefs.bear;
+   bars.push({time:x.time,open:x.open,high:x.high,low:x.low,close:x.close,color,borderColor:color,wickColor:color});
+   // showLabels=false by default in the Pine version: keep detection, no labels/arrows.
+ }
+ return {bars,marks,e13,e50,e100,e200}
+}
+function renderSpeed(o){
+ let on=o.el.querySelector('[data-x="speed"]').checked;
+ if(!on){
+  renderPriceLayers(o);
+  (o.speedLines||[]).forEach(s=>{try{o.ch.removeSeries(s)}catch(e){}});o.speedLines=[];
+  return;
+ }
+ let s=speedEngine(o.data,candlePrefs(o));renderPriceLayers(o);
+ (o.speedLines||[]).forEach(x=>{try{o.ch.removeSeries(x)}catch(e){}});o.speedLines=[];
+ const addDyn=(vals)=>{
+  let seg=[],state=null;
+  const flush=()=>{if(seg.length>1){let l=o.ch.addLineSeries({lineWidth:2,color:state?"#64ff50":"#ff3737",priceLineVisible:false,lastValueVisible:false});l.setData(seg);o.speedLines.push(l)}seg=[]};
+  for(let i=0;i<o.data.length;i++){
+   if(vals[i]==null){flush();state=null;continue}
+   let st=o.data[i].close>=vals[i],p={time:o.data[i].time,value:vals[i]};
+   if(state===null){state=st;seg=[p]}
+   else if(st===state)seg.push(p);
+   else{let prev=seg.at(-1);flush();state=st;seg=prev?[prev,p]:[p]}
+  } flush();
+ };
+ addDyn(s.e13);addDyn(s.e50);addDyn(s.e100);addDyn(s.e200);
+ // No VOL/SPD text or arrows unless a later settings panel enables showLabels.
+ 
+}
+function wsChannel(f){
+ const m={"1m":"1min","5m":"5min","15m":"15min","30m":"30min","1h":"60min","2h":"2h","4h":"4h","6h":"6h","8h":"8h","12h":"12h","1d":"1day","3d":"3day","1w":"1week","1M":"1month"};
+ return "market_kline_"+(m[f]||f);
+}
+function normalizeWsKline(msg){
+ const d=msg&&msg.data;
+ if(!d)return [];
+ const rows=Array.isArray(d)?d:[d];
+ return rows.map(k=>{
+  let ts=Number(k.time??k.ts??k.t??msg.ts??0);
+  if(ts>1e12)ts=Math.floor(ts/1000);
+  return {time:ts,open:Number(k.o??k.open),high:Number(k.h??k.high),low:Number(k.l??k.low),close:Number(k.c??k.close),volume:Number(k.b??k.baseVol??k.volume??0)};
+ }).filter(k=>Number.isFinite(k.time)&&k.time>0&&Number.isFinite(k.open)&&Number.isFinite(k.high)&&Number.isFinite(k.low)&&Number.isFinite(k.close));
+}
+function restInterval(f){return f}
+function normalizeRestRows(j){
+ const raw=j?.data?.list||j?.data||j?.result?.list||j?.result||[];
+ const rows=Array.isArray(raw)?raw:[];
+ return rows.map(k=>{
+   if(Array.isArray(k)){
+     let ts=Number(k[0]);if(ts>1e12)ts=Math.floor(ts/1000);
+     return {time:ts,open:Number(k[1]),high:Number(k[2]),low:Number(k[3]),close:Number(k[4]),volume:Number(k[5]||0)};
+   }
+   let ts=Number(k.time??k.ts??k.t??k.openTime??0);if(ts>1e12)ts=Math.floor(ts/1000);
+   return {time:ts,open:Number(k.open??k.o),high:Number(k.high??k.h),low:Number(k.low??k.l),close:Number(k.close??k.c),volume:Number(k.baseVol??k.volume??k.v??0)};
+ }).filter(k=>Number.isFinite(k.time)&&k.time>0&&[k.open,k.high,k.low,k.close].every(Number.isFinite));
+}
+async function fetchJsonTimeout(url,ms=10000,wrapped=false){
+ const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),ms);
+ try{
+  const r=await fetch(url,{method:'GET',cache:'no-store',mode:'cors',credentials:'omit',referrerPolicy:'no-referrer',headers:{'Accept':'application/json'},signal:ctl.signal});
+  if(!r.ok)throw Error(`HTTP ${r.status}`);
+  const j=await r.json();
+  if(wrapped&&typeof j?.contents==='string')return JSON.parse(j.contents);
+  return j;
+ }finally{clearTimeout(tm)}
+}
+async function tryHistory(s,f){
+ // V1.10.4 — Bitunix Futures history. Important: corsproxy.io uses the target URL
+ // directly after '?', not '?url='. We also request an explicit time window.
+ const now=Date.now(),mins={"1m":1,"5m":5,"15m":15,"30m":30,"1h":60,"2h":120,"4h":240,"6h":360,"8h":480,"12h":720,"1d":1440,"3d":4320,"1w":10080,"1M":43200}[f]||15;
+ const startTime=now-(mins*60*1000*220);
+ const qs=`symbol=${encodeURIComponent(s)}&startTime=${Math.floor(startTime)}&endTime=${Math.floor(now)}&interval=${encodeURIComponent(f)}&limit=200&type=LAST_PRICE`;
+ const official=`https://fapi.bitunix.com/api/v1/futures/market/kline?${qs}`;
+ const attempts=[
+  {name:'Bitunix direct',url:official},
+  {name:'CORSProxy',url:`https://corsproxy.io/?${encodeURIComponent(official)}`},
+  {name:'AllOrigins raw',url:`https://api.allorigins.win/raw?url=${encodeURIComponent(official)}`},
+  {name:'AllOrigins JSON',url:`https://api.allorigins.win/get?url=${encodeURIComponent(official)}`,wrapped:true},
+  {name:'CodeTabs',url:`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(official)}`}
+ ];
+ let errors=[];
+ for(const a of attempts){
+  try{
+   const j=await fetchJsonTimeout(a.url,11000,!!a.wrapped);
+   if(j && Number(j.code)!==0 && j.code!==undefined)throw Error(`Bitunix code ${j.code}: ${j.msg||''}`);
+   const rows=normalizeRestRows(j);
+   if(rows.length){
+    const u=new Map();rows.forEach(x=>u.set(x.time,x));
+    const out=[...u.values()].sort((x,y)=>x.time-y.time);
+    out._source=`${a.name} • Bitunix Futures`;
+    out._historyError='';
+    return out;
+   }
+   errors.push(`${a.name}: réponse sans historique`);
+  }catch(e){errors.push(`${a.name}: ${e.name==='AbortError'?'timeout':(e.message||e)}`)}
+ }
+ const er=Error(errors.join(' | '));er.historyErrors=errors;throw er;
+}
+async function wsSnapshot(s,f,waitMs=1800){
+ const url="wss://fapi.bitunix.com/public/",ch=wsChannel(f);
+ return await new Promise((resolve,reject)=>{
+   let done=false,rows=[],ws;
+   const finish=(err)=>{if(done)return;done=true;clearTimeout(timer);clearInterval(pinger);try{ws.close()}catch(e){};
+     const uniq=new Map();rows.forEach(k=>uniq.set(k.time,k));const out=[...uniq.values()].sort((a,b)=>a.time-b.time);
+     if(out.length)resolve(out);else reject(err||Error('WebSocket connecté mais aucune chandelle reçue'))};
+   try{ws=new WebSocket(url)}catch(e){reject(e);return}
+   const timer=setTimeout(()=>finish(Error('Timeout WebSocket Bitunix')),10000);
+   const pinger=setInterval(()=>{try{if(ws.readyState===1)ws.send(JSON.stringify({op:'ping',ping:Math.floor(Date.now()/1000)}))}catch(e){}},5000);
+   ws.onopen=()=>ws.send(JSON.stringify({op:'subscribe',args:[{symbol:s,ch}]}));
+   ws.onerror=()=>finish(Error('Connexion WebSocket Bitunix bloquée'));
+   ws.onmessage=ev=>{try{const msg=JSON.parse(ev.data);if(msg&&msg.ch===ch&&msg.symbol===s){const got=normalizeWsKline(msg);if(got.length){rows.push(...got);setTimeout(()=>finish(null),waitMs)}}}catch(e){}};
+ });
+}
+async function getData(s,f){
+ let hist=[];
+ let histErr=''; try{hist=await tryHistory(s,f)}catch(e){histErr=e.message||String(e);console.warn('Bitunix history unavailable',e)}
+ let live=[];
+ try{live=await wsSnapshot(s,f)}catch(e){if(!hist.length)throw e}
+ const uniq=new Map();hist.forEach(k=>uniq.set(k.time,k));live.forEach(k=>uniq.set(k.time,k));
+ const out=[...uniq.values()].sort((a,b)=>a.time-b.time);
+ if(!out.length)throw Error('Aucune chandelle Bitunix reçue');
+ out._source=hist._source||(hist.length?'Bitunix REST':'Bitunix WS');
+ out._historyError=histErr;
+ return out;
+}
+
+function fmt(x){if(x>=1000)return x.toFixed(2);if(x>=1)return x.toFixed(4);return x.toFixed(6)}
+function dateLabel(time,interval){
+ const d=new Date(time*1000);
+ if(["1m","5m","15m","30m","1h","2h","4h","6h","12h"].includes(interval))
+   return d.toLocaleString("fr-CA",{month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+ return d.toLocaleDateString("fr-CA",{year:"2-digit",month:"short",day:"2-digit"});
+}
+function make(i){
+ let sv=JSON.parse(localStorage.getItem("cj13_"+i)||"null")||def[i],el=document.createElement("section");el.className="card";
+ el.innerHTML=`<div class="toolbar"><select class="sym">${syms.map(s=>`<option ${s==sv.s?"selected":""}>${s}</option>`).join("")}</select>
+ <select class="tf">${Object.entries(frames).map(([k,v])=>`<option value="${v}" ${v==sv.f?"selected":""}>${k}</option>`).join("")}</select>
+ <button class="indBtn">＋ Indicateurs</button><button class="fs">⛶</button></div>
+ <div class="chartWrap"><div class="chart"></div><div class="oscPane"><div class="momDash"></div></div><div class="watermark"><span class="wmSymbol"></span><span class="wmTf"></span><div class="ohlc">O — H — L — C —</div></div></div>
+ <div class="drawer"><h3>Indicateurs CryptoJuju</h3>
+ <label class="row"><input type="checkbox" data-x="e21" checked>EMA 21</label>
+ <label class="row"><input type="checkbox" data-x="e50">EMA 50</label>
+ <label class="row"><input type="checkbox" data-x="s200">SMA 200</label>
+ <label class="row"><input type="checkbox" data-x="momfusion">Momentum Fusion — complet</label>
+ <label class="row"><input type="checkbox" data-x="speed">CJ SPEED Candle V3</label>
+ <label class="row"><input type="checkbox" data-x="vector">CJ Vector Always In Trade V1.10.4</label></div>
+ <div class="hint"><span class="feed">Chargement…</span><span>Graphique + indicateur synchronisés • Glisser / pincer pour zoomer</span></div>`;
+ document.querySelector("#grid").appendChild(el);let ce=el.querySelector(".chart"),interval=sv.f;
+ let ch=LightweightCharts.createChart(ce,{
+  layout:{background:{color:"#111722"},textColor:"#aebbd0"},
+  grid:{vertLines:{color:"#1b2533"},horzLines:{color:"#1b2533"}},
+  rightPriceScale:{visible:true,borderColor:"#344158",scaleMargins:{top:.08,bottom:.08}},
+  timeScale:{visible:true,borderColor:"#344158",timeVisible:true,secondsVisible:false,rightOffset:7,barSpacing:8,minBarSpacing:3,
+   tickMarkFormatter:(t)=>dateLabel(t,interval)},
+  crosshair:{mode:LightweightCharts.CrosshairMode.Normal,vertLine:{labelVisible:true},horzLine:{labelVisible:true}},
+  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+  handleScale:{axisPressedMouseMove:true,mouseWheel:true,pinch:true}
+ });
+ let cs=ch.addCandlestickSeries({upColor:"#28c79a",downColor:"#f05d78",borderVisible:false,wickUpColor:"#28c79a",wickDownColor:"#f05d78",priceLineVisible:true,lastValueVisible:true});
+ let oscEl=el.querySelector(".oscPane");
+ let o={i,el,ch,cs,data:[],lines:{},speedLines:[],vectorOn:false,momChart:null,momSeries:null,momLines:[],get interval(){return interval},set interval(v){interval=v}};
+ new ResizeObserver(()=>{ch.applyOptions({width:ce.clientWidth,height:ce.clientHeight});if(o.momChart)o.momChart.applyOptions({width:oscEl.clientWidth,height:oscEl.clientHeight})}).observe(el);
+ ch.subscribeCrosshairMove(p=>{if(!p.time)return;let d=p.seriesData.get(cs);if(d)el.querySelector(".ohlc").textContent=`O ${fmt(d.open)}   H ${fmt(d.high)}   L ${fmt(d.low)}   C ${fmt(d.close)}`});
+ el.querySelector(".indBtn").onclick=()=>el.querySelector(".drawer").classList.toggle("open");
+ el.querySelector(".fs").onclick=()=>{el.classList.toggle("fullscreen");setTimeout(()=>ch.applyOptions({width:ce.clientWidth,height:ce.clientHeight}),40)};
+ el.querySelectorAll("input[data-x]").forEach(x=>x.onchange=()=>{inds(o);renderMom(o);renderSpeed(o);renderVector(o)});
+ let cbtn=el.querySelector(".candleColorBtn"),cp=el.querySelector(".candleColorPanel");
+ if(cbtn&&cp){cbtn.onclick=(e)=>{e.stopPropagation();cp.style.display=cp.style.display==="none"?"block":"none"};
+ cp.querySelectorAll('input[type="color"]').forEach(x=>x.oninput=()=>{renderSpeed(o);renderVector(o)});}
+ el.querySelector(".sym").onchange=()=>load(o);el.querySelector(".tf").onchange=()=>load(o);load(o);return o
+}
+
+function renderMom(o){
+ let on=o.el.querySelector('[data-x="momfusion"]').checked;
+ o.el.classList.toggle("mom-on",on);
+ if(!on){if(o.momChart){o.momChart.remove();o.momChart=null;o.momSeries=null;o.momLines=[];o.divSeries=[];o._syncReady=false}return}
+ let pane=o.el.querySelector(".oscPane");
+ if(!o.momChart){
+  o.momChart=LightweightCharts.createChart(pane,{layout:{background:{color:"#0f1520"},textColor:"#9fb0c6"},grid:{vertLines:{color:"#1b2533"},horzLines:{color:"#1b2533"}},rightPriceScale:{borderColor:"#344158",scaleMargins:{top:.06,bottom:.06}},timeScale:{visible:true,borderColor:"#344158",timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+  o.momSeries=o.momChart.addLineSeries({lineWidth:2,priceLineVisible:false,lastValueVisible:true});
+  o.momLines=[];o.divSeries=[];
+  [10,30,50,70,90].forEach(v=>{let l=o.momChart.addLineSeries({lineWidth:1,lineStyle:(v===50?2:3),priceLineVisible:false,lastValueVisible:false});o.momLines.push({v,l})});
+ }
+ // clear old divergence line series
+ (o.divSeries||[]).forEach(s=>{try{o.momChart.removeSeries(s)}catch(e){}});o.divSeries=[];
+ let m=calcMomFusion(o.data),pts=[];
+ for(let i=0;i<o.data.length;i++)if(m.comp[i]!=null)pts.push({time:o.data[i].time,value:m.comp[i]});
+ o.momSeries.setData(pts);
+ o.momLines.forEach(z=>z.l.setData(o.data.map(x=>({time:x.time,value:z.v}))));
+ let markers=[];
+ for(let s of m.sig)markers.push({time:o.data[s.i].time,position:s.type==="bull"?"belowBar":"aboveBar",color:s.type==="bull"?"#32d296":"#f05d78",shape:s.type==="bull"?"arrowUp":"arrowDown",text:""});
+ for(let c of m.conf)markers.push({time:o.data[c.i].time,position:c.type==="bull"?"belowBar":"aboveBar",color:c.type==="bull"?"#32d296":"#f05d78",shape:"circle",text:"◆"});
+ for(let d of m.divs){
+   let col=d.type==="regBull"?"#65ff65":d.type==="regBear"?"#ff5b6e":d.type==="hidBull"?"#20b9a7":"#8b2f3d";
+   let ls=o.momChart.addLineSeries({lineWidth:2,lineStyle:d.type.startsWith("hid")?2:0,priceLineVisible:false,lastValueVisible:false,color:col});
+   ls.setData([{time:o.data[d.a].time,value:d.va},{time:o.data[d.b].time,value:d.vb}]);o.divSeries.push(ls);
+   markers.push({time:o.data[d.b].time,position:d.type.includes("Bull")?"belowBar":"aboveBar",color:col,shape:d.type.includes("Bull")?"arrowUp":"arrowDown",text:d.text});
+ }
+ markers.sort((a,b)=>a.time-b.time);o.momSeries.setMarkers(markers);
+ if(!o._syncReady){
+   o._syncReady=true;let lock=false;
+   const sync=(from,to)=>from.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(lock||!r)return;lock=true;try{to.timeScale().setVisibleLogicalRange(r)}catch(e){}lock=false});
+   sync(o.ch,o.momChart);sync(o.momChart,o.ch);
+ }
+ let valid=m.comp.filter(x=>x!=null),last=valid.at(-1),zone=last>=90?"Extreme Bull":last>=70?"Overbought":last<=10?"Extreme Bear":last<=30?"Oversold":"Neutral";
+ let trend=m.ef.at(-1)>m.es.at(-1)?"Bull":"Bear";
+ // approximate HTF context from 4x aggregation for a useful live V1 implementation
+ let htf="Neutral"; if(valid.length>5){let v=valid[Math.max(0,valid.length-4)];htf=v>=70?"Overbought":v<=30?"Oversold":"Neutral"}
+ let lastConf=m.conf.length?(m.conf.at(-1).type==="bull"?"Bull":"Bear"):"None";
+ o.el.querySelector(".momDash").innerHTML=`<table><tr class="head"><td colspan="2">Momentum Fusion</td></tr>
+ <tr><td>Value</td><td>${last?.toFixed(2)??"—"}</td></tr><tr><td>Zone</td><td class="${zone.includes("Over")?"warn":""}">${zone}</td></tr>
+ <tr><td>Trend Filter</td><td class="${trend==="Bull"?"bull":"bear"}">${trend}</td></tr><tr><td>Divergence</td><td>${m.lastDiv}</td></tr>
+ <tr><td>HTF Zone</td><td>${htf}</td></tr><tr><td>Confluence</td><td class="${lastConf==="Bull"?"bull":lastConf==="Bear"?"bear":""}">${lastConf}</td></tr></table>`;
+ try{o.momChart.timeScale().setVisibleLogicalRange(o.ch.timeScale().getVisibleLogicalRange())}catch(e){}
+}
+function inds(o){
+ Object.values(o.lines).forEach(x=>o.ch.removeSeries(x));o.lines={};
+ function add(k,d,w){let s=o.ch.addLineSeries({lineWidth:w,priceLineVisible:false,lastValueVisible:false});s.setData(d);o.lines[k]=s}
+ if(o.el.querySelector('[data-x="e21"]').checked)add("e21",ema(o.data,21),2);
+ if(o.el.querySelector('[data-x="e50"]').checked)add("e50",ema(o.data,50),2);
+ if(o.el.querySelector('[data-x="s200"]').checked)add("s200",sma(o.data,200),1)
+}
+async function load(o){
+ let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value;o.interval=f;
+ o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});
+ o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");
+ o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;
+ o.el.querySelector(".feed").textContent="Chargement…";localStorage.setItem("cj13_"+o.i,JSON.stringify({s,f}));
+ try{o.data=await getData(s,f);o.cs.setData(o.data);inds(o);renderMom(o);renderSpeed(o);renderVector(o);o.ch.timeScale().fitContent();o.el.querySelector(".feed").textContent=o.data.length>10?`${o.data.length} chandelle(s) • ${o.data._source||"Bitunix Futures"} • historique + WS`:`${o.data.length} chandelle(s) • WS seulement • historique bloqué${o.data._historyError?" • "+o.data._historyError:""}`}
+ catch(e){console.error("CryptoJuju Bitunix",e);o.el.querySelector(".feed").textContent=`Erreur Bitunix WS • ${e.message||e}` }
+}
+function setL(x){
+ layout=x;localStorage.cjLayout13=x;let g=document.querySelector("#grid");g.className=x;
+ document.querySelectorAll(".layout button").forEach(b=>b.classList.toggle("active",b.dataset.l===x));
+ let n=x==="one"?1:x==="two"?2:4;cards.forEach((c,i)=>c.el.style.display=i<n?"flex":"none");
+ setTimeout(()=>cards.forEach(c=>c.ch.applyOptions({width:c.el.querySelector(".chart").clientWidth,height:c.el.querySelector(".chart").clientHeight})),40)
+}
+for(let i=0;i<4;i++)cards.push(make(i));
+document.querySelectorAll(".layout button").forEach(b=>b.onclick=()=>setL(b.dataset.l));
+document.querySelector("#reset").onclick=()=>{Object.keys(localStorage).filter(k=>k.startsWith("cj")).forEach(k=>localStorage.removeItem(k));location.reload()};
+setL(layout);
+</script></body></html>
