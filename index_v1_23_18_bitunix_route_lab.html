@@ -1,0 +1,30 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CryptoJuju Bitunix Diagnostic V1.23.18</title><style>
+body{margin:0;background:#07100d;color:#eafff2;font-family:system-ui;padding:15px}h1{font-size:20px;margin:0}.sub{color:#91b5a4;font-size:13px;margin:6px 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.b,.r{background:#0b1712;border:1px solid #24563d;border-radius:12px;padding:12px}
+label{font-size:12px;color:#9bbbab}input,select,button{width:100%;box-sizing:border-box;padding:11px;margin-top:5px;border-radius:9px;border:1px solid #347452;background:#06100b;color:#fff;font-size:15px}
+button{background:#10452e;border-color:#40ef91;font-weight:800}.full{grid-column:1/-1}.r{margin-top:10px}.ok{color:#49ef91}.bad{color:#ff647c}.wait{color:#ffd166}.meta{font-size:13px;line-height:1.55;color:#bdd7ca;margin-top:6px}pre{font-size:10px;white-space:pre-wrap;max-height:95px;overflow:auto;background:#040a07;padding:7px;border-radius:7px}
+.note{font-size:12px;color:#e4c66c;border:1px solid #6d5921;padding:9px;border-radius:9px;margin:12px 0}@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style></head><body><h1>CryptoJuju — Bitunix Route Lab V1.23.18</h1>
+<div class="sub">Bitunix uniquement • diagnostic de routes GET • aucun fallback d'exchange</div>
+<div class="note">Cette version teste plusieurs chemins vers les mêmes chandelles Bitunix. Elle ne remplace pas encore le moteur CryptoJuju.</div>
+<div class="grid"><div class="b"><label>Symbole</label><input id="s" value="BTCUSDT"></div>
+<div class="b"><label>Time frame</label><select id="tf"><option>1m</option><option>5m</option><option selected>15m</option><option>30m</option><option>1h</option><option>2h</option><option>4h</option><option>6h</option><option>12h</option><option>1d</option><option>1w</option></select></div>
+<div class="b full"><button id="go">🧪 Tester toutes les routes</button></div></div><div id="o"></div>
+<script>
+const routes=[
+["Bitunix DIRECT",u=>u],
+["CodeTabs",u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)],
+["CORS.lol",u=>"https://api.cors.lol/?url="+encodeURIComponent(u)],
+["AllOrigins RAW",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],
+["CORS.SH sans clé (test)",u=>"https://proxy.cors.sh/"+u]
+];
+function candles(j){let x=j?.data?.list??j?.data??j?.result?.list??j?.result??[];return Array.isArray(x)?x:[]}
+function add(n){let d=document.createElement("div");d.className="r";d.innerHTML=`<b>${n}</b><div class="wait st">⏳ TEST...</div><div class=meta></div><pre></pre>`;o.appendChild(d);return d}
+async function test(n,make,u){let d=add(n),st=d.querySelector(".st"),m=d.querySelector(".meta"),p=d.querySelector("pre"),c=new AbortController(),to=false,t=setTimeout(()=>{to=true;c.abort()},12000),t0=performance.now();
+try{let r=await fetch(make(u),{cache:"no-store",credentials:"omit",signal:c.signal});let text=await r.text(),ms=Math.round(performance.now()-t0),j=null,jok=false;try{j=JSON.parse(text);jok=true}catch(e){}
+let a=jok?candles(j):[];let good=r.ok&&jok&&a.length>0;st.className="st "+(good?"ok":"bad");st.textContent=good?`✅ RÉUSSI — ${a.length} chandelles`:"❌ ÉCHEC / DONNÉES VIDES";
+m.innerHTML=`HTTP <b>${r.status}</b> • ${ms} ms • JSON <b>${jok?"OUI":"NON"}</b> • chandelles <b>${a.length}</b>`;p.textContent=text.slice(0,900)}
+catch(e){st.className="st bad";st.textContent="❌ "+(to?"TIMEOUT":"FETCH/CORS BLOQUÉ");m.innerHTML=`${Math.round(performance.now()-t0)} ms • ${e.name}`;p.textContent=e.message}finally{clearTimeout(t)}}
+go.onclick=async()=>{o.innerHTML="";let now=Date.now(),u=`https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=${encodeURIComponent(s.value.trim().toUpperCase())}&interval=${encodeURIComponent(tf.value)}&limit=200&endTime=${now}&type=LAST_PRICE`;for(let r of routes)await test(r[0],r[1],u);let d=document.createElement("div");d.className="r";d.innerHTML="<b>FIN</b><div class=meta>Envoie-moi une capture avec les 5 résultats. Une route verte avec des chandelles réelles est candidate pour le prochain moteur.</div>";o.appendChild(d)}
+</script></body></html>
