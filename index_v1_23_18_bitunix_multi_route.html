@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CryptoJuju Bitunix Multi-Route V1.23.18</title>
+<style>
+body{margin:0;background:#07100d;color:#e8fff3;font-family:system-ui,Arial;padding:16px}
+h1{font-size:20px;margin:0 0 6px}.sub{color:#91b5a4;font-size:13px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.box{background:#0c1813;border:1px solid #214d38;border-radius:12px;padding:12px}
+label{display:block;font-size:12px;color:#91b5a4;margin-bottom:5px}input,select,button{width:100%;box-sizing:border-box;background:#07100d;color:#e8fff3;border:1px solid #2c684a;border-radius:9px;padding:11px;font-size:15px}
+button{background:#0e3d29;border-color:#37e889;font-weight:700;margin-top:12px}.route{margin-top:12px;border:1px solid #214d38;border-radius:12px;padding:12px;background:#0a1511}
+.name{font-weight:800}.wait{color:#f3c96b}.ok{color:#49ef91}.bad{color:#ff667d}.meta{font-size:13px;line-height:1.6;margin-top:7px;color:#bdd7ca;word-break:break-word}
+pre{white-space:pre-wrap;font-size:11px;background:#050b08;padding:8px;border-radius:8px;max-height:130px;overflow:auto}
+.full{grid-column:1/-1}.banner{padding:10px;border:1px solid #a07720;background:#241d08;color:#ffd66c;border-radius:10px;font-size:13px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<h1>CryptoJuju — Bitunix Multi-Route V1.23.18</h1>
+<div class="sub">Bitunix pur • aucun Bitget / OKX / Binance • routes de secours vers la même API Bitunix</div>
+<div class="banner">Validation multi-route Bitunix : toutes les routes pointent vers la même API Bitunix. Aucun fallback inter-exchange.</div>
+<div class="grid" style="margin-top:12px">
+<div class="box"><label>Symbole</label><input id="sym" value="BTCUSDT"></div>
+<div class="box"><label>Time frame</label><select id="tf"><option>1m</option><option>5m</option><option selected>15m</option><option>30m</option><option>1h</option><option>2h</option><option>4h</option><option>6h</option><option>12h</option><option>1d</option><option>1w</option></select></div>
+<div class="box full"><button id="go">▶ Lancer les tests Bitunix</button></div></div>
+<div id="out"></div>
+<script>
+const routes=[
+ ["Bitunix DIRECT",u=>u],
+ ["CORS.SH",u=>"https://proxy.cors.sh/"+u],
+ ["Render CORSProxy",u=>"https://corsproxy.io/?"+encodeURIComponent(u)],
+ ["corsproxy.nl",u=>"https://corsproxy.nl/?"+encodeURIComponent(u)],
+ ["CorsBridge",u=>"https://cors.isomorphic-git.org/"+u],
+ ["AllOrigins RAW",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],
+ ["AllOrigins GET",u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u)]
+];
+function rows(j){const raw=j?.data?.list||j?.data||j?.result?.list||j?.result||[];return(Array.isArray(raw)?raw:[]).map(k=>Array.isArray(k)?k:{time:k.time??k.ts??k.t,open:k.open??k.o,high:k.high??k.h,low:k.low??k.l,close:k.close??k.c}).filter(Boolean)}
+function card(name){let d=document.createElement("div");d.className="route";d.innerHTML=`<div class="name">${name}</div><div class="state wait">EN ATTENTE</div><div class="meta"></div><pre></pre>`;out.appendChild(d);return d}
+async function probe(name,wrap,url){
+ const c=card(name), st=c.querySelector(".state"), m=c.querySelector(".meta"), p=c.querySelector("pre");
+ const ctl=new AbortController(); let timed=false; const t=setTimeout(()=>{timed=true;ctl.abort()},10000);
+ const t0=performance.now();
+ try{
+   let r=await fetch(wrap(url),{cache:"no-store",mode:"cors",credentials:"omit",signal:ctl.signal});
+   let ms=Math.round(performance.now()-t0), text=await r.text(), j=null, jsonOK=false;
+   try{j=JSON.parse(text);jsonOK=true}catch(_){}
+   let rr=jsonOK?rows(j):[];
+   st.className="state "+(r.ok&&jsonOK&&rr.length?"ok":"bad");
+   st.textContent=r.ok&&jsonOK&&rr.length?`✅ RÉUSSI — ${rr.length} chandelles`:"❌ ÉCHEC / RÉPONSE INVALIDE";
+   m.innerHTML=`HTTP: <b>${r.status}</b> • CORS/fetch: <b>OK</b> • Temps: <b>${ms} ms</b><br>JSON valide: <b>${jsonOK?"OUI":"NON"}</b> • Chandelles détectées: <b>${rr.length}</b>`;
+   p.textContent=text.slice(0,1200);
+ }catch(e){
+   let ms=Math.round(performance.now()-t0);
+   st.className="state bad"; st.textContent="❌ "+(timed?"TIMEOUT":"FETCH/CORS BLOQUÉ");
+   m.innerHTML=`HTTP: <b>non disponible</b> • Temps: <b>${ms} ms</b><br>Erreur navigateur: <b>${String(e?.name||e)}</b>`;
+   p.textContent=String(e?.message||e);
+ }finally{clearTimeout(t)}
+}
+go.onclick=async()=>{
+ out.innerHTML="";
+ let s=sym.value.trim().toUpperCase(), f=tf.value, now=Date.now();
+ let u=`https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=${encodeURIComponent(s)}&endTime=${now}&interval=${encodeURIComponent(f)}&limit=200&type=LAST_PRICE`;
+
+ const results=[];
+ async function rankedProbe(name,wrap){
+   const t0=performance.now();
+   try{
+     const ctl=new AbortController();
+     const timer=setTimeout(()=>ctl.abort(),12000);
+     const r=await fetch(wrap(u),{cache:"no-store",mode:"cors",credentials:"omit",signal:ctl.signal});
+     const text=await r.text(); clearTimeout(timer);
+     let j=null; try{j=JSON.parse(text)}catch(_){}
+     const rr=j?rows(j):[];
+     const ms=Math.round(performance.now()-t0);
+     results.push({name,ok:r.ok&&rr.length>0,ms,count:rr.length});
+   }catch(e){
+     results.push({name,ok:false,ms:Math.round(performance.now()-t0),count:0});
+   }
+ }
+ for(const [n,w] of routes){
+   await probe(n,w,u);
+   await rankedProbe(n,w);
+ }
+ const good=results.filter(x=>x.ok).sort((a,b)=>a.ms-b.ms);
+ let rank=document.createElement("div"); rank.className="route";
+ rank.innerHTML='<div class="name">🏁 CLASSEMENT DES ROUTES FONCTIONNELLES</div><div class="meta">'+
+   (good.length?good.map((x,i)=>`${i+1}. ${x.name} — ${x.ms} ms — ${x.count} chandelles`).join("<br>"):"Aucune route fonctionnelle")+
+   '</div>';
+ out.appendChild(rank);
+
+ let note=document.createElement("div"); note.className="route";
+ note.innerHTML='<div class="name">FIN DU TEST</div><div class="meta">Toutes les routes ci-dessus demandent les chandelles à Bitunix. Aucun Bitget / OKX / Binance n’est utilisé.</div>';
+ out.appendChild(note);
+};
+</script></body></html>
