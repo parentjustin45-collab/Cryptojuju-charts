@@ -7,7 +7,7 @@ import {speedClassificationsToColorEvents,speedColorScenarios} from './speed-col
 import {runBacktest} from './engine.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
-const days=7, minBars=22;
+const days=14, minBars=22;
 const fetchPage=makeCryptoJujuFetchPage();
 async function run(symbol,interval){
  const intervalMs=periods[interval],endTime=Math.floor(Date.now()/intervalMs)*intervalMs,startTime=endTime-days*86400000;
@@ -18,7 +18,7 @@ async function run(symbol,interval){
   rows.push(...page.filter(r=>Number(r.time)>=start&&Number(r.time)<end));
  }
  const plan=planCleanBacktestWindows(rows,{startTime,endTime,intervalMs},{minBars});
- const groups=['directional','earlyReversal','combined'];
+ const groups=['green','red','blue','pink','directional','earlyReversal','combined'];
  const summary=Object.fromEntries(groups.map(k=>[k,{trades:0,wins:0,netPnl:0,signals:0,segments:0,maxDrawdownPct:0}]));
  const counts={green:0,red:0,blue:0,pink:0};
  for(const w of plan.eligibleWindows){
@@ -26,13 +26,14 @@ async function run(symbol,interval){
   for(const e of events)counts[e.color]++;
   const scenarios=speedColorScenarios(events);
   for(const k of groups){
-   const signals=scenarios[k].map(({time,side})=>({time,side}));
+   const selected=['green','red','blue','pink'].includes(k)?scenarios.combined.filter(e=>e.color===k):scenarios[k];
+   const signals=selected.map(({time,side})=>({time,side}));
    const result=runBacktest(w.candles,signals,{initialCapital:100,feeRate:0.0006,historyWindow:{startTime:w.startTime,endTime:w.endTime,intervalMs}});
    const s=summary[k];s.signals+=signals.length;s.trades+=result.tradeCount;s.wins+=result.trades.filter(t=>t.pnl>0).length;s.netPnl+=result.netProfit;s.segments++;s.maxDrawdownPct=Math.max(s.maxDrawdownPct,result.maxDrawdownPct);
   }
  }
  for(const s of Object.values(summary))s.winRatePct=s.trades?Number((100*s.wins/s.trades).toFixed(2)):null;
- return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,scenarios:summary,warning:'Experimental. Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
 }
 const output=[];
 for(const symbol of symbols)for(const interval of Object.keys(periods)){
