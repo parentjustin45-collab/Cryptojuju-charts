@@ -11,6 +11,7 @@ on:
       - 'backtest/bitunix-adapter.mjs'
       - 'backtest/multipage-smoke.mjs'
       - 'backtest/retry-missing.mjs'
+      - 'backtest/ohlc-precision-diagnostic.mjs'
   workflow_dispatch:
 jobs:
   compare-history:
@@ -35,3 +36,6 @@ jobs:
       - name: Retry missing 15m candles without modifying prices
         if: always()
         run: node backtest/retry-missing.mjs
+      - name: Diagnose raw OHLC precision without altering prices
+        if: always()
+        run: node backtest/ohlc-precision-diagnostic.mjs
