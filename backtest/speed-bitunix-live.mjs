@@ -10,7 +10,8 @@ import {studySpeedStructureReversals} from './speed-structure-reversal.mjs';
 import {compareSpeedMidToOrdinary} from './speed-matched-baseline.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
-const days=14, minBars=22;
+const days=Number(process.env.SPEED_HISTORY_DAYS ?? 60), minBars=22;
+if(!Number.isSafeInteger(days)||days<1||days>90)throw Error('SPEED_HISTORY_DAYS must be an integer from 1 to 90');
 const fetchPage=makeCryptoJujuFetchPage();
 async function run(symbol,interval){
  const intervalMs=periods[interval],endTime=Math.floor(Date.now()/intervalMs)*intervalMs,startTime=endTime-days*86400000;
@@ -54,7 +55,7 @@ async function run(symbol,interval){
   metrics.winRatePct=metrics.events?Number((100*metrics.wins/metrics.events).toFixed(2)):null;
   metrics.meanSignedPct=metrics.events?Number((metrics.sumSignedPct/metrics.events).toFixed(4)):null;
  }
- return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,coveragePct:Number((100*(1-plan.excludedBars/((endTime-startTime)/intervalMs))).toFixed(2)),excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
 }
 const output=[];
 for(const symbol of symbols)for(const interval of Object.keys(periods)){
