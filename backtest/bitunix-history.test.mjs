@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {loadBitunixHistory} from './bitunix-history.mjs';
+const ms=60_000;
+const make=(i)=>({time:i*ms,open:100,high:102,low:99,close:101,volume:5});
+const result=await loadBitunixHistory({symbol:'BTCUSDT',interval:'1m',startTime:0,endTime:5*ms,intervalMs:ms,limit:2,fetchPage:async ({startTime,limit})=>[0,1,2,3,4].map(make).filter(c=>c.time>=startTime).slice(0,limit)});
+assert.deepEqual(result.candles.map(c=>c.time),[0,ms,2*ms,3*ms,4*ms]);
+assert.equal(result.quality.pages,3);
+assert.equal(result.quality.gaps.length,0);
+const gap=await loadBitunixHistory({symbol:'BTCUSDT',interval:'1m',startTime:0,endTime:4*ms,intervalMs:ms,fetchPage:async()=>[make(0),make(2),make(2),make(3)]});
+assert.equal(gap.quality.duplicates.length,1);
+assert.equal(gap.quality.gaps[0].missing,1);
+await assert.rejects(loadBitunixHistory({symbol:'BTCUSDT',interval:'1m',startTime:0,endTime:ms,intervalMs:ms,fetchPage:async()=>[make(0)],limit:201}),/Invalid pagination/);
+console.log('Bitunix history tests passed');
