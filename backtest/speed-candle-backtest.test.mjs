@@ -27,3 +27,15 @@ test('short clean history cannot be backtested',()=>{
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.summary.winRatePct,null);
 });
+
+test('exactly minimum warmup bars are eligible but one fewer is blocked',()=>{
+ const short=Array.from({length:21},(_,i)=>bar(i));
+ const blocked=backtestSpeedCandleV3({rows:short,historyWindow:{startTime:0,endTime:21*ms,intervalMs:ms}});
+ assert.equal(blocked.status,'BLOCKED');
+ assert.equal(blocked.segments.length,0);
+ assert.equal(blocked.summary.tradeCount,0);
+ const sufficient=Array.from({length:22},(_,i)=>bar(i));
+ const ready=backtestSpeedCandleV3({rows:sufficient,historyWindow:{startTime:0,endTime:22*ms,intervalMs:ms}});
+ assert.equal(ready.status,'READY');
+ assert.equal(ready.segments.length,1);
+});
