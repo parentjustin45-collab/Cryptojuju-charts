@@ -1,0 +1,43 @@
+/* Read-only live Bitunix SPEED V3 experiment. No main/prod changes.
+   Compare signal groups on isolated clean continuous windows only. */
+import {makeCryptoJujuFetchPage} from './cryptojuju-adapter.mjs';
+import {planCleanBacktestWindows} from './quarantine.mjs';
+import {classifySpeedCandleV3} from './speed-candle-v3.mjs';
+import {speedClassificationsToColorEvents,speedColorScenarios} from './speed-color-scenarios.mjs';
+import {runBacktest} from './engine.mjs';
+const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
+const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
+const days=7, minBars=22;
+const fetchPage=makeCryptoJujuFetchPage();
+async function run(symbol,interval){
+ const intervalMs=periods[interval],endTime=Math.floor(Date.now()/intervalMs)*intervalMs,startTime=endTime-days*86400000;
+ const rows=[],pageBars=180;
+ for(let start=startTime;start<endTime;start+=pageBars*intervalMs){
+  const end=Math.min(endTime,start+pageBars*intervalMs);
+  const page=await fetchPage({symbol,interval,startTime:start,endTime:end,limit:200});
+  rows.push(...page.filter(r=>Number(r.time)>=start&&Number(r.time)<end));
+ }
+ const plan=planCleanBacktestWindows(rows,{startTime,endTime,intervalMs},{minBars});
+ const groups=['directional','earlyReversal','combined'];
+ const summary=Object.fromEntries(groups.map(k=>[k,{trades:0,wins:0,netPnl:0,signals:0,segments:0,maxDrawdownPct:0}]));
+ const counts={green:0,red:0,blue:0,pink:0};
+ for(const w of plan.eligibleWindows){
+  const events=speedClassificationsToColorEvents(classifySpeedCandleV3(w.candles).slice(19));
+  for(const e of events)counts[e.color]++;
+  const scenarios=speedColorScenarios(events);
+  for(const k of groups){
+   const signals=scenarios[k].map(({time,side})=>({time,side}));
+   const result=runBacktest(w.candles,signals,{initialCapital:100,feeRate:0.0006,historyWindow:{startTime:w.startTime,endTime:w.endTime,intervalMs}});
+   const s=summary[k];s.signals+=signals.length;s.trades+=result.tradeCount;s.wins+=result.trades.filter(t=>t.pnl>0).length;s.netPnl+=result.netProfit;s.segments++;s.maxDrawdownPct=Math.max(s.maxDrawdownPct,result.maxDrawdownPct);
+  }
+ }
+ for(const s of Object.values(summary))s.winRatePct=s.trades?Number((100*s.wins/s.trades).toFixed(2)):null;
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,scenarios:summary,warning:'Experimental. Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+}
+const output=[];
+for(const symbol of symbols)for(const interval of Object.keys(periods)){
+ try{const r=await run(symbol,interval);output.push(r);console.log(JSON.stringify(r));}
+ catch(e){const r={symbol,interval,status:'ERROR',error:String(e.message??e)};output.push(r);console.error(JSON.stringify(r));}
+}
+console.log('SPEED_BITUNIX_REPORT='+JSON.stringify(output));
+if(output.every(x=>x.status==='ERROR'||x.cleanWindows===0))process.exitCode=1;
