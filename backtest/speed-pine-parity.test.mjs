@@ -22,7 +22,7 @@ const bar=(i,volume=100,up=true)=>({time:i*900000,open:100,close:up?101:99,high:
 test('Pine default parity: all four classifications and exact metrics',()=>{
  const rows=Array.from({length:40},(_,i)=>bar(i));
  rows[25]=bar(25,250,true);rows[26]=bar(26,250,false);
- rows[27]=bar(27,180,true);rows[28]=bar(28,180,false);
+ rows[27]=bar(27,180,true);rows[28]=bar(28,190,false);
  const expected=pineReference(rows,0.1),actual=classifySpeedCandleV3(rows,{minTick:0.1});
  for(let i=0;i<rows.length;i++){
   assert.equal(actual[i].color,expected[i].color,'classification at '+i);
