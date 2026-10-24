@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/compare-history.yml'
       - 'backtest/compare-sources.mjs'
+      - 'backtest/bitunix-diagnostics.mjs'
       - 'backtest/cryptojuju-adapter.mjs'
       - 'backtest/bitunix-adapter.mjs'
   workflow_dispatch:
@@ -19,5 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Diagnose rejected Bitunix candles
+        run: node backtest/bitunix-diagnostics.mjs
       - name: Compare live BTCUSDT 15m sources
         run: node backtest/compare-sources.mjs
