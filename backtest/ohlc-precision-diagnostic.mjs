@@ -34,5 +34,17 @@ const a=report.sources.bitunixDirect,b=report.sources.cryptojujuProxy;
 const map=new Map(b.anomalies.map(x=>[x.utc,x]));
 report.anomalyComparison=a.anomalies.map(x=>({utc:x.utc,bitunix:x,proxy:map.get(x.utc)??null,rawMatch:JSON.stringify(x.raw)===JSON.stringify(map.get(x.utc)?.raw)}));
 report.summary={bitunixAnomalies:a.anomalies.length,proxyAnomalies:b.anomalies.length,bitunixWithinOneTenth:a.anomalies.filter(x=>x.withinOneTenthUSDT).length,rawMatchingAnomalies:report.anomalyComparison.filter(x=>x.rawMatch).length,errors:a.errors.length+b.errors.length};
-console.log(JSON.stringify(report,null,2));
+const summary = {
+ symbol:report.symbol, interval:report.interval, startUTC:report.startUTC, endUTC:report.endUTC,
+ directCandles:a.count, proxyCandles:b.count, directMissing:a.missing.length, proxyMissing:b.missing.length,
+ ...report.summary,
+ identicalRawAnomalies:report.summary.rawMatchingAnomalies===a.anomalies.length&&a.anomalies.length===b.anomalies.length,
+ largestHighDeficitUSDT:Math.max(0,...a.anomalies.map(x=>x.highDeficitUSDT??0)),
+ largestLowExcessUSDT:Math.max(0,...a.anomalies.map(x=>x.lowExcessUSDT??0)),
+ sampleUTC:a.anomalies.slice(0,8).map(x=>x.utc),
+ quality:report.summary.errors?'FETCH_ERROR':(a.missing.length||b.missing.length||a.anomalies.length||b.anomalies.length)?'UNSAFE_FOR_STRICT_BACKTEST':'CLEAN'
+};
+console.log(JSON.stringify(summary,null,2));
+if(process.env.OHLC_VERBOSE==='1')console.log(JSON.stringify(report,null,2));
+if(summary.quality!=='CLEAN')console.warn('Raw candles preserved; do not silently repair OHLC or treat this history as clean.');
 if(report.summary.errors)process.exitCode=1;
