@@ -28,7 +28,7 @@ export function classifyHistory(rows,{startTime,endTime,intervalMs}={}){
  }
  const candles=[...valid.values()].sort((a,b)=>a.time-b.time);
  const issues=[...invalid.values()].sort((a,b)=>a.time-b.time);
- const status=unusable.length?'BLOCKED':'READY';
+ const status=(unusable.length||duplicates.length)?'BLOCKED':'READY';
  return {status,candles,issues,missing,unusable,quality:{expected:(endTime-startTime)/intervalMs,valid:candles.length,invalid:issues.length,missing:missing.length,duplicates:duplicates.length,outOfRange:outOfRange.length,coveragePct:100*candles.length/((endTime-startTime)/intervalMs)},canBacktest:status==='READY'};
 }
 export function requireCleanHistory(classification){
