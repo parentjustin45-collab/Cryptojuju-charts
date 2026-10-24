@@ -1,5 +1,13 @@
-name: Bitunix live history smoke (manual)
+name: Bitunix live history smoke
 on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/bitunix-live-smoke.yml'
+      - 'backtest/bitunix-smoke.mjs'
+      - 'backtest/bitunix-adapter.mjs'
+      - 'backtest/bitunix-history.mjs'
+      - 'backtest/history-validation.mjs'
   workflow_dispatch:
 jobs:
   check-history:
