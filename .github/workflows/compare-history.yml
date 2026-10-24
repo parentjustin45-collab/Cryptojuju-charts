@@ -10,6 +10,7 @@ on:
       - 'backtest/cryptojuju-adapter.mjs'
       - 'backtest/bitunix-adapter.mjs'
       - 'backtest/multipage-smoke.mjs'
+      - 'backtest/retry-missing.mjs'
   workflow_dispatch:
 jobs:
   compare-history:
@@ -31,3 +32,6 @@ jobs:
       - name: Validate seven days of paginated BTCUSDT 15m history
         if: always()
         run: node backtest/multipage-smoke.mjs
+      - name: Retry missing 15m candles without modifying prices
+        if: always()
+        run: node backtest/retry-missing.mjs
