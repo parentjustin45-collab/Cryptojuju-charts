@@ -19,5 +19,5 @@ export function planCleanBacktestWindows(rows,window,{minBars=3}={}){
  }
  flush();
  const eligible=segments.filter(x=>x.eligible);
- return {status:quality.canBacktest?'READY':eligible.length?'PARTIAL_QUARANTINED':'BLOCKED',quality:quality.quality,issues:quality.issues,missing:quality.missing,duplicateTimes:[...duplicateTimes].filter(t=>t>=startTime&&t<endTime).sort((a,b)=>a-b),segments:segments.map(({candles,...metadata})=>metadata),eligibleWindows:eligible.map(({candles,...metadata})=>({...metadata,candles})),excludedBars:quality.quality.expected-eligible.reduce((n,x)=>n+x.bars,0),policy:'RAW_UNMODIFIED_NO_CROSS_GAP_TRADES'};
+ return {status:quality.canBacktest&&eligible.length?'READY':eligible.length?'PARTIAL_QUARANTINED':'BLOCKED',quality:quality.quality,issues:quality.issues,missing:quality.missing,duplicateTimes:[...duplicateTimes].filter(t=>t>=startTime&&t<endTime).sort((a,b)=>a-b),segments:segments.map(({candles,...metadata})=>metadata),eligibleWindows:eligible.map(({candles,...metadata})=>({...metadata,candles})),excludedBars:quality.quality.expected-eligible.reduce((n,x)=>n+x.bars,0),policy:'RAW_UNMODIFIED_NO_CROSS_GAP_TRADES'};
 }
