@@ -9,7 +9,7 @@ on:
 jobs:
   speed-history:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
@@ -18,7 +18,9 @@ jobs:
         with:
           node-version: '22'
       - name: Run SPEED color scenarios against Bitunix history
-        run: node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
+        run: |
+          set -o pipefail
+          node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
       - name: Upload research report
         if: always()
         uses: actions/upload-artifact@v4
