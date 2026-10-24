@@ -1,0 +1,28 @@
+name: SPEED Bitunix historical experiments
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/speed-bitunix-live.mjs'
+      - '.github/workflows/speed-bitunix-live.yml'
+jobs:
+  speed-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run SPEED color scenarios against Bitunix history
+        run: node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
+      - name: Upload research report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-bitunix-research
+          path: speed-bitunix-report.log
+          if-no-files-found: ignore
