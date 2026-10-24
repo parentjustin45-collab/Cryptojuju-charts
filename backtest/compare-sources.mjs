@@ -17,7 +17,7 @@ const normalize=rows=>{
 };
 const results=await Promise.allSettled([
  makeBitunixFetchPage()({symbol:'BTCUSDT',interval:'15m',startTime,endTime,limit:200}),
- makeCryptoJujuFetchPage()({symbol:'BTCUSDT',interval:'15m',limit:500})
+ makeCryptoJujuFetchPage()({symbol:'BTCUSDT',interval:'15m',startTime,endTime,limit:200})
 ]);
 const names=['bitunixDirect','cryptojujuServer'];
 const out={requested:{symbol:'BTCUSDT',interval:'15m',startTime,endTime},sources:{}};
