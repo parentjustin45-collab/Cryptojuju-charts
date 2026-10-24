@@ -5,6 +5,7 @@ import {planCleanBacktestWindows} from './quarantine.mjs';
 import {classifySpeedCandleV3} from './speed-candle-v3.mjs';
 import {speedClassificationsToColorEvents,speedColorScenarios} from './speed-color-scenarios.mjs';
 import {runBacktest} from './engine.mjs';
+import {studySpeedForwardReturns} from './speed-forward-study.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
 const days=14, minBars=22;
@@ -21,7 +22,10 @@ async function run(symbol,interval){
  const groups=['green','red','blue','pink','directional','earlyReversal','combined'];
  const summary=Object.fromEntries(groups.map(k=>[k,{trades:0,wins:0,netPnl:0,signals:0,segments:0,maxDrawdownPct:0}]));
  const counts={green:0,red:0,blue:0,pink:0};
+ const forward=Object.fromEntries(['bullHigh','bullMid','bearHigh','bearMid'].map(k=>[k,Object.fromEntries([3,5,10].map(h=>[h,{events:0,wins:0,losses:0,flat:0,sumSignedPct:0}]))]));
  for(const w of plan.eligibleWindows){
+  const study=studySpeedForwardReturns(w.candles);
+  for(const [color,horizons] of Object.entries(study.byClassification))for(const [h,metrics] of Object.entries(horizons))for(const field of ['events','wins','losses','flat','sumSignedPct'])forward[color][h][field]+=metrics[field];
   const events=speedClassificationsToColorEvents(classifySpeedCandleV3(w.candles).slice(19));
   for(const e of events)counts[e.color]++;
   const scenarios=speedColorScenarios(events);
@@ -33,7 +37,11 @@ async function run(symbol,interval){
   }
  }
  for(const s of Object.values(summary))s.winRatePct=s.trades?Number((100*s.wins/s.trades).toFixed(2)):null;
- return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+ for(const horizons of Object.values(forward))for(const metrics of Object.values(horizons)){
+  metrics.winRatePct=metrics.events?Number((100*metrics.wins/metrics.events).toFixed(2)):null;
+  metrics.meanSignedPct=metrics.events?Number((metrics.sumSignedPct/metrics.events).toFixed(4)):null;
+ }
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
 }
 const output=[];
 for(const symbol of symbols)for(const interval of Object.keys(periods)){
