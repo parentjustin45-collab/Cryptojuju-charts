@@ -43,4 +43,7 @@ if(out.bitunixDirect&&out.cryptojujuServer){
 }
 delete out.bitunixDirect;delete out.cryptojujuServer;
 console.log(JSON.stringify(out,null,2));
-if(results.every(r=>r.status==='rejected'))process.exitCode=1;
+if(results.some(r=>r.status==='rejected') || !out.comparison || out.comparison.priceMismatches>0) {
+ console.error('Comparison incomplete or mismatched: both sources must succeed and prices must agree');
+ process.exitCode=1;
+}
