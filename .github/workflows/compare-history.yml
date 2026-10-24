@@ -1,0 +1,23 @@
+name: Compare Bitunix and CryptoJuju history
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/compare-history.yml'
+      - 'backtest/compare-sources.mjs'
+      - 'backtest/cryptojuju-adapter.mjs'
+      - 'backtest/bitunix-adapter.mjs'
+  workflow_dispatch:
+jobs:
+  compare-history:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare live BTCUSDT 15m sources
+        run: node backtest/compare-sources.mjs
