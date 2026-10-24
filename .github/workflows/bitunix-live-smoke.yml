@@ -1,0 +1,16 @@
+name: Bitunix live history smoke (manual)
+on:
+  workflow_dispatch:
+jobs:
+  check-history:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate live BTCUSDT 15m history (read only)
+        run: node backtest/bitunix-smoke.mjs
