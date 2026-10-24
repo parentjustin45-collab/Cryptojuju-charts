@@ -12,6 +12,7 @@ import {studySpeedByPeriod} from './speed-period-stability.mjs';
 import {compareSpeedMatchedFeatures} from './speed-feature-matched.mjs';
 import {compareSpeedHighContinuation} from './speed-high-continuation.mjs';
 import {studySpeedConfirmations} from './speed-confirmation-sequences.mjs';
+import {compareSpeedConfirmationEntries} from './speed-confirmation-entry-comparison.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
 const days=Number(process.env.SPEED_HISTORY_DAYS ?? 60), minBars=22;
@@ -78,6 +79,24 @@ async function run(symbol,interval){
    m.meanSignedPct=m.pairs?Number((m.sumSignedPct/m.pairs).toFixed(4)):null;
   }
  }
+ const confirmationEntryComparison=Object.fromEntries(['bull','bear'].map(d=>[d,{midSignals:0,confirmed:0,unconfirmed:0,byHorizon:Object.fromEntries([3,5,10].map(h=>[h,{matched:0,midWins:0,confirmedWins:0,midSumPct:0,confirmedSumPct:0,allMidCount:0,allMidWins:0,allMidSumPct:0}]))}]));
+ for(const w of plan.eligibleWindows){
+  const study=compareSpeedConfirmationEntries(w.candles);
+  for(const [dir,m] of Object.entries(study.byDirection)){
+   const dest=confirmationEntryComparison[dir];
+   for(const field of ['midSignals','confirmed','unconfirmed'])dest[field]+=m[field];
+   for(const [h,v] of Object.entries(m.byHorizon))for(const field of ['matched','midWins','confirmedWins','midSumPct','confirmedSumPct','allMidCount','allMidWins','allMidSumPct'])dest.byHorizon[h][field]+=v[field];
+  }
+ }
+ for(const v of Object.values(confirmationEntryComparison))for(const m of Object.values(v.byHorizon)){
+  m.midWinRatePct=m.matched?Number((100*m.midWins/m.matched).toFixed(2)):null;
+  m.confirmedWinRatePct=m.matched?Number((100*m.confirmedWins/m.matched).toFixed(2)):null;
+  m.midMeanNetPct=m.matched?Number((m.midSumPct/m.matched).toFixed(4)):null;
+  m.confirmedMeanNetPct=m.matched?Number((m.confirmedSumPct/m.matched).toFixed(4)):null;
+  m.waitMinusMidPp=m.matched?Number(((m.confirmedSumPct-m.midSumPct)/m.matched).toFixed(4)):null;
+  m.allMidWinRatePct=m.allMidCount?Number((100*m.allMidWins/m.allMidCount).toFixed(2)):null;
+  m.allMidMeanNetPct=m.allMidCount?Number((m.allMidSumPct/m.allMidCount).toFixed(4)):null;
+ }
  const groups=['green','red','blue','pink','directional','earlyReversal','combined'];
  const summary=Object.fromEntries(groups.map(k=>[k,{trades:0,wins:0,netPnl:0,signals:0,segments:0,maxDrawdownPct:0}]));
  const counts={green:0,red:0,blue:0,pink:0};
@@ -111,7 +130,7 @@ async function run(symbol,interval){
   metrics.winRatePct=metrics.events?Number((100*metrics.wins/metrics.events).toFixed(2)):null;
   metrics.meanSignedPct=metrics.events?Number((metrics.sumSignedPct/metrics.events).toFixed(4)):null;
  }
- return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,coveragePct:Number((100*(1-plan.excludedBars/((endTime-startTime)/intervalMs))).toFixed(2)),excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,periodStability:stability,featureMatched,highMatched,confirmations,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,coveragePct:Number((100*(1-plan.excludedBars/((endTime-startTime)/intervalMs))).toFixed(2)),excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,periodStability:stability,featureMatched,highMatched,confirmations,confirmationEntryComparison,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
 }
 const output=[];
 for(const symbol of symbols)for(const interval of Object.keys(periods)){
