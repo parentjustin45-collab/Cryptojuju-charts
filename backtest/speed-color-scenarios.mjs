@@ -1,6 +1,15 @@
 /* Research-only scenario builder. Requires verified, closed-candle color events
-   from the real SPEED V3 classifier; never infer blue/pink from volume alone. */
+   from the real SPEED V3 classifier; bullHigh=green, bullMid=blue, bearHigh=red, bearMid=pink. */
 const meanings=Object.freeze({green:'long',red:'short',blue:'long',pink:'short'});
+const levels=Object.freeze({bullHigh:'green',bullMid:'blue',bearHigh:'red',bearMid:'pink'});
+export function speedClassificationsToColorEvents(rows){
+ if(!Array.isArray(rows))throw Error('Classifications array required');
+ return rows.filter(r=>r.color!=null).map(r=>{
+  if(!Object.hasOwn(levels,r.color))throw Error('Unknown SPEED classification: '+r.color);
+  if(r.closed!==true)throw Error('Unclosed SPEED candle');
+  return {time:r.time,color:levels[r.color],closed:true,classification:r.color};
+ });
+}
 export function speedColorScenarios(events,{reversalLookahead=5}={}){
  if(!Array.isArray(events)||!Number.isSafeInteger(reversalLookahead)||reversalLookahead<1)throw Error('Invalid inputs');
  const groups={directional:[],earlyReversal:[],combined:[],reversalAlerts:[]};
