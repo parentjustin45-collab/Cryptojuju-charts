@@ -1,0 +1,18 @@
+import {runBacktest} from './engine.mjs';
+import assert from 'node:assert/strict';
+const bars=[1,2,3,4].map((time,i)=>({time,open:100+i*10,high:112+i*10,low:98+i*10,close:105+i*10}));
+const noSignal=runBacktest(bars,[]);
+assert.equal(noSignal.tradeCount,0);
+assert.equal(noSignal.finalCapital,100);
+const long=runBacktest(bars,[{time:1,side:'long'},{time:3,side:'flat'}],{feeRate:0,slippageRate:0});
+assert.equal(long.trades[0].entryTime,2);
+assert.equal(long.trades[0].exitTime,4);
+assert.equal(long.trades[0].entry,110);
+assert.equal(long.trades[0].exit,130);
+assert.ok(long.netProfit>0);
+const short=runBacktest(bars,[{time:1,side:'short'}],{feeRate:0});
+assert.equal(short.trades[0].entryTime,2);
+assert.ok(short.netProfit<0);
+assert.throws(()=>runBacktest([bars[1],bars[0]],[]),/Invalid or unordered/);
+assert.throws(()=>runBacktest(bars,[{time:1,side:'long'},{time:1,side:'short'}]),/duplicate/);
+console.log('Backtest engine tests passed');
