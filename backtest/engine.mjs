@@ -1,3 +1,4 @@
+import {classifyHistory,requireCleanHistory} from './quality-gate.mjs';
 /* CryptoJuju Charts V1.26.0 — deterministic backtest core.
    Standalone ES module. No UI or network side effects.
    Signals: [{time,side:'long'|'short'|'flat'}] computed using closed candles only.
@@ -13,6 +14,11 @@ export function runBacktest(candles, signals, options = {}) {
   }
   if (initialCapital <= 0 || allocation > 1 || feeRate >= 1 || slippageRate >= 1) throw new Error('Invalid configuration');
   if (!Array.isArray(candles) || !Array.isArray(signals)) throw new Error('Candles and signals must be arrays');
+  // A caller supplying a history window opts into strict, complete data validation.
+  // Never repair OHLC values or silently skip missing intervals.
+  if (options.historyWindow) {
+    candles = requireCleanHistory(classifyHistory(candles, options.historyWindow));
+  }
   const bars = candles.map(c => ({...c,time:Number(c.time),open:Number(c.open),high:Number(c.high),low:Number(c.low),close:Number(c.close)}));
   for (let i=0;i<bars.length;i++) {
     const c=bars[i];
