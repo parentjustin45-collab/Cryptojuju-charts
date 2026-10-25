@@ -1,6 +1,6 @@
 // Vector Always In Trade V1.1: closed candle research port.
 export function vectorAIT(candles,p={}){
- const cfg={volumeLength:20,spreadLength:20,atrLength:14,volumeMultiplier:1.5,spreadMultiplier:1.5,atrMultiplier:0.8,minimumBodyRatio:0.6,minimumCloseStrength:0.7,minimumConfirmations:4,minTick:1e-8,...p};
+ const cfg={volumeLength:20,spreadLength:20,atrLength:14,volumeMultiplier:1.5,spreadMultiplier:1.5,atrMultiplier:0.8,minimumBodyRatio:0.6,minimumCloseStrength:0.7,minimumConfirmations:4,minTick:Number.EPSILON,...p};
  let atr=null,dir=0,entry=null;const tr=[],vol=[],spread=[],out=[];
  for(let i=0;i<candles.length;i++){
   const c=candles[i],o=Number(c.open),h=Number(c.high),l=Number(c.low),close=Number(c.close),v=Number(c.volume??0);
