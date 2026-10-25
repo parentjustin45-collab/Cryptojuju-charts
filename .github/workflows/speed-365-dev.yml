@@ -18,6 +18,8 @@ on:
       - 'backtest/vector-speed-comparison.test.mjs'
       - 'backtest/vector-exit-selection.mjs'
       - 'backtest/vector-exit-selection.test.mjs'
+      - 'backtest/vector-exit-report.mjs'
+      - 'backtest/vector-exit-report.test.mjs'
   workflow_dispatch:
 jobs:
   research-365-days:
@@ -32,7 +34,7 @@ jobs:
         with:
           node-version: '22'
       - name: Validate EMA research tests
-        run: node --test backtest/speed-ema-filter.test.mjs backtest/speed-ema-interactions.test.mjs backtest/speed-ema-strategy-comparison.test.mjs backtest/speed-ema-holdout.test.mjs backtest/speed-ema-risk-holdout.test.mjs backtest/vector-ait-v1.test.mjs backtest/vector-speed-comparison.test.mjs backtest/vector-exit-selection.test.mjs
+        run: node --test backtest/speed-ema-filter.test.mjs backtest/speed-ema-interactions.test.mjs backtest/speed-ema-strategy-comparison.test.mjs backtest/speed-ema-holdout.test.mjs backtest/speed-ema-risk-holdout.test.mjs backtest/vector-ait-v1.test.mjs backtest/vector-speed-comparison.test.mjs backtest/vector-exit-selection.test.mjs backtest/vector-exit-report.test.mjs
       - name: Run 365-day Bitunix SPEED research
         env:
           SPEED_HISTORY_DAYS: '365'
@@ -41,6 +43,8 @@ jobs:
           node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
       - name: Export comparable strategy table
         run: node backtest/speed-report-comparison.mjs speed-bitunix-report.log
+      - name: Export detailed Vector exit audit
+        run: node backtest/vector-exit-report.mjs speed-bitunix-report.log
       - name: Upload 365-day results
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,4 +54,6 @@ jobs:
             speed-bitunix-report.log
             speed-strategy-comparison.csv
             speed-strategy-comparison.json
+            vector-exit-comparison.csv
+            vector-exit-comparison.json
           if-no-files-found: warn
