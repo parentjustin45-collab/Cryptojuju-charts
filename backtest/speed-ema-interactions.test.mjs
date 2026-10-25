@@ -7,7 +7,7 @@ test('no event before an EMA is initialized using previous closed candle',()=>{
  assert.deepEqual(events,[]);
 });
 test('SPEED bullish bounce at EMA and no forward-looking dependence',()=>{
- const rows=bars();rows[220]={...rows[220],open:99.5,high:102,low:99,close:101};
+ const rows=bars();rows[220]={...rows[220],open:100.2,high:102,low:99,close:101};
  const a=classifySpeedEmaInteractions(rows,{periods:[13]});
  assert.ok(a.some(e=>e.time===rows[220].time&&e.side==='long'&&e.type==='bounce'));
  const copy=rows.map(x=>({...x}));copy[230].close=200;copy[230].high=201;
