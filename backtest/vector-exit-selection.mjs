@@ -117,22 +117,24 @@ export function studyVectorExits(windows,{
   for(const side of ['long','short']){
    const signals=vector.flatMap((v,i)=>v.signal===side&&i<bars.length-1?[i]:[]);
    for(const cfg of VECTOR_EXIT_CONFIGS){
-    // No overlapping positions per candidate and direction. Censored trades also
-    // reserve their observed interval, until the train split or clean window ends.
-    let occupied=-1;
-    for(const i of signals){
-     if(i+1<=occupied)continue;
-     const trade=simulateVectorExitTrade(bars,vector,i,side,cfg,{cutoffTime,feeRate,slippageRate});
-     const stress=simulateVectorExitTrade(bars,vector,i,side,cfg,{cutoffTime,feeRate,slippageRate:stressSlippageRate});
-     const partition=trade.partition??(Number(bars[i+1].time)<cutoffTime?'train':'test');
-     accumulate(result[side].candidates[cfg.id][partition],trade);
-     accumulate(result[side].candidates[cfg.id].stress[partition],stress);
-     if(trade.status==='closed')occupied=trade.exitIndex;
-     else{
-      occupied=bars.length-1;
-      if(partition==='train'){
-       const boundary=bars.findIndex(b=>Number(b.time)>=cutoffTime);
-       if(boundary>=0)occupied=boundary-1;
+    // Independently simulate non-overlapping trades in each cost scenario.
+    // The stress scenario never selects a new strategy; it is only evaluated.
+    for(const [scenario,slip] of [['baseline',slippageRate],['stress',stressSlippageRate]]){
+     let occupied=-1;
+     for(const i of signals){
+      if(i+1<=occupied)continue;
+      const trade=simulateVectorExitTrade(bars,vector,i,side,cfg,{cutoffTime,feeRate,slippageRate:slip});
+      const partition=trade.partition??(Number(bars[i+1].time)<cutoffTime?'train':'test');
+      const bucket=scenario==='baseline'?result[side].candidates[cfg.id][partition]:
+       result[side].candidates[cfg.id].stress[partition];
+      accumulate(bucket,trade);
+      if(trade.status==='closed')occupied=trade.exitIndex;
+      else{
+       occupied=bars.length-1;
+       if(partition==='train'){
+        const boundary=bars.findIndex(b=>Number(b.time)>=cutoffTime);
+        if(boundary>=0)occupied=boundary-1;
+       }
       }
      }
     }
@@ -158,7 +160,7 @@ export function studyVectorExits(windows,{
    hybrid:'TP/SL, maximum holding bars, or confirmed opposite Vector (whichever occurs first)',
    sameBarStopTake:'stop-first',gapFill:'at actual next open if beyond stop or take',
    censoring:'incomplete trades at split/window ends are counted separately and EXCLUDED from P&L and trade totals',
-   selection:'best net mean on train at baseline slippage only; identical winner checked on test and with stress slippage',
+   selection:'best net mean on train at baseline slippage only; same chosen rule re-evaluated on test with independent non-overlapping fills at each slippage level',
    capital:'independent net percent per completed trade; not compounded across gaps',
    warning:'Research only. TradingView signal parity not independently verified; no tick-level ordering. Excluding censored trades may bias estimates; inspect censor counts and sample sizes.'}};
 }
