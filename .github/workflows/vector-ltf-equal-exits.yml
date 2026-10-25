@@ -1,0 +1,32 @@
+name: Vector 15m 30m 1h comparable 12h exits (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-ltf-equal-exits.yml'
+      - 'backtest/vector-ltf-execution-comparison.mjs'
+      - 'backtest/vector-ltf-execution-comparison.test.mjs'
+  workflow_dispatch:
+jobs:
+  ltf-equal-exits:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify 12-hour horizon, causality, 4H filter and execution tests
+        run: node --test backtest/vector-ltf-execution-comparison.test.mjs
+      - name: Compare 90 days Bitunix simulated SHORT fills
+        run: node backtest/vector-ltf-execution-comparison.mjs > vector-ltf-equal-exits.json
+      - name: Preserve 90-day report for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-ltf-equal-exits-90d
+          path: vector-ltf-equal-exits.json
+          if-no-files-found: warn
