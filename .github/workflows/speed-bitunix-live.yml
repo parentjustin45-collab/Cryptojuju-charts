@@ -5,6 +5,7 @@ on:
     branches: [dev/v1.26.0]
     paths:
       - 'backtest/speed-bitunix-live.mjs'
+      - 'backtest/speed-report-comparison.mjs'
       - '.github/workflows/speed-bitunix-live.yml'
       - 'backtest/speed-prospective.mjs'
       - '.github/workflows/speed-prospective.yml'
@@ -23,12 +24,17 @@ jobs:
         run: |
           set -o pipefail
           node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
+      - name: Export comparable strategy table
+        run: node backtest/speed-report-comparison.mjs speed-bitunix-report.log
       - name: Upload research report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: speed-bitunix-research
-          path: speed-bitunix-report.log
+          path: |
+            speed-bitunix-report.log
+            speed-strategy-comparison.csv
+            speed-strategy-comparison.json
           if-no-files-found: ignore
 
   prospective-observation:
