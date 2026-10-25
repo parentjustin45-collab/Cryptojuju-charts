@@ -20,7 +20,7 @@ import {summarizeExitHoldout} from './speed-exit-holdout.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
 const days=Number(process.env.SPEED_HISTORY_DAYS ?? 60), minBars=22;
-if(!Number.isSafeInteger(days)||days<1||days>90)throw Error('SPEED_HISTORY_DAYS must be an integer from 1 to 90');
+if(!Number.isSafeInteger(days)||days<1||days>365)throw Error('SPEED_HISTORY_DAYS must be an integer from 1 to 365');
 const fetchPage=makeCryptoJujuFetchPage();
 async function run(symbol,interval){
  const intervalMs=periods[interval],endTime=Math.floor(Date.now()/intervalMs)*intervalMs,startTime=endTime-days*86400000;
