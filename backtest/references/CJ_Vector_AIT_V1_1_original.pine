@@ -1,0 +1,206 @@
+//@version=6
+indicator("CryptoJuju Vector Always In Trade V1.1", shorttitle="CJ Vector AIT V1.1", overlay=true, max_labels_count=500)
+
+// ============================================================
+// 01 — PARAMETRES VECTOR
+// ============================================================
+
+int volumeLength = input.int(20, "Moyenne du volume", minval=2, group="01 - Detection Vector")
+int spreadLength = input.int(20, "Moyenne Volume x Amplitude", minval=2, group="01 - Detection Vector")
+int atrLength = input.int(14, "Periode ATR", minval=2, group="01 - Detection Vector")
+
+float volumeMultiplier = input.float(1.50, "Multiplicateur volume", minval=0.50, step=0.05, group="01 - Detection Vector")
+float spreadMultiplier = input.float(1.50, "Multiplicateur Volume x Amplitude", minval=0.50, step=0.05, group="01 - Detection Vector")
+float atrMultiplier = input.float(0.80, "Amplitude minimale x ATR", minval=0.10, step=0.05, group="01 - Detection Vector")
+
+float minimumBodyRatio = input.float(0.60, "Corps minimal", minval=0.10, maxval=1.00, step=0.05, group="01 - Detection Vector")
+float minimumCloseStrength = input.float(0.70, "Force minimale de cloture", minval=0.50, maxval=1.00, step=0.05, group="01 - Detection Vector")
+
+int minimumConfirmations = input.int(4, "Confirmations minimales", minval=2, maxval=5, group="01 - Detection Vector")
+
+// ============================================================
+// 02 — PARAMETRES DES SIGNAUX
+// ============================================================
+
+bool confirmAtClose = input.bool(true, "Confirmer a la fermeture", group="02 - Signaux")
+bool showEntryLabels = input.bool(true, "Afficher LONG et SHORT", group="02 - Signaux")
+bool showExitLabels = input.bool(true, "Afficher les sorties", group="02 - Signaux")
+bool showPerformance = input.bool(true, "Afficher rendement du trade", group="02 - Signaux")
+
+// ============================================================
+// 03 — AFFICHAGE
+// ============================================================
+
+bool colorVectorCandles = input.bool(true, "Colorer les chandelles Vector", group="03 - Affichage")
+bool showVectorDots = input.bool(false, "Afficher les points Vector", group="03 - Affichage")
+
+color bullColor = input.color(color.rgb(0, 230, 100), "Couleur haussiere", group="03 - Affichage")
+color bearColor = input.color(color.rgb(255, 45, 45), "Couleur baissiere", group="03 - Affichage")
+color exitColor = input.color(color.rgb(255, 220, 40), "Couleur des sorties", group="03 - Affichage")
+
+// ============================================================
+// 04 — CALCULS DE BASE
+// ============================================================
+
+float candleRange = math.max(high - low, syminfo.mintick)
+float candleBody = math.abs(close - open)
+float bodyRatio = candleBody / candleRange
+
+float atrValue = ta.atr(atrLength)
+
+float safeVolume = nz(volume, 0.0)
+float averageVolume = ta.sma(safeVolume, volumeLength)
+
+float volumeSpread = safeVolume * candleRange
+float averageVolumeSpread = ta.sma(volumeSpread, spreadLength)
+
+float relativeVolume = 0.0
+if averageVolume > 0
+    relativeVolume := safeVolume / averageVolume
+
+float relativeSpread = 0.0
+if averageVolumeSpread > 0
+    relativeSpread := volumeSpread / averageVolumeSpread
+
+float bullishCloseStrength = (close - low) / candleRange
+float bearishCloseStrength = (high - close) / candleRange
+
+// ============================================================
+// 05 — CRITERES VECTOR
+// ============================================================
+
+bool highRelativeVolume = relativeVolume >= volumeMultiplier
+bool highVolumeSpread = relativeSpread >= spreadMultiplier
+bool strongBody = bodyRatio >= minimumBodyRatio
+bool expandedRange = candleRange >= atrValue * atrMultiplier
+bool strongBullClose = bullishCloseStrength >= minimumCloseStrength
+bool strongBearClose = bearishCloseStrength >= minimumCloseStrength
+
+int bullishScore = 0
+int bearishScore = 0
+
+bullishScore += highRelativeVolume ? 1 : 0
+bullishScore += highVolumeSpread ? 1 : 0
+bullishScore += strongBody ? 1 : 0
+bullishScore += expandedRange ? 1 : 0
+bullishScore += strongBullClose ? 1 : 0
+
+bearishScore += highRelativeVolume ? 1 : 0
+bearishScore += highVolumeSpread ? 1 : 0
+bearishScore += strongBody ? 1 : 0
+bearishScore += expandedRange ? 1 : 0
+bearishScore += strongBearClose ? 1 : 0
+
+bool candleConfirmed = not confirmAtClose or barstate.isconfirmed
+
+bool bullishVector = candleConfirmed and close > open and bullishScore >= minimumConfirmations
+bool bearishVector = candleConfirmed and close < open and bearishScore >= minimumConfirmations
+
+// ============================================================
+// 06 — GESTION ALWAYS IN TRADE
+// ============================================================
+
+// 1 = LONG
+// -1 = SHORT
+// 0 = aucune position
+
+var int tradeDirection = 0
+var float entryPrice = na
+
+bool longSignal = false
+bool shortSignal = false
+bool exitLongSignal = false
+bool exitShortSignal = false
+
+float closedTradeReturn = na
+
+// Premiere position
+if tradeDirection == 0
+    if bullishVector
+        tradeDirection := 1
+        entryPrice := close
+        longSignal := true
+    else if bearishVector
+        tradeDirection := -1
+        entryPrice := close
+        shortSignal := true
+
+// Inversion SHORT vers LONG
+else if tradeDirection == -1 and bullishVector
+    if not na(entryPrice) and entryPrice > 0
+        closedTradeReturn := ((entryPrice - close) / entryPrice) * 100.0
+
+    exitShortSignal := true
+    longSignal := true
+    tradeDirection := 1
+    entryPrice := close
+
+// Inversion LONG vers SHORT
+else if tradeDirection == 1 and bearishVector
+    if not na(entryPrice) and entryPrice > 0
+        closedTradeReturn := ((close - entryPrice) / entryPrice) * 100.0
+
+    exitLongSignal := true
+    shortSignal := true
+    tradeDirection := -1
+    entryPrice := close
+
+// ============================================================
+// 07 — COULEUR DES CHANDELLES
+// ============================================================
+
+color currentBarColor = na
+
+if bullishVector
+    currentBarColor := bullColor
+else if bearishVector
+    currentBarColor := bearColor
+
+barcolor(colorVectorCandles ? currentBarColor : na)
+
+// ============================================================
+// 08 — POINTS VECTOR
+// ============================================================
+
+plotshape(showVectorDots and bullishVector, title="Vector haussier", style=shape.circle, location=location.belowbar, color=bullColor, size=size.tiny)
+plotshape(showVectorDots and bearishVector, title="Vector baissier", style=shape.circle, location=location.abovebar, color=bearColor, size=size.tiny)
+
+// ============================================================
+// 09 — ETIQUETTES
+// ============================================================
+
+float labelOffset = atrValue * 0.25
+
+if exitShortSignal and showExitLabels
+    label.new(bar_index, low - labelOffset, "EXIT SHORT", style=label.style_label_up, color=exitColor, textcolor=color.black, size=size.small)
+
+if longSignal and showEntryLabels
+    label.new(bar_index, low - labelOffset * 2.25, "LONG", style=label.style_label_up, color=bullColor, textcolor=color.black, size=size.small)
+
+if exitLongSignal and showExitLabels
+    label.new(bar_index, high + labelOffset, "EXIT LONG", style=label.style_label_down, color=exitColor, textcolor=color.black, size=size.small)
+
+if shortSignal and showEntryLabels
+    label.new(bar_index, high + labelOffset * 2.25, "SHORT", style=label.style_label_down, color=bearColor, textcolor=color.white, size=size.small)
+
+// ============================================================
+// 10 — RENDEMENT DU TRADE FERME
+// ============================================================
+
+if showPerformance and not na(closedTradeReturn)
+    string returnText = str.tostring(closedTradeReturn, "#.##") + "%"
+
+    if exitLongSignal
+        label.new(bar_index, high + labelOffset * 3.75, returnText, style=label.style_label_down, color=closedTradeReturn >= 0 ? bullColor : bearColor, textcolor=color.white, size=size.small)
+
+    if exitShortSignal
+        label.new(bar_index, low - labelOffset * 3.75, returnText, style=label.style_label_up, color=closedTradeReturn >= 0 ? bullColor : bearColor, textcolor=color.white, size=size.small)
+
+// ============================================================
+// 11 — ALERTES
+// ============================================================
+
+alertcondition(longSignal, title="CJ Vector LONG", message="Nouveau signal LONG confirme")
+alertcondition(shortSignal, title="CJ Vector SHORT", message="Nouveau signal SHORT confirme")
+alertcondition(exitLongSignal, title="CJ Vector EXIT LONG", message="EXIT LONG et inversion SHORT")
+alertcondition(exitShortSignal, title="CJ Vector EXIT SHORT", message="EXIT SHORT et inversion LONG")

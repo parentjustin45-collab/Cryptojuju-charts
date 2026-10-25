@@ -1,0 +1,24 @@
+name: Vector V1.1 supplied Pine semantics audit (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-pine-v11-audit.yml'
+      - 'backtest/vector-pine-v11-parity.test.mjs'
+      - 'backtest/references/CJ_Vector_AIT_V1_1_original.pine'
+      - 'backtest/vector-ait-v1.mjs'
+  workflow_dispatch:
+jobs:
+  pine-reference-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare original Pine V1.1 rules against independent closed-bar JS translation
+        run: node --test backtest/vector-pine-v11-parity.test.mjs backtest/vector-ait-v1.test.mjs backtest/vector-frontend-parity.test.mjs
