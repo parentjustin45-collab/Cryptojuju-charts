@@ -36,7 +36,11 @@ test('Reference V1.1 and V1.2 and EMA50 are independently observable after warmu
  assert.equal(r.status,'INSUFFICIENT_TRADES');
 });
 test('Bearish EMA filter can reject short signal during bullish trend without changing V1.1/V1.2 signals',()=>{
- const r=evaluate(candles(125,{up:true}));
+ const b=candles(125,{up:true});
+ // Follow-through is deliberately bearish while the 50-bar EMA trend is still bullish.
+ b[66]={...b[66],open:b[65].close+.45,high:b[65].close+.6,
+  low:b[65].low-.3,close:b[65].low-.15};
+ const r=evaluate(b);
  assert.ok(r.byMode.baseline_v11.zero.trades>=1);
  assert.ok(r.byMode.break_extreme_2.zero.trades>=1);
  assert.equal(r.byMode.v13_ema50_slope.zero.trades,0);
