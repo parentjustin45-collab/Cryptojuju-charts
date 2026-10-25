@@ -9,6 +9,8 @@ on:
       - 'backtest/speed-ema-strategy-comparison.test.mjs'
       - 'backtest/speed-ema-holdout.mjs'
       - 'backtest/speed-ema-holdout.test.mjs'
+      - 'backtest/speed-ema-risk-holdout.mjs'
+      - 'backtest/speed-ema-risk-holdout.test.mjs'
       - 'backtest/speed-bitunix-live.mjs'
   workflow_dispatch:
 jobs:
@@ -24,7 +26,7 @@ jobs:
         with:
           node-version: '22'
       - name: Validate EMA research tests
-        run: node --test backtest/speed-ema-filter.test.mjs backtest/speed-ema-interactions.test.mjs backtest/speed-ema-strategy-comparison.test.mjs backtest/speed-ema-holdout.test.mjs
+        run: node --test backtest/speed-ema-filter.test.mjs backtest/speed-ema-interactions.test.mjs backtest/speed-ema-strategy-comparison.test.mjs backtest/speed-ema-holdout.test.mjs backtest/speed-ema-risk-holdout.test.mjs
       - name: Run 365-day Bitunix SPEED research
         env:
           SPEED_HISTORY_DAYS: '365'
