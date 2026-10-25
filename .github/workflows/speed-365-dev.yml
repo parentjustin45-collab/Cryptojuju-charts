@@ -4,6 +4,8 @@ on:
     branches: [dev/v1.26.0]
     paths:
       - '.github/workflows/speed-365-dev.yml'
+      - 'backtest/speed-ema-filter.mjs'
+      - 'backtest/speed-bitunix-live.mjs'
   workflow_dispatch:
 jobs:
   research-365-days:
@@ -17,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate EMA research tests
+        run: node --test backtest/speed-ema-filter.test.mjs
       - name: Run 365-day Bitunix SPEED research
         env:
           SPEED_HISTORY_DAYS: '365'
