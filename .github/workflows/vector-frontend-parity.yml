@@ -1,0 +1,23 @@
+name: Vector frontend/backtest exact V1.1 parity audit (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-frontend-parity.yml'
+      - 'backtest/vector-frontend-parity.test.mjs'
+      - 'backtest/vector-ait-v1.mjs'
+      - 'index.html'
+  workflow_dispatch:
+jobs:
+  frontend-parity:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare actual frontend function to backtest source
+        run: node --test backtest/vector-frontend-parity.test.mjs backtest/vector-ait-v1.test.mjs
