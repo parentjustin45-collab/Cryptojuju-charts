@@ -1,0 +1,32 @@
+name: Vector V1.2 prospective BTC 1H SHORT (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-prospective-v12.yml'
+      - 'backtest/vector-prospective-v12.mjs'
+      - 'backtest/vector-prospective-v12.test.mjs'
+  workflow_dispatch:
+jobs:
+  prospective-vector:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify deterministic causal rules
+        run: node --test backtest/vector-prospective-v12.test.mjs backtest/vector-antiwhipsaw-v12.test.mjs
+      - name: Record forward research (no trading orders)
+        run: node backtest/vector-prospective-v12.mjs > vector-prospective-v12.json
+      - name: Upload immutable run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-prospective-btc-1h-short
+          path: vector-prospective-v12.json
+          if-no-files-found: warn
