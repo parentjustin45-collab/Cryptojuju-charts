@@ -1,0 +1,26 @@
+name: SPEED prospective locked observation
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 1 * * *'
+jobs:
+  prospective:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run pre-registered prospective observation
+        run: node backtest/speed-prospective.mjs > speed-prospective.json
+      - name: Publish read-only report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-prospective-observation
+          path: speed-prospective.json
+          if-no-files-found: error
