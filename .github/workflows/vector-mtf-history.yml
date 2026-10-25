@@ -1,0 +1,32 @@
+name: Vector 1D-4H-1H historical context audit (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-mtf-history.yml'
+      - 'backtest/vector-mtf-history.mjs'
+      - 'backtest/vector-mtf-history.test.mjs'
+  workflow_dispatch:
+jobs:
+  historical-mtf:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify closed higher timeframe and historical cohort guards
+        run: node --test backtest/vector-mtf-history.test.mjs backtest/vector-prospective-v12.test.mjs
+      - name: Run read-only Bitunix 365-day BTC MTF comparison
+        run: node backtest/vector-mtf-history.mjs > vector-mtf-history.json
+      - name: Upload historical research report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-mtf-history-365-days
+          path: vector-mtf-history.json
+          if-no-files-found: warn
