@@ -17,6 +17,7 @@ import {simulateSpeedMidRisk} from './speed-mid-risk.mjs';
 import {backtestSpeedOppositeHigh} from './speed-opposite-high.mjs';
 import {compareSpeedExits} from './speed-exit-comparison.mjs';
 import {summarizeExitHoldout} from './speed-exit-holdout.mjs';
+import {compareSpeedEmaFilter} from './speed-ema-filter.mjs';
 const periods={ '15m':900000,'30m':1800000,'1h':3600000,'4h':14400000 };
 const symbols=['BTCUSDT','ETHUSDT','SOLUSDT'];
 const days=Number(process.env.SPEED_HISTORY_DAYS ?? 60), minBars=22;
@@ -117,6 +118,12 @@ async function run(symbol,interval){
    oppositeHighSimulation[key].push({startTime:w.startTime,endTime:w.endTime,bars:w.bars,returnPercent:Number(r.returnPercent.toFixed(4)),tradeCount:r.tradeCount,winRatePercent:r.winRatePercent,maxDrawdownPercent:Number(r.maxDrawdownPercent.toFixed(4)),exitReasons:Object.fromEntries(['opposite_high','stop','stop_gap','max_bars','end_of_data'].map(k=>[k,r.trades.filter(t=>t.reason===k).length]))});
   }
  }
+ const emaTrendComparison=[];
+ for(const w of plan.eligibleWindows){
+  if(w.candles.length<22)continue;
+  const comparison=compareSpeedEmaFilter(w.candles);
+  emaTrendComparison.push({startTime:w.startTime,endTime:w.endTime,bars:w.bars,counts:comparison.counts,strategies:Object.fromEntries(Object.entries(comparison.results).map(([key,result])=>[key,{trades:result.tradeCount,winRatePct:result.winRate,returnPct:result.returnPct,maxDrawdownPct:result.maxDrawdownPct}]))});
+ }
  const exitComparison={};
  for(const w of plan.eligibleWindows)for(const entry of ['mid','high'])for(const side of ['long','short','both'])for(const mode of ['fixed','opposite','hybrid']){
   const key=entry+'_'+side+'_'+mode;
@@ -157,7 +164,7 @@ async function run(symbol,interval){
   metrics.winRatePct=metrics.events?Number((100*metrics.wins/metrics.events).toFixed(2)):null;
   metrics.meanSignedPct=metrics.events?Number((metrics.sumSignedPct/metrics.events).toFixed(4)):null;
  }
- return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,coveragePct:Number((100*(1-plan.excludedBars/((endTime-startTime)/intervalMs))).toFixed(2)),excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,periodStability:stability,featureMatched,highMatched,confirmations,confirmationEntryComparison,riskSimulation,oppositeHighSimulation,exitComparison,exitHoldout,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
+ return {symbol,interval,periodDays:days,status:plan.status,expectedBars:(endTime-startTime)/intervalMs,receivedRows:rows.length,coveragePct:Number((100*(1-plan.excludedBars/((endTime-startTime)/intervalMs))).toFixed(2)),excludedBars:plan.excludedBars,cleanWindows:plan.eligibleWindows.length,emaTrendComparison,counts,forwardStudy:forward,structureReversals:structure,matchedBaseline:baseline,periodStability:stability,featureMatched,highMatched,confirmations,confirmationEntryComparison,riskSimulation,oppositeHighSimulation,exitComparison,exitHoldout,scenarios:summary,warning:'Experimental. Each color is tested as an independent position strategy (not a direct event success metric). Segment capital resets to $100. netPnl is a sum of independent segment PnL, not a compounded return. No cross-gap trades; missing/invalid bars quarantined.'};
 }
 const output=[];
 for(const symbol of symbols)for(const interval of Object.keys(periods)){
