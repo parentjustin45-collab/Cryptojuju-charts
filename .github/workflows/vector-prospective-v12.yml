@@ -6,6 +6,8 @@ on:
       - '.github/workflows/vector-prospective-v12.yml'
       - 'backtest/vector-prospective-v12.mjs'
       - 'backtest/vector-prospective-v12.test.mjs'
+      - 'backtest/vector-mtf-forward-summary.mjs'
+      - 'backtest/vector-mtf-forward-summary.test.mjs'
   workflow_dispatch:
 jobs:
   prospective-vector:
@@ -19,14 +21,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify deterministic causal rules
-        run: node --test backtest/vector-prospective-v12.test.mjs backtest/vector-antiwhipsaw-v12.test.mjs
-      - name: Record forward research (no trading orders)
+      - name: Verify original prospective and independently locked MTF cohorts
+        run: node --test backtest/vector-prospective-v12.test.mjs backtest/vector-antiwhipsaw-v12.test.mjs backtest/vector-mtf-forward-summary.test.mjs
+      - name: Record original prospective experiment without orders
         run: node backtest/vector-prospective-v12.mjs > vector-prospective-v12.json
-      - name: Upload immutable run artifact
+      - name: Summarize prospective 4H / 1D cohorts without re-simulation
+        run: node backtest/vector-mtf-forward-summary.mjs vector-prospective-v12.json > vector-mtf-forward-summary.json
+      - name: Upload immutable per-run read-only reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: vector-prospective-btc-1h-short
-          path: vector-prospective-v12.json
+          path: |
+            vector-prospective-v12.json
+            vector-mtf-forward-summary.json
           if-no-files-found: warn
