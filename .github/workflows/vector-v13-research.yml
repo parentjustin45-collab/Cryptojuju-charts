@@ -1,0 +1,47 @@
+name: Vector V1.3 EMA regime 365d research (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-v13-research.yml'
+      - 'backtest/vector-v13-regime.mjs'
+      - 'backtest/vector-v13-regime.test.mjs'
+      - 'backtest/vector-v13-365-study.mjs'
+      - 'backtest/vector-v13-365-study.test.mjs'
+  workflow_dispatch:
+jobs:
+  v13-research:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert original signals, EMA causality, 4H no-lookahead and risk rules
+        run: node --test backtest/vector-v13-regime.test.mjs backtest/vector-v13-365-study.test.mjs
+      - name: Run 365d Bitunix BTC ETH SOL Vector V1.3 research
+        run: node backtest/vector-v13-365-study.mjs > vector-v13-365.json
+      - name: Export review-friendly summary
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-v13-365.json","utf8"));
+          fs.writeFileSync("vector-v13-summary.json",JSON.stringify(r.summary,null,2));
+          const keys=["symbol","timeframe","side","mode","earlierTrades","earlierMeanNetPct","laterTrades","laterWinRatePct","laterMeanNetPct","harshLaterMeanNetPct","earlierSampleSufficient","laterSampleSufficient","status"];
+          const csv=[keys.join(","),...r.summary.map(row=>keys.map(key=>row[key]??"").join(","))].join("\n")+"\n";
+          fs.writeFileSync("vector-v13-summary.csv",csv);
+          '
+      - name: Upload full read-only historical audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-v13-365day-regime-research
+          path: |
+            vector-v13-365.json
+            vector-v13-summary.json
+            vector-v13-summary.csv
+          if-no-files-found: warn
