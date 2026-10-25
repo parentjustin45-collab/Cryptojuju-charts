@@ -46,12 +46,16 @@ test('Strict bearish EMA stack allows a confirmed SHORT but no premature output'
  assert.equal(z.features[66].regime,'bear_stack');
 });
 test('A bullish trend never passes as confirmed bearish signal, symmetric long passes',()=>{
- const b=candles(110,false),rawShort=fakeRaw(b,'short');
+ const b=candles(110,false);
+ // Force a causal one-bar downside break while the 50-bar trend remains bullish.
+ b[66]={...b[66],open:b[66].close+.2,high:b[66].close+.4,
+  low:b[65].low-.2,close:b[65].low-.1};
+ const rawShort=fakeRaw(b,'short');
  const denied=applyVectorV13(b,{mode:'v13_ema_stack',rawVector:rawShort});
  assert.equal(denied.audit.accepted,0);
  assert.equal(denied.audit.rejected,1);
- const rawLong=fakeRaw(b,'long');
- const long=applyVectorV13(b,{mode:'v13_ema_stack',rawVector:rawLong});
+ const bullish=candles(110,false),rawLong=fakeRaw(bullish,'long');
+ const long=applyVectorV13(bullish,{mode:'v13_ema_stack',rawVector:rawLong});
  assert.equal(long.events[66].signal,'long');
 });
 test('4H gate cannot use a future or absent 4H candle',()=>{
