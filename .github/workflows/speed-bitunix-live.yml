@@ -1,6 +1,16 @@
 name: SPEED Bitunix historical experiments
 on:
   workflow_dispatch:
+    inputs:
+      history_days:
+        description: 'Bitunix history window in days (1-365; start with 180)'
+        required: true
+        default: '180'
+        type: choice
+        options:
+          - '60'
+          - '180'
+          - '365'
   push:
     branches: [dev/v1.26.0]
     paths:
@@ -21,6 +31,8 @@ jobs:
         with:
           node-version: '22'
       - name: Run SPEED color scenarios against Bitunix history
+        env:
+          SPEED_HISTORY_DAYS: ${{ inputs.history_days || '60' }}
         run: |
           set -o pipefail
           node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
