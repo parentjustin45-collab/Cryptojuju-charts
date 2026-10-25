@@ -6,6 +6,8 @@ on:
     paths:
       - 'backtest/speed-bitunix-live.mjs'
       - '.github/workflows/speed-bitunix-live.yml'
+      - 'backtest/speed-prospective.mjs'
+      - '.github/workflows/speed-prospective.yml'
 jobs:
   speed-history:
     runs-on: ubuntu-latest
@@ -28,3 +30,26 @@ jobs:
           name: speed-bitunix-research
           path: speed-bitunix-report.log
           if-no-files-found: ignore
+
+  prospective-observation:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run locked prospective observation
+        run: |
+          set -o pipefail
+          node backtest/speed-prospective.mjs | tee speed-prospective.json
+      - name: Upload prospective report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-prospective-observation
+          path: speed-prospective.json
+          if-no-files-found: warn
