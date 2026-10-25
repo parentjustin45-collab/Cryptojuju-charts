@@ -1,0 +1,37 @@
+name: SPEED Bitunix 365-day research (dev)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/speed-365-dev.yml'
+  workflow_dispatch:
+jobs:
+  research-365-days:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run 365-day Bitunix SPEED research
+        env:
+          SPEED_HISTORY_DAYS: '365'
+        run: |
+          set -o pipefail
+          node backtest/speed-bitunix-live.mjs | tee speed-bitunix-report.log
+      - name: Export comparable strategy table
+        run: node backtest/speed-report-comparison.mjs speed-bitunix-report.log
+      - name: Upload 365-day results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speed-bitunix-365-day-research
+          path: |
+            speed-bitunix-report.log
+            speed-strategy-comparison.csv
+            speed-strategy-comparison.json
+          if-no-files-found: warn
