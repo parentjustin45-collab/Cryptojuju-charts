@@ -28,10 +28,7 @@ test('fixed stop has priority if both intrabar levels are touched',()=>{
  assert.equal(r.reason,'stop');assert.equal(r.exitIndex,1);assert.equal(r.exit,99);
 });
 test('gap beyond stop fills at open, not at unreachable stop level',()=>{
- const b=bars();b[1]={...b[1],open:97,high:100,low:96,close:98};
- const r=simulateVectorExitTrade(b,oppositeVector(),0,'long',config('fixed_1_2_12'),opts);
- // Stop computed from the actual entry open on bar 1; use a gap on later bar.
- assert.equal(r.reason,'timeout'===r.reason?'timeout':r.reason);
+ // Entry is at bar 1 open=100; a gap at bar 2 opens below the stop.
  const later=bars();later[2]={...later[2],open:95,high:96,low:94,close:95};
  const s=simulateVectorExitTrade(later,oppositeVector(),0,'long',config('fixed_1_2_12'),opts);
  assert.equal(s.reason,'stop');assert.equal(s.exitIndex,2);assert.equal(s.exit,95);
