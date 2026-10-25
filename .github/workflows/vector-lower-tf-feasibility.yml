@@ -1,0 +1,32 @@
+name: Vector lower-timeframe feasibility 15m 30m (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-lower-tf-feasibility.yml'
+      - 'backtest/vector-lower-tf-diagnostic.mjs'
+      - 'backtest/vector-lower-tf-diagnostic.test.mjs'
+  workflow_dispatch:
+jobs:
+  lower-tf:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify lower timeframe close causality and signal diagnostics
+        run: node --test backtest/vector-lower-tf-diagnostic.test.mjs
+      - name: Read 45 days Bitunix candles without trading orders
+        run: node backtest/vector-lower-tf-diagnostic.mjs > vector-lower-tf-diagnostic.json
+      - name: Upload feasibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-lower-tf-btc-45day
+          path: vector-lower-tf-diagnostic.json
+          if-no-files-found: warn
