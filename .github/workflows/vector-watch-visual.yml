@@ -1,0 +1,37 @@
+name: Vector WATCH desktop and Android Chromium visual smoke (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - index.html
+      - backtest/vector-watch-browser.mjs
+      - backtest/vector-watch-visual-smoke.mjs
+      - .github/workflows/vector-watch-visual.yml
+  workflow_dispatch:
+jobs:
+  visual-smoke:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser test dependencies
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium browser and runtime dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Verify real web app in desktop 1440 and mobile Android 390
+        run: node backtest/vector-watch-visual-smoke.mjs
+      - name: Preserve actual browser screenshots, even on failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-watch-visual-desktop-android-dev
+          path: |
+            watch-desktop.png
+            watch-android-390.png
+          if-no-files-found: warn
