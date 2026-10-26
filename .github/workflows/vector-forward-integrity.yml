@@ -1,0 +1,52 @@
+name: Vector forward paper independent report integrity (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-forward-integrity.yml'
+      - 'backtest/vector-forward-integrity.mjs'
+      - 'backtest/vector-forward-integrity.test.mjs'
+  workflow_dispatch:
+jobs:
+  paper-report-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate counters, frozen rules, P&L arithmetic and zero future leakage
+        run: node --test backtest/vector-forward-integrity.test.mjs
+      - name: Download report from the already locked GitHub Actions research run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40358145063
+          name: vector-forward-paper-v11-v14-bitunix
+          path: input
+          github-token: ${{ github.token }}
+      - name: Independently inspect the ACTUAL recorded Bitunix report
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          import {checkReport,asMarkdown} from "./backtest/vector-forward-integrity.mjs";
+          const report=JSON.parse(fs.readFileSync("input/vector-forward-paper.json","utf8"));
+          const result=checkReport(report);
+          fs.writeFileSync("vector-forward-integrity-result.json",JSON.stringify(result,null,2));
+          fs.writeFileSync("vector-forward-integrity-report.md",asMarkdown(result));
+          if(result.status==="BLOCKED"){console.error(result.errors.join("\n"));process.exitCode=1}
+          else console.log(asMarkdown(result));
+          '
+      - name: Archive readable report; never deploy or modify any research files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-forward-independent-quality-review
+          path: |
+            vector-forward-integrity-result.json
+            vector-forward-integrity-report.md
+          if-no-files-found: warn
