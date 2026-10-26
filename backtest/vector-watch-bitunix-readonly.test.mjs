@@ -22,7 +22,12 @@ test('Reject tampered OHLC, duplicate and disconnected last 55 bars',()=>{
  const duplicate=[...source,source[5]];
  assert.throws(()=>assessBitunixPage(duplicate,now),/duplicate/);
  const corrupted=page();corrupted[20].high=90;
- assert.throws(()=>assessBitunixPage(corrupted,now),/corrupt/);
+ const quarantined=assessBitunixPage(corrupted,now);
+ assert.equal(quarantined.excludedInvalidCount,1);
+ assert.equal(quarantined.continuousClosed,59);
+ assert.equal(quarantined.ohlc.every(x=>x.time!==corrupted[20].time/1000),true);
+ const recentCorrupt=page();recentCorrupt[70].high=90;
+ assert.throws(()=>assessBitunixPage(recentCorrupt,now),/last continuous/);
  const gap=page();gap[35].time+=H; // duplicate 36, effectively a gap
  assert.throws(()=>assessBitunixPage(gap,now),/duplicate/);
  const remote=page();remote.splice(60,1); // one missing hour in the last segment
