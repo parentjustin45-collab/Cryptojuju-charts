@@ -1,0 +1,27 @@
+name: Vector WATCH badge browser integration (development only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - index.html
+      - backtest/vector-watch-browser.mjs
+      - backtest/vector-watch-browser.test.mjs
+      - backtest/vector-watch-shadow.mjs
+      - .github/workflows/vector-watch-browser.yml
+  workflow_dispatch:
+jobs:
+  watch-ui:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test WATCH active/closed candles, state isolation and UI syntax
+        run: node --test backtest/vector-watch-browser.test.mjs
+      - name: Verify original Vector parity and new browser WATCH all pass
+        run: node --test backtest/vector-v14-hysteresis.test.mjs backtest/vector-watch-shadow.test.mjs backtest/vector-watch-browser.test.mjs
