@@ -1,0 +1,55 @@
+name: Vector WATCH REAL Bitunix snapshot plus Android preview (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - backtest/vector-watch-bitunix-readonly.mjs
+      - backtest/vector-watch-bitunix-readonly.test.mjs
+      - backtest/vector-watch-bitunix-browser-smoke.mjs
+      - backtest/vector-watch-browser.mjs
+      - index.html
+      - .github/workflows/vector-watch-real-bitunix.yml
+  workflow_dispatch:
+jobs:
+  real-bitunix-watch:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test no-orders, data freshness and strict Bitunix-only OHLC
+        run: node --test backtest/vector-watch-bitunix-readonly.test.mjs backtest/vector-watch-browser.test.mjs
+      - name: Capture current read-only BTC ETH SOL 1h Bitunix OHLC
+        run: node backtest/vector-watch-bitunix-readonly.mjs > vector-watch-bitunix-snapshot.json
+      - name: Prepare isolated Chromium browser and candlestick renderer
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Verify BTC ETH SOL real Bitunix prices and badge on desktop / Android
+        run: node backtest/vector-watch-bitunix-browser-smoke.mjs
+      - name: Package an independent, read-only staging bundle (not deployed)
+        run: |
+          mkdir -p staging-watch/backtest
+          cp index.html staging-watch/index.html
+          cp backtest/vector-watch-browser.mjs staging-watch/backtest/
+          cp backtest/vector-watch-shadow.mjs staging-watch/backtest/
+          cp backtest/vector-v14-hysteresis.mjs staging-watch/backtest/
+          cp backtest/vector-ait-v1.mjs staging-watch/backtest/
+          cp backtest/VECTOR_WATCH_STAGING_README.md staging-watch/README.md
+          zip -qr vector-watch-staging-v1.26.0.zip staging-watch
+      - name: Preserve fresh Bitunix verification evidence even on failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-watch-real-bitunix-readonly-staging
+          path: |
+            vector-watch-bitunix-snapshot.json
+            watch-bitunix-desktop.png
+            watch-bitunix-android-390.png
+            vector-watch-staging-v1.26.0.zip
+          if-no-files-found: warn
