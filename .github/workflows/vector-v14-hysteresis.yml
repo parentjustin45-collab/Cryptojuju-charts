@@ -1,0 +1,46 @@
+name: Vector V1.4 structural holding and early reversal research (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-v14-hysteresis.yml'
+      - 'backtest/vector-v14-hysteresis.mjs'
+      - 'backtest/vector-v14-hysteresis.test.mjs'
+      - 'backtest/vector-v14-history.mjs'
+      - 'backtest/vector-v14-history.test.mjs'
+  workflow_dispatch:
+jobs:
+  vector-v14:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate causal structure, protective costs, split censoring, no gaps
+        run: node --test backtest/vector-v14-hysteresis.test.mjs backtest/vector-v14-history.test.mjs
+      - name: Read 180d Bitunix BTC ETH SOL 1h and calculate 4 independent research arms
+        run: node backtest/vector-v14-history.mjs > vector-v14-history.json
+      - name: Export compact cross-market comparisons
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const x=JSON.parse(fs.readFileSync("vector-v14-history.json","utf8"));
+          fs.writeFileSync("vector-v14-summary.json",JSON.stringify(x.summary,null,2));
+          const keys=["symbol","mode","side","fixedEarlierTrades","fixedEarlierNetPct","fixedLaterTrades","fixedLaterNetPct","fixedLaterWinPct","fixedLaterHarshNetPct","fixedEarlierSufficient","fixedLaterSufficient","holdingEarlierEpisodes","holdingEarlierNetPct","holdingLaterEpisodes","holdingLaterNetPct","holdingLaterWorstAdversePct"];
+          fs.writeFileSync("vector-v14-summary.csv",[keys.join(","),...x.summary.map(r=>keys.map(k=>r[k]??"").join(","))].join("\n")+"\n");
+          '
+      - name: Preserve read-only audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-v14-structure-180day-exploratory
+          path: |
+            vector-v14-history.json
+            vector-v14-summary.json
+            vector-v14-summary.csv
+          if-no-files-found: warn
