@@ -1,0 +1,46 @@
+name: Vector V1.5 missed good reversals / followthrough research (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-v15-opportunity.yml'
+      - 'backtest/vector-v15-followthrough.mjs'
+      - 'backtest/vector-v15-followthrough.test.mjs'
+      - 'backtest/vector-v15-missed-reversal-study.mjs'
+      - 'backtest/vector-v15-missed-reversal-study.test.mjs'
+  workflow_dispatch:
+jobs:
+  v15-opportunity:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify no-lookahead, opposite-signal tests and missed-movement accounting
+        run: node --test backtest/vector-v15-followthrough.test.mjs backtest/vector-v15-missed-reversal-study.test.mjs
+      - name: Evaluate 180d Bitunix BTC ETH SOL 1h without orders
+        run: node backtest/vector-v15-missed-reversal-study.mjs > vector-v15-opportunity-180d.json
+      - name: Export CSV for cross-market comparison
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-v15-opportunity-180d.json","utf8"));
+          fs.writeFileSync("vector-v15-summary.json",JSON.stringify(r.summary,null,2));
+          const keys=["symbol","mode","side","earlierTrades","earlierMeanNetPct","laterTrades","laterMeanNetPct","laterWinRatePct","laterHarshNetPct","laterSufficient"];
+          fs.writeFileSync("vector-v15-summary.csv",[keys.join(","),...r.summary.map(row=>keys.map(k=>row[k]??"").join(","))].join("\n")+"\n");
+          '
+      - name: Preserve auditable report and October case log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-v15-btc-eth-sol-opportunity-180d
+          path: |
+            vector-v15-opportunity-180d.json
+            vector-v15-summary.json
+            vector-v15-summary.csv
+          if-no-files-found: warn
