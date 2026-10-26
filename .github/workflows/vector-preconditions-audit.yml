@@ -1,0 +1,73 @@
+name: Vector known-at-signal preconditions versus missed reversals (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-preconditions-audit.yml'
+      - 'backtest/vector-preconditions-audit.mjs'
+      - 'backtest/vector-preconditions-audit.test.mjs'
+  workflow_dispatch:
+jobs:
+  preconditions-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify closed-bar-only EMA, ATR, structure, prior-move and label isolation
+        run: node --test backtest/vector-preconditions-audit.test.mjs
+      - name: Audit frozen 90d Bitunix BTC ETH SOL rejected Vector signals
+        run: node backtest/vector-preconditions-audit.mjs > vector-preconditions-90d.json
+      - name: Export compact feature groups and signal-level evidence
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const report=JSON.parse(fs.readFileSync("vector-preconditions-90d.json","utf8"));
+          const group=[],signals=[];
+          for(const r of report.results){
+            if(r.status!=="STUDIED")continue;
+            for(const [mode,d] of Object.entries(r.audit.byMode)){
+              for(const [period,sideGroups] of Object.entries(d.groups))
+              for(const [side,labels] of Object.entries(sideGroups))
+              for(const [label,v] of Object.entries(labels)){
+                group.push({symbol:r.symbol,mode,period,side,label,
+                  count:v.count,medianSignedEma50SlopePct:v.signedEma50SlopePct.median,
+                  medianSignedDistanceEma50Atr:v.signedDistanceEma50Atr.median,
+                  medianSignedPrior3hPct:v.signedPrior3hPct.median,
+                  medianSignedPrior6hPct:v.signedPrior6hPct.median,
+                  medianAtrPct:v.atrPct.median,medianBodyAtr:v.bodyAtr.median,
+                  medianRelativeVolume20:v.relativeVolume20.median,
+                  medianEfficiency6:v.efficiency6.median,
+                  structureBreakCount:v.directionalStructure4.trueCount,
+                  strongVectorCount:v.currentCandleStrongVector.trueCount});
+              }
+              signals.push(...d.rows);
+            }
+          }
+          fs.writeFileSync("vector-preconditions-summary.json",JSON.stringify(group,null,2));
+          const columns=["symbol","mode","period","side","label","count",
+            "medianSignedEma50SlopePct","medianSignedDistanceEma50Atr",
+            "medianSignedPrior3hPct","medianSignedPrior6hPct","medianAtrPct",
+            "medianBodyAtr","medianRelativeVolume20","medianEfficiency6",
+            "structureBreakCount","strongVectorCount"];
+          const esc=x=>{const s=x==null?"":String(x);return /[,"\n]/.test(s)?"\""+s.replaceAll("\"","\"\"")+"\"":s;};
+          fs.writeFileSync("vector-preconditions-summary.csv",
+            [columns.join(","),...group.map(row=>columns.map(c=>esc(row[c])).join(","))].join("\n")+"\n");
+          fs.writeFileSync("vector-preconditions-rows.json",JSON.stringify(signals,null,2));
+          '
+      - name: Archive full auditable features with no production code changes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-closed-bar-preconditions-90d
+          path: |
+            vector-preconditions-90d.json
+            vector-preconditions-summary.json
+            vector-preconditions-summary.csv
+            vector-preconditions-rows.json
+          if-no-files-found: warn
