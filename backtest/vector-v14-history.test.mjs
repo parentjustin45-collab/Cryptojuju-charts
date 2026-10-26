@@ -69,6 +69,8 @@ test('Opposite flip-to-flip study never fakes a stop-loss or an exit before oppo
  const mode=r.byMode.baseline_v11;
  assert.equal(mode.holding.common.earlier.reasons.stop,0);
  assert.equal(mode.holding.common.earlier.reasons.take,0);
+ assert.equal(mode.holding.common.earlier.reasons.timeout,0);
+ assert.equal(mode.holding.common.earlier.reasons.opposite,mode.holding.common.earlier.trades);
  assert.ok(mode.holding.common.earlier.signals>=mode.holding.common.earlier.trades);
  assert.ok(mode.holding.common.later.censored>=0);
 });
