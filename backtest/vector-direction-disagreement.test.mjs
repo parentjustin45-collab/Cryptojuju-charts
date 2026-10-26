@@ -11,8 +11,8 @@ function sample(n=100,step=H){
 }
 function signalFixture(){
  const b=sample(110);
- b[20]={...b[20],open:100,high:100.2,low:98.7,close:99,volume:5000};
- b[25]={...b[25],open:99,high:100.3,low:98.8,close:100,volume:5000};
+ b[65]={...b[65],open:100,high:100.2,low:98.7,close:99,volume:5000};
+ b[70]={...b[70],open:99,high:100.3,low:98.8,close:100,volume:5000};
  return b;
 }
 test('Protocol is fixed, read-only, and includes SOL/BTC 1h plus BTC 4h',()=>{
@@ -23,9 +23,9 @@ test('Protocol is fixed, read-only, and includes SOL/BTC 1h plus BTC 4h',()=>{
 });
 test('The two directions can be OPPOSITE on exactly the same confirmed OHLC',()=>{
  const b=signalFixture(),raw=vectorAIT(b),v14=applyVectorV14(b,{rawVector:raw});
- assert.equal(raw[25].signal,'long');
- assert.equal(raw[25].direction,1);
- assert.equal(v14.events[25].direction,-1);
+ assert.equal(raw[70].signal,'long');
+ assert.equal(raw[70].direction,1);
+ assert.equal(v14.events[70].direction,-1);
  const report=compareDirectionWindow(b);
  assert.equal(report.current.v11,'LONG');
  assert.equal(report.current.v14,'SHORT');
@@ -37,7 +37,7 @@ test('Episode returns are hindsight from following OPEN, not same-bar closed sig
  const b=signalFixture(),x=compareDirectionWindow(b);
  const entry=x.episodes.find(e=>e.v11Side==='LONG'&&e.v14Side==='SHORT');
  const i=b.findIndex(c=>c.time===entry.startTime);
- assert.equal(entry.startTime,b[25].time);
+ assert.equal(entry.startTime,b[70].time);
  assert.equal(entry.futureGross.horizon3.v11.grossPct,
   Number((100*(b[i+3].close-b[i+1].open)/b[i+1].open).toFixed(5)));
  assert.equal(entry.futureGross.horizon3.v14.grossPct,
@@ -46,16 +46,16 @@ test('Episode returns are hindsight from following OPEN, not same-bar closed sig
 });
 test('A future manipulation never changes earlier direction or episode inception',()=>{
  const b=signalFixture(),a=compareDirectionWindow(b);
- const copy=b.map((v,i)=>i<78?{...v}:{...v,open:100,high:110,low:90,close:108,volume:200000});
+ const copy=b.map((v,i)=>i<95?{...v}:{...v,open:100,high:110,low:90,close:108,volume:200000});
  const changed=compareDirectionWindow(copy);
- const first=x=>x.episodes.filter(e=>e.startTime<60*H)
+ const first=x=>x.episodes.filter(e=>e.startTime<80*H)
   .map(e=>({start:e.startTime,v11:e.v11Side,v14:e.v14Side}));
  assert.deepEqual(first(a),first(changed));
- assert.equal(b[90].high,101);
+ assert.equal(b[105].high,101);
 });
 test('12-bar ex-post return cannot cross temporal partition or window end',()=>{
- const b=signalFixture(),r=compareDirectionWindow(b,{cutoffTime:30*H});
- const e=r.episodes.find(x=>x.startTime===25*H);
+ const b=signalFixture(),r=compareDirectionWindow(b,{cutoffTime:75*H});
+ const e=r.episodes.find(x=>x.startTime===70*H);
  assert.equal(e.futureGross.horizon12.v11,null);
  assert.equal(e.futureGross.horizon12.v14,null);
  const short=compareDirectionWindow(b.slice(0,60),{cutoffTime:Number.MAX_SAFE_INTEGER});
