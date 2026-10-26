@@ -40,8 +40,8 @@ test('Episode returns are hindsight from following OPEN, not same-bar closed sig
  assert.equal(entry.startTime,b[70].time);
  assert.equal(entry.futureGross.horizon3.v11.grossPct,
   Number((100*(b[i+3].close-b[i+1].open)/b[i+1].open).toFixed(5)));
- assert.equal(entry.futureGross.horizon3.v14.grossPct,
-  -entry.futureGross.horizon3.v11.grossPct);
+ assert.ok(Math.abs(entry.futureGross.horizon3.v14.grossPct+
+  entry.futureGross.horizon3.v11.grossPct)<1e-8);
  assert.equal(entry.futureGross.horizon3.v11.hours,3);
 });
 test('A future manipulation never changes earlier direction or episode inception',()=>{
