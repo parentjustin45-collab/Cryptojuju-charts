@@ -2,6 +2,16 @@
 
 **Tableau de bord autonome, en lecture seule**, développement sur \`dev/v1.26.0\`. Ce travail ne change **ni les moteurs de backtest verrouillés, ni \`main\`, ni Render, ni les flèches ou positions Bitunix**.
 
+## Tableau de bord sur Render TEST — sans import manuel
+
+Le site de test indépendant `https://cryptojuju-watch-v126-test.onrender.com/vector-dashboard.html` propose maintenant le bouton **Actualiser Bitunix**. Cette page **recalcule la simulation dans le navigateur**, en utilisant les chandelles publiques Bitunix via le même proxy CryptoJuju utilisé par les graphiques. Aucune clé API ni ordre réel. Le protocole de recherche verrouillé est transposé pour le navigateur et sa somme de contrôle Git est validée pendant la construction; les modifications ne changent pas les règles V1.1/V1.4.
+
+Lorsqu'elle reste ouverte et visible, la page tente une actualisation toutes les **15 minutes**. Si elle passe en arrière-plan ou si Android ferme l'onglet, les mises à jour sont suspendues; la réouverture relance un calcul. **Ce n'est pas un système autonome toutes les 15 minutes, ni une notification ChatGPT.** Les données Bitunix sont en 1H et peuvent ne pas changer entre deux rafraîchissements.
+
+L'option d'**import JSON GitHub** reste disponible et le **fichier HTML hors ligne** reste utilisable sans réseau, mais demande toujours un fichier manuel. La version Render est publiquement accessible : ne jamais publier de clés privées ni de données personnelles dans les résultats.
+
+L'accès Bitunix et son proxy restent dépendants du réseau, de CORS et du temps de réponse; si la lecture échoue, la page doit afficher l'erreur sans fabriquer de résultats. Le site principal `main` n'est pas concerné.
+
 ## Mode d'emploi sur Samsung ou ordinateur
 
 1. Dans GitHub Actions, ouvre un run réussi de **LOCKED Vector V1.1 vs V1.4 forward paper comparison**, puis télécharge l'artefact \`vector-forward-paper-v11-v14-bitunix\` pour obtenir \`vector-forward-paper.json\`.
