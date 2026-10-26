@@ -42,8 +42,8 @@ Les chiffres reposent sur des **mouvements bruts avec le bénéfice du recul**. 
 
 ### Études de cas Bitcoin autour du 11–12 octobre
 
-- **11 octobre 13:00 UTC**, WATCH SHORT, alors que la direction V1.4 est LONG; WATCH expirée, mouvement directionnel brut ultérieur 12 h **-0,238 %**. C'est un avertissement contre une entrée immédiate.
-- **12 octobre 09:00 UTC**, WATCH LONG, alors que la direction V1.4 est SHORT; annulée par une chandelle Vector contraire, et horizon de 12 h **censuré** à cause d'une fenêtre historique. Ne pas classer cette observation comme gagnante ou perdante.
+- **11 octobre 17:00 UTC**, WATCH SHORT, alors que la direction V1.4 est LONG; WATCH expirée, mouvement directionnel brut ultérieur 12 h **-0,238 %**. C'est un avertissement contre une entrée immédiate.
+- **12 octobre 13:00 UTC**, WATCH LONG, alors que la direction V1.4 est SHORT; annulée par une chandelle Vector contraire, et horizon de 12 h **censuré** à cause d'une fenêtre historique. Ne pas classer cette observation comme gagnante ou perdante.
 - Les heures sont tirées du journal OHLC Bitunix en UTC, **sans correspondance établie au crosshair des anciennes captures**.
 
 ## Conclusion / décision
