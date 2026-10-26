@@ -33,7 +33,7 @@ function quality(bars,step){
   b.high<Math.max(b.open,b.close)||b.low>Math.min(b.open,b.close)||
   b.low<=0||!Number.isFinite(b.volume)||b.volume<0))throw Error('Invalid or discontinuous closed OHLC');
 }
-const summaryTemplate=()=>({counterFlips:0,lateConfirmed:0,revertedV11:0,
+const summaryTemplate=()=>({counterFlips:0,alignedLater:0,sameSourceConfirmed:0,newSourceAligned:0,revertedV11:0,
   unresolvedBoundary:0,unresolvedGapOrEnd:0,simultaneousOrOther:0,
   pairedFillCount:0,lateEntryWorse:0,lateEntryBetter:0,flatEntry:0,
   delayBars:[],entryGapPct:[],shortLivedV11NetPct:[]});
@@ -66,7 +66,7 @@ export function compareCounterFlips(bars,v11,v14,{
    symbol,time:bars[i].time,side:sideText(dir),period,
    priorV14:sideText(ref.direction),v11EntryTime:null,
    v11EntryOpen:null,v14ConfirmationTime:null,v14EntryTime:null,
-   v14ConfirmationReason:null,delayBars:null,waitHours:null,
+   v14ConfirmationReason:null,v14SourceTime:null,sameSourceConfirmation:null,delayBars:null,waitHours:null,
    entryGapPct:null,v11ShortLivedNetPct:null,
    resolution:null,resolvedTime:null,
    observationsUsedAfterSignal:false};
@@ -83,7 +83,7 @@ export function compareCounterFlips(bars,v11,v14,{
    if(v14Caught&&!v11Still){
     resolution={kind:'simultaneous_or_ambiguous',j};break;
    }
-   if(v14Caught){resolution={kind:'v14_confirmed_later',j};break;}
+   if(v14Caught){resolution={kind:'v14_aligned_later',j};break;}
    if(!v11Still){resolution={kind:'v11_reverted_first',j};break;}
    if(v14[j].direction===0){resolution={kind:'simultaneous_or_ambiguous',j};break;}
   }
@@ -101,11 +101,15 @@ export function compareCounterFlips(bars,v11,v14,{
   }
   const common={...base,resolution:resolution.kind,resolvedTime:bars[j].time,
    delayBars:j-i,waitHours:(j-i)*stepMs/H,observationsUsedAfterSignal:true};
-  if(resolution.kind==='v14_confirmed_later'){
+  if(resolution.kind==='v14_aligned_later'){
    const lateOpen=Number(bars[after].open);
+   const from=Number.isInteger(v14[j].sourceIndex)?v14[j].sourceIndex:null;
+   const sameSource=from===i;
    events.push({...common,v14ConfirmationTime:bars[j].time,
     v14EntryTime:bars[after].time,
     v14ConfirmationReason:v14[j].why??null,
+    v14SourceTime:from!==null?bars[from]?.time??null:null,
+    sameSourceConfirmation:sameSource,
     entryGapPct:round(100*dir*(lateOpen-v11EntryOpen)/v11EntryOpen)});
   }else if(resolution.kind==='v11_reverted_first'){
    // Hypothetical TWO-SIDED fee and slippage on V1.1 flip-and-flip-back.
@@ -123,8 +127,10 @@ function aggregate(events){
   const matches=grouped[period+'|'+side]??[],b=summaryTemplate();
   for(const x of matches){
    b.counterFlips++;
-   if(x.resolution==='v14_confirmed_later'){
-    b.lateConfirmed++;
+   if(x.resolution==='v14_aligned_later'){
+    b.alignedLater++;
+    if(x.sameSourceConfirmation)b.sameSourceConfirmed++;
+    else b.newSourceAligned++;
     b.delayBars.push(x.delayBars);b.entryGapPct.push(x.entryGapPct);b.pairedFillCount++;
     b.lateEntryWorse+=Number(x.entryGapPct>0);
     b.lateEntryBetter+=Number(x.entryGapPct<0);
@@ -136,7 +142,8 @@ function aggregate(events){
    else b.simultaneousOrOther++;
   }
   buckets[period+'|'+side]={
-   counterFlips:b.counterFlips,lateConfirmed:b.lateConfirmed,
+   counterFlips:b.counterFlips,alignedLater:b.alignedLater,
+   sameSourceConfirmed:b.sameSourceConfirmed,newSourceAligned:b.newSourceAligned,
    revertedV11:b.revertedV11,unresolvedBoundary:b.unresolvedBoundary,
    unresolvedGapOrEnd:b.unresolvedGapOrEnd,simultaneousOrOther:b.simultaneousOrOther,
    pairedFillCount:b.pairedFillCount,lateEntryWorse:b.lateEntryWorse,
@@ -169,7 +176,7 @@ export function analyzeLatencyWindows(windows,{symbol='ETHUSDT',cutoffTime=cutof
  return {symbol,cleanWindows,blockedWindows,
   cohorts:aggregate(events),events,
   caveats:['90d already studied; not a new prospective holdout.',
-   'A late confirmation gap is a price difference only and does not prove a missed trade gain.',
+   'A later alignment gap is a price difference only. A later V1.4 flip can originate from a DIFFERENT candidate, and not confirm the initial V1.1 signal.',
    'V1.4 holds the old position; therefore skipped V1.1 flips are not "risk-free".',
    'Incomplete episodes and those crossing the split are censored, never winners.',
    'No optimization, no new strategy, no Bitunix orders.']};
