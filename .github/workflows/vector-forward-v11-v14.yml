@@ -1,0 +1,61 @@
+name: LOCKED Vector V1.1 vs V1.4 forward paper comparison (dev only)
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-forward-v11-v14.yml'
+      - 'backtest/vector-forward-v11-v14.mjs'
+      - 'backtest/vector-forward-v11-v14.test.mjs'
+jobs:
+  paper:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test causal fills, pre-start exclusion, pending positions, stop-first and fees
+        run: node --test backtest/vector-forward-v11-v14.test.mjs
+      - name: Gather Bitunix 1H public CLOSED OHLC for future-only paper evaluation
+        run: node backtest/vector-forward-v11-v14.mjs > vector-forward-paper.json
+      - name: Export human-readable evidence and per-trade CSV
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-forward-paper.json","utf8"));
+          const out=[],trades=[];
+          for(const x of r.results){
+            for(const [mode,row] of Object.entries(x.audit?.byMode??{}))
+              out.push({symbol:x.symbol,mode,status:x.status,asOfUtc:r.generatedAtUtc,...row});
+            trades.push(...(x.audit?.trades??[]));
+          }
+          fs.writeFileSync("vector-forward-summary.json",JSON.stringify(out,null,2));
+          fs.writeFileSync("vector-forward-trades.json",JSON.stringify(trades,null,2));
+          const quote=z=>{const a=z==null?"":String(z);return /[,"\n]/.test(a)?"\""+a.replaceAll("\"","\"\"")+"\"":a;};
+          const csv=(file,items,keys)=>fs.writeFileSync(file,
+            [keys.join(","),...items.map(x=>keys.map(k=>quote(x[k])).join(","))].join("\n")+"\n");
+          csv("vector-forward-trades.csv",trades,["symbol","mode","side",
+            "signalTime","originTime","entryTime","entryPrice","exitTime",
+            "status","reason","indicatorReason","grossPct","netPct"]);
+          csv("vector-forward-summary.csv",out,["symbol","mode","status",
+            "asOfUtc","signalCount","entries","closed","pending",
+            "censoredGap","winning","winRatePct","meanNetPct",
+            "medianNetPct","netPctSum","stop","take","timeout","sufficientSample"]);
+          '
+      - name: Preserve immutable prospective run and trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-forward-paper-v11-v14-bitunix
+          path: |
+            vector-forward-paper.json
+            vector-forward-summary.json
+            vector-forward-summary.csv
+            vector-forward-trades.json
+            vector-forward-trades.csv
+          if-no-files-found: warn
