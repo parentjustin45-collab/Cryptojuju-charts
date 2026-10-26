@@ -73,6 +73,22 @@ function render(){
   body.append(tr);
  }
 }
+/* Both the optional Bitunix connector and JSON-import path reuse the same
+ * strict report validator, so neither can manufacture a gain. */
+globalThis.CJForwardDashboard={
+ load(report,{origin='local'}={}){
+  const candidate=analyzeForwardReport(report);
+  model=candidate;
+  $('feedback').className='good';
+  $('feedback').textContent='Rapport vérifié : '+model.status+
+   ' · '+model.totals.closed+' transactions clôturées.';
+  $('meta').textContent='Observation UTC : '+model.asOf+
+   ' · Moteur : '+(origin==='bitunix'?'Bitunix public, calcul dans le navigateur':'rapport GitHub importé')+
+   ' · '+(model.commit?'Commit : '+model.commit:'Code de recherche verrouillé');
+  $('export').disabled=false;render();
+ },
+};
+
 async function importFile(file){
  if(!file)return;
  try{
