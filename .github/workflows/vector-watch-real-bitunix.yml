@@ -28,8 +28,8 @@ jobs:
         run: node backtest/vector-watch-bitunix-readonly.mjs > vector-watch-bitunix-snapshot.json
       - name: Prepare isolated Chromium browser and candlestick renderer
         run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
-      - name: Install Chromium dependencies
-        run: npx playwright install --with-deps chromium
+      - name: Install isolated headless Chromium (Ubuntu runner)
+        run: npx playwright install chromium --only-shell
       - name: Verify BTC ETH SOL real Bitunix prices and badge on desktop / Android
         run: node backtest/vector-watch-bitunix-browser-smoke.mjs
       - name: Package an independent, read-only staging bundle (not deployed)
