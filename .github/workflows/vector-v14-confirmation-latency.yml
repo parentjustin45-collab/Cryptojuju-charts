@@ -1,0 +1,69 @@
+name: Vector V1.4 delayed confirmation costs vs V1.1 — ETH focus (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-v14-confirmation-latency.yml'
+      - 'backtest/vector-v14-confirmation-latency.mjs'
+      - 'backtest/vector-v14-confirmation-latency.test.mjs'
+  workflow_dispatch:
+jobs:
+  latency-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify causal entry timing, two-sided fees, boundary censoring and no old-code mutation
+        run: node --test backtest/vector-v14-confirmation-latency.test.mjs
+      - name: Query 90d Bitunix ETH BTC SOL 1H for V1.4 confirmation-delay evidence
+        run: node backtest/vector-v14-confirmation-latency.mjs > vector-v14-latency-90d.json
+      - name: Export candidate-by-candidate ledger and period by direction summary
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-v14-latency-90d.json","utf8"));
+          const all=[],groups=[];
+          for(const market of r.results){
+            if(market.status!=="STUDIED")continue;
+            all.push(...market.audit.events);
+            for(const [key,g] of Object.entries(market.audit.cohorts)){
+              const [period,side]=key.split("|");
+              groups.push({symbol:market.symbol,period,side,...g});
+            }
+          }
+          fs.writeFileSync("vector-v14-latency-cohorts.json",JSON.stringify(groups,null,2));
+          fs.writeFileSync("vector-v14-latency-events.json",JSON.stringify(all,null,2));
+          const esc=v=>{const s=v==null?"":String(v);return /[,"\n]/.test(s)?"\""+s.replaceAll("\"","\"\"")+"\"":s;};
+          const csv=(rows,file,cols)=>fs.writeFileSync(file,
+            [cols.join(","),...rows.map(x=>cols.map(c=>esc(x[c])).join(","))].join("\n")+"\n");
+          csv(all,"vector-v14-latency-events.csv",[
+            "symbol","time","side","period","priorV14","resolution",
+            "v11EntryTime","v11EntryOpen","resolvedTime",
+            "v14ConfirmationTime","v14ConfirmationReason","v14EntryTime",
+            "delayBars","waitHours","entryGapPct","v11ShortLivedNetPct"]);
+          csv(groups,"vector-v14-latency-cohorts.csv",[
+            "symbol","period","side","counterFlips","lateConfirmed",
+            "revertedV11","unresolvedBoundary","unresolvedGapOrEnd",
+            "simultaneousOrOther","pairedFillCount",
+            "lateEntryWorse","lateEntryBetter","flatEntry",
+            "medianDelayBars","meanDelayBars","medianEntryGapPct",
+            "meanEntryGapPct","meanShortLivedV11HypotheticalNetPct","adequateSample"]);
+          '
+      - name: Archive complete evidence without promoting a new indicator
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-v14-latency-costs-btc-eth-sol-90d
+          path: |
+            vector-v14-latency-90d.json
+            vector-v14-latency-cohorts.json
+            vector-v14-latency-events.json
+            vector-v14-latency-cohorts.csv
+            vector-v14-latency-events.csv
+          if-no-files-found: warn
