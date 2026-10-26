@@ -7,6 +7,8 @@ on:
       - scripts/build-forward-live-dashboard.mjs
       - scripts/build-vector-dashboard.mjs
       - backtest/vector-forward-live.mjs
+      - backtest/vector-forward-refresh-policy.mjs
+      - backtest/vector-forward-refresh-policy.test.mjs
       - backtest/vector-forward-dashboard-ui.mjs
       - backtest/vector-forward-dashboard-data.mjs
       - backtest/vector-forward-dashboard.html
@@ -28,7 +30,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify independent WATCH and Bitunix-live dashboard static bundle
-        run: node --test backtest/watch-preview-packaging.test.mjs
+        run: node --test backtest/watch-preview-packaging.test.mjs backtest/vector-forward-refresh-policy.test.mjs
       - name: Archive deployment-ready static files; NEVER deploy automatically
         uses: actions/upload-artifact@v4
         with:

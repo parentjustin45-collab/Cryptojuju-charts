@@ -38,3 +38,9 @@ Les tâches automatisées ChatGPT n'autorisent **au maximum qu'un contrôle par 
 - \`scripts/build-vector-dashboard.mjs\` : construction d'un unique HTML autonome pouvant être ouvert depuis Android.
 - \`backtest/vector-forward-dashboard-data.test.mjs\`, \`backtest/vector-forward-dashboard-build.test.mjs\` : tests no-lookahead, données vides, rapport incorrect, packaging offline.
 - \`.github/workflows/vector-forward-dashboard.yml\` : tests, puis artefact sur dev, sans publication.
+
+## Fiabilité des rafraîchissements (26 octobre 2026)
+
+Avant d'accepter les résultats nouveaux, le tableau vérifie les **55 dernières chandelles 1H clôturées consécutives et cohérentes pour chacun de BTC/ETH/SOL**, sans accepter une duplication, un trou ou un dernier chandelier incohérent. Une quarantaine de données **anciennes** comme les 54 chandelles d'ETH peut rester admissible si les 55 dernières sont intactes; les données incomplètes **récentes** bloquent l'actualisation et le tableau conserve la dernière version horodatée. Le statut de fraîcheur correspond à la dernière heure entière clôturée, pas à une cotation en temps réel.
+
+Le planificateur navigateur mémorise **la dernière tentative**, même lors d'un échec, afin de ne pas bombarder l'API; nouvelles tentatives automatiques seulement après 15 minutes et uniquement quand l'onglet est visible. Un onglet Android suspendu ne peut pas agir en arrière-plan. Les contrôles automatisés testent la limite des 15 minutes, les 55 clôtures, les duplications, les trous et les données historiques ETH mises en quarantaine.

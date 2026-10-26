@@ -19,6 +19,7 @@ test('The separate Render bundle contains ONLY WATCH, browser-paper dependencies
   'backtest/quarantine.mjs',
   'backtest/vector-exit-selection.mjs',
   'backtest/vector-forward-live.mjs',
+  'backtest/vector-forward-refresh-policy.mjs',
   'backtest/vector-forward-browser-engine.mjs',
   'vector-dashboard.html',
   'index.html','robots.txt'
@@ -57,7 +58,7 @@ test('Browser-transformed engine has exactly the same causal results as immutabl
  assert.ok(pre.results.every(r=>r.audit.trades.length===0));
  assert.equal(pre.commit,'744da2b93772f3c5dfdb8876ffcc5784058819d9');
  const live=fs.readFileSync(path.join(ROOT,'backtest/vector-forward-live.mjs'),'utf8');
- assert.match(live,/15\*60\*1000/);
+ assert.match(live,/REFRESH_INTERVAL_MS/);
  assert.match(live,/document\.hidden/);
  assert.doesNotMatch(live,/POST|apiKey|apiSecret|order\/create/i);
 });

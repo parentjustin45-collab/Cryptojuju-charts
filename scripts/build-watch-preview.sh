@@ -11,7 +11,7 @@ for name in vector-watch-browser vector-watch-shadow vector-v14-hysteresis vecto
 done
 # Extra read-only browser data connector. The research engine is SHA-locked
 # and only its Node CLI/metadata are transformed for browser compatibility.
-for name in vector-exit-selection quarantine quality-gate cryptojuju-adapter vector-forward-live; do
+for name in vector-exit-selection quarantine quality-gate cryptojuju-adapter vector-forward-live vector-forward-refresh-policy; do
   cp "$ROOT/backtest/$name.mjs" "$OUT/backtest/$name.mjs"
 done
 cd "$ROOT"
@@ -22,7 +22,7 @@ User-agent: *
 Disallow: /
 ROBOTS
 # Restrict build output to the needed static site, never source/CI docs/secrets.
-test "$(find "$OUT" -type f | wc -l | tr -d ' ')" = 13
+test "$(find "$OUT" -type f | wc -l | tr -d ' ')" = 14
 grep -q "Retournement possible" "$OUT/index.html" || { echo 'WATCH UI missing' >&2; exit 1; }
 grep -q 'visibleByDefault:false' "$OUT/backtest/vector-watch-browser.mjs" || { echo 'WATCH must default OFF' >&2; exit 1; }
-echo 'WATCH and read-only Vector dashboard isolated Render preview: 13 static files ready'
+echo 'WATCH and read-only Vector dashboard isolated Render preview: 14 static files ready'
