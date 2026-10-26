@@ -1,0 +1,22 @@
+# OPTIONAL: Create a NEW Render Blueprint using CUSTOM path render-watch-preview.yaml
+# and branch dev/v1.26.0. Do NOT attach this to an existing Render service/API.
+# This file is NOT named render.yaml to prevent accidental discovery or takeover.
+services:
+  - type: web
+    runtime: static
+    name: cryptojuju-watch-v126-test
+    repo: https://github.com/parentjustin45-collab/Cryptojuju-charts
+    branch: dev/v1.26.0
+    buildCommand: bash scripts/build-watch-preview.sh
+    staticPublishPath: ./watch-preview-dist
+    autoDeployTrigger: "off"
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow, noarchive
+      - path: /*
+        name: Cache-Control
+        value: no-store
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer

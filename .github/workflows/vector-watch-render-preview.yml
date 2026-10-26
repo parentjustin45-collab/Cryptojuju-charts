@@ -1,0 +1,30 @@
+name: Render WATCH Preview Package Validation (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - scripts/build-watch-preview.sh
+      - render-watch-preview.yaml
+      - backtest/watch-preview-packaging.test.mjs
+      - .github/workflows/vector-watch-render-preview.yml
+  workflow_dispatch:
+jobs:
+  render-preview-package:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert independent branch and minimal WATCH static bundle
+        run: node --test backtest/watch-preview-packaging.test.mjs
+      - name: Archive deployment-ready static files; NEVER deploy automatically
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptojuju-watch-render-preview-minimal
+          path: watch-preview-dist/
+          if-no-files-found: error
