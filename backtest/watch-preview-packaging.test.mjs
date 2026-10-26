@@ -5,7 +5,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 const ROOT=path.resolve(import.meta.dirname,'..');
 const out=path.join(ROOT,'watch-preview-dist');
-test('A sandbox-ready Render static bundle contains only the five app files and robots exclusion',()=>{
+test('The separate Render bundle contains ONLY WATCH, browser-paper dependencies and robots exclusion',()=>{
  execFileSync('bash',['scripts/build-watch-preview.sh'],{cwd:ROOT,stdio:'pipe'});
  const files=fs.readdirSync(out,{recursive:true,withFileTypes:true})
   .filter(x=>x.isFile()).map(x=>path.relative(out,path.join(x.parentPath,x.name))).sort();
@@ -14,6 +14,13 @@ test('A sandbox-ready Render static bundle contains only the five app files and 
   'backtest/vector-v14-hysteresis.mjs',
   'backtest/vector-watch-browser.mjs',
   'backtest/vector-watch-shadow.mjs',
+  'backtest/cryptojuju-adapter.mjs',
+  'backtest/quality-gate.mjs',
+  'backtest/quarantine.mjs',
+  'backtest/vector-exit-selection.mjs',
+  'backtest/vector-forward-live.mjs',
+  'backtest/vector-forward-browser-engine.mjs',
+  'vector-dashboard.html',
   'index.html','robots.txt'
  ].sort());
  const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
@@ -22,6 +29,14 @@ test('A sandbox-ready Render static bundle contains only the five app files and 
  const script=fs.readFileSync(path.join(out,'backtest/vector-watch-browser.mjs'),'utf8');
  assert.match(script,/visibleByDefault:false/);
  assert.match(script,/tradingSignal:false/);
+ const dashboard=fs.readFileSync(path.join(out,'vector-dashboard.html'),'utf8');
+ assert.match(dashboard,/id="refreshBitunix"/);
+ assert.match(dashboard,/15 minutes/);
+ assert.match(dashboard,/backtest\/vector-forward-live\.mjs/);
+ const engine=fs.readFileSync(path.join(out,'backtest/vector-forward-browser-engine.mjs'),'utf8');
+ assert.match(engine,/2026-10-28T00:00:00Z/);
+ assert.doesNotMatch(engine,/node:url|process\./);
+
 });
 test('Preview Blueprint points only to DEV, forbids automatic deployments, and names a new Render site',()=>{
  const yaml=fs.readFileSync(path.join(ROOT,'render-watch-preview.yaml'),'utf8');
