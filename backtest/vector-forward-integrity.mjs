@@ -28,7 +28,7 @@ export function checkReport(d,{now=Date.now()}={}){
  const asOf=Date.parse(d.generatedAtUtc??'');
  if(!Number.isFinite(asOf)||!Number.isFinite(now)||asOf>now+5*60000)err('Invalid/future generation time');
  if(Number.isFinite(asOf)&&now-asOf>36*H)warn('Report older than 36 hours; not a live observation');
- if(d.commit!==REPORT_LOCK.code)warn('Report commit differs from pinned engine; verify actual checkout');
+ if(d.commit!==REPORT_LOCK.code)warn('GitHub event SHA '+d.commit+' differs from research checkout pin '+REPORT_LOCK.code+' (expected for pinned workflow; separate workflow-at-event SHA check required)');
  if(!Array.isArray(d.results)||d.results.length!==3)err('Expected exactly three markets');
  if(!['ARMED_NOT_STARTED','PROSPECTIVE_COLLECTING'].includes(d.status))err('Run is not healthy: '+d.status);
  const names=new Set();
