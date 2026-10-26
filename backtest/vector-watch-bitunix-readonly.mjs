@@ -42,17 +42,21 @@ export function assessBitunixPage(rows,nowMs,{symbol='BTCUSDT',source='Bitunix'}
  const bars=rows.map(convert).sort((a,b)=>a.time-b.time);
  if(bars.length<LIVE_WATCH_LOCK.minContinuousClosedBars)
   throw Error(symbol+' insufficient Bitunix raw OHLC');
- const unique=new Map();
+ const unique=new Map(),excludedInvalid=[];
  for(const b of bars){
-  if(b.time%H!==0 || b.time<=0 || b.time>nowMs||
-    b.low<=0||b.high<b.low||b.high<Math.max(b.open,b.close)||
-    b.low>Math.min(b.open,b.close)||b.volume<0)
-   throw Error(symbol+' corrupt Bitunix OHLC at '+b.time);
   if(unique.has(b.time))throw Error(symbol+' duplicate Bitunix OHLC');
   unique.set(b.time,b);
+  if(b.time%H!==0 || b.time<=0 || b.time>nowMs||
+    b.low<=0||b.high<b.low||b.high<Math.max(b.open,b.close)||
+    b.low>Math.min(b.open,b.close)||b.volume<0){
+   // Never repair an impossible OHLC candle; quarantine the entire bar.
+   // The final continuous CLOSED tail must still have >=55 bars.
+   excludedInvalid.push({time:b.time,open:b.open,high:b.high,low:b.low,close:b.close});
+  }
  }
+ const bad=new Set(excludedInvalid.map(b=>b.time));
  const nowSeconds=Math.floor(nowMs/1000);
- const closed=bars.filter(b=>b.time+H<=nowMs),contiguous=[];
+ const closed=bars.filter(b=>!bad.has(b.time)&&b.time+H<=nowMs),contiguous=[];
  for(let i=closed.length-1;i>=0;i--){
   if(contiguous.length && contiguous[0].time-closed[i].time!==H)break;
   contiguous.unshift(closed[i]);
@@ -67,7 +71,9 @@ export function assessBitunixPage(rows,nowMs,{symbol='BTCUSDT',source='Bitunix'}
  if(!['possible','confirmed_idle','neutral'].includes(state.status))
   throw Error(symbol+' cannot evaluate WATCH from fresh Bitunix closed candles: '+state.status);
  return {symbol,source,latestClosedUtc:new Date(contiguous.at(-1).time).toISOString(),
-  barsReceived:bars.length,continuousClosed:contiguous.length,
+  barsReceived:bars.length,excludedInvalidCount:excludedInvalid.length,
+  excludedInvalidPreview:excludedInvalid.slice(0,4),
+  continuousClosed:contiguous.length,
   dataAgeSeconds:Math.floor(ageMs/1000),WATCH:state,ohlc:normalized};
 }
 async function timedFetch(url,opts={}) {
