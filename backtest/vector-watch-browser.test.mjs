@@ -42,6 +42,30 @@ test('Later position cannot look back across missing bars or insufficient warmup
  const r=readVectorWatchState(b,'1h',b.at(-1).time+H);
  assert.equal(r.status,'insufficient');
 });
+test('A single invalid older Bitunix OHLC is quarantined; valid recent 55+ bars still show WATCH',()=>{
+ const b=withWatch(),now=b.at(-1).time+H;
+ // Observed Bitunix defect: high 82379.4 < open 82379.5.
+ b[8]={...b[8],open:82379.5,high:82379.4,low:82089,close:82319.8};
+ const state=readVectorWatchState(b,'1h',now);
+ assert.equal(state.status,'possible');
+ assert.equal(state.watchDirection,'LONG');
+ assert.equal(state.confirmedDirection,'SHORT');
+ assert.equal(state.tradingSignal,false);
+});
+test('Malformed Bitunix OHLC inside last 55 bars blocks WATCH (no interpolation)',()=>{
+ const b=withWatch(),now=b.at(-1).time+H;
+ b[40]={...b[40],open:100.5,high:100.4,low:99.5,close:100};
+ const state=readVectorWatchState(b,'1h',now);
+ assert.equal(state.status,'insufficient');
+ assert.equal(state.watchDirection,null);
+});
+test('Corrupt latest fully closed candle cannot be bypassed by older valid candles',()=>{
+ const b=withWatch(),now=b.at(-1).time+H;
+ b[74]={...b[74],open:100.5,high:100.4,low:99.5,close:100};
+ const state=readVectorWatchState(b,'1h',now);
+ assert.equal(state.status,'insufficient');
+ assert.equal(state.tradingSignal,false);
+});
 test('Stale data not presented as a live reversal alert',()=>{
  const b=withWatch(),now=b.at(-1).time+10*H;
  const r=readVectorWatchState(b,'1h',now);
