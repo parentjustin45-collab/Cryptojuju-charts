@@ -73,7 +73,7 @@ test('Opposite flip-to-flip study never fakes a stop-loss or an exit before oppo
  assert.ok(mode.holding.common.later.censored>=0);
 });
 test('Censored positions never contribute positive net profit',()=>{
- const b=candles(60),r=study(b,40*H);
+ const b=candles().slice(0,60),r=study(b,40*H);
  for(const mode of V14_HISTORICAL_LOCK.modes){
   const z=r.byMode[mode].holding.common.later;
   assert.equal(z.trades,0);
