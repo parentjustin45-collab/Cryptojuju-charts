@@ -1270,7 +1270,56 @@ function renderZ(o){
  try{o.zMain.setMarkers(zMarkers)}catch(_){}
  let last=[...f.zs].reverse().find(Number.isFinite);if(Number.isFinite(last))o.el.querySelector('.zBadge').textContent=`CQ Rolling Z-Score • ${last.toFixed(2)} • L${f.len} / ±${f.th}`;requestAnimationFrame(()=>{syncAxisGeometry(o);syncLogicalRange(o.ch,o.zCh,o)});
 }
-function renderIndicators(o){Object.values(o.lines).forEach(x=>{try{o.ch.removeSeries(x)}catch(e){}});o.lines={};function add(k,d,w){let s=o.ch.addLineSeries({lineWidth:w,priceLineVisible:false,lastValueVisible:false});s.setData(d);o.lines[k]=s}if(o.el.querySelector('[data-x="e21"]').checked)add("e21",ema(o.data,21),2);if(o.el.querySelector('[data-x="e50"]').checked)add("e50",ema(o.data,50),2);if(o.el.querySelector('[data-x="s200"]').checked)add("s200",sma(o.data,200),1);renderSignalLayers(o);drawSR(o);renderMomentum(o);renderFrank(o);renderZ(o)}
+
+/* Dev-only research WATCH state, isolated from chart/scanner signals. */
+let cjWatchModulePromise=null;
+function refreshExperimentalWatch(o){
+ const checkbox=o.el.querySelector('[data-x="watchstate"]');
+ const badge=o.el.querySelector('.cjWatchBadge');
+ if(!badge)return;
+ const serial=o.cjWatchSerial=(o.cjWatchSerial||0)+1;
+ if(!checkbox?.checked){
+  badge.hidden=true;
+  o.cjWatchKey=null;
+  return;
+ }
+ badge.hidden=false;
+ const now=Math.floor(Date.now()/1000),tf=o.interval,
+  sec=intervalSeconds(tf),sym=o.el.querySelector('.sym')?.value||'';
+ const closed=[...(o.data||[])].reverse().find(x=>Number(x.time)+sec<=now);
+ const key=[sym,tf,Math.floor(now/sec),o.data?.length||0,
+  closed?.time??'',closed?.open??'',closed?.high??'',
+  closed?.low??'',closed?.close??'',closed?.volume??''].join('|');
+ function paint(result){
+  badge.dataset.status=result.status;
+  badge.textContent=result.label+' · labo';
+  badge.title='Observation Vector V1.4 expérimentale sur chandelles clôturées. Ce n’est pas un ordre LONG/SHORT.';
+ }
+ if(o.cjWatchKey===key&&o.cjWatchValue){
+  paint(o.cjWatchValue);
+  return;
+ }
+ if(!o.cjWatchValue)badge.textContent='WATCH · analyse…';
+ if(!cjWatchModulePromise) cjWatchModulePromise=import('./backtest/vector-watch-browser.mjs').catch(err=>{
+  cjWatchModulePromise=null;
+  throw err;
+ });
+ cjWatchModulePromise.then(mod=>{
+  if(serial!==o.cjWatchSerial||!o.el.isConnected||!checkbox.checked)return;
+  const result=mod.readVectorWatchState(o.data,tf,Math.floor(Date.now()/1000));
+  o.cjWatchKey=key;
+  o.cjWatchValue=result;
+  paint(result);
+ }).catch(err=>{
+  if(serial!==o.cjWatchSerial||!checkbox.checked)return;
+  o.cjWatchKey=null;o.cjWatchValue=null;
+  badge.dataset.status='insufficient';
+  badge.textContent='WATCH · module indisponible';
+  console.warn('Vector WATCH expérimental',err);
+ });
+}
+
+function renderIndicators(o){Object.values(o.lines).forEach(x=>{try{o.ch.removeSeries(x)}catch(e){}});o.lines={};function add(k,d,w){let s=o.ch.addLineSeries({lineWidth:w,priceLineVisible:false,lastValueVisible:false});s.setData(d);o.lines[k]=s}if(o.el.querySelector('[data-x="e21"]').checked)add("e21",ema(o.data,21),2);if(o.el.querySelector('[data-x="e50"]').checked)add("e50",ema(o.data,50),2);if(o.el.querySelector('[data-x="s200"]').checked)add("s200",sma(o.data,200),1);renderSignalLayers(o);drawSR(o);renderMomentum(o);renderFrank(o);renderZ(o);refreshExperimentalWatch(o)}
 
 /* V1.22.1 P2 — indicator engine boundary.
    References only: validated implementations remain unchanged. */
@@ -1701,7 +1750,7 @@ cjModule("chartFactory",{
 });
 
 const historyCache=new Map();
-async function load(o){stopLive(o);const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;o.data=normalizeHistoryBuckets(h.rows,f);if(o.data.length)applyDisplayPricePrecision(o,o.data.at(-1).close);o.cs.setData(o.data);try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}renderIndicators(o);o.ch.timeScale().fitContent();requestAnimationFrame(()=>{try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}syncAxisGeometry(o);if(o.frankCh)syncLogicalRange(o.ch,o.frankCh,o);if(o.momCh)syncLogicalRange(o.ch,o.momCh,o);if(o.zCh)syncLogicalRange(o.ch,o.zCh,o)});o.historySource=h.source;o.historyFetchedAt=Date.now();const sameSource=String(h.source||"").startsWith("Bitunix");o.el.querySelector(".feed").textContent=`${o.data.length} chandelle(s) • SOURCE: ${h.source}${historyCache.has(key)?" • cache TF":""}${sameSource?" • LIVE compatible":" • historique seulement"}`;if(o.data.length)updateLastUI(o,o.data.at(-1),false)}catch(e){if(loadToken!==o.loadToken)return;console.error(e);o.data=[];o.historySource="";o.cs.setData([]);o.el.querySelector(".feed").textContent=e.message}if(loadToken!==o.loadToken)return;startLive(o,s,f);startCountdown(o)}
+async function load(o){stopLive(o);const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;o.data=normalizeHistoryBuckets(h.rows,f);if(o.data.length)applyDisplayPricePrecision(o,o.data.at(-1).close);o.cs.setData(o.data);try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}renderIndicators(o);o.ch.timeScale().fitContent();requestAnimationFrame(()=>{try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}syncAxisGeometry(o);if(o.frankCh)syncLogicalRange(o.ch,o.frankCh,o);if(o.momCh)syncLogicalRange(o.ch,o.momCh,o);if(o.zCh)syncLogicalRange(o.ch,o.zCh,o)});o.historySource=h.source;o.historyFetchedAt=Date.now();const sameSource=String(h.source||"").startsWith("Bitunix");o.el.querySelector(".feed").textContent=`${o.data.length} chandelle(s) • SOURCE: ${h.source}${historyCache.has(key)?" • cache TF":""}${sameSource?" • LIVE compatible":" • historique seulement"}`;if(o.data.length)updateLastUI(o,o.data.at(-1),false)}catch(e){if(loadToken!==o.loadToken)return;console.error(e);o.data=[];o.historySource="";o.cs.setData([]);refreshExperimentalWatch(o);o.el.querySelector(".feed").textContent=e.message}if(loadToken!==o.loadToken)return;startLive(o,s,f);startCountdown(o)}
 /* V1.22.1 P2 — scanner boundary.
    Scanner calculations and UI behavior are not changed. */
 cjModule("scanner",{
