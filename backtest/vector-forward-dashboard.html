@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08130f">
+<title>CryptoJuju Charts — Laboratoire Vector</title>
+<style>
+:root{color-scheme:dark;--bg:#07120e;--panel:#101e18;--line:#284437;--ink:#e9fff0;--quiet:#a2b9aa;--green:#9bf864;--yellow:#efcd70;--red:#ff9a96}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 85% 0,#142c1d 0,transparent 60%),var(--bg);font:14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+main{max-width:1200px;margin:auto;padding:26px 20px 80px}
+h1{font-size:clamp(25px,4vw,38px);line-height:1.12;margin:6px 0 14px;letter-spacing:-.035em}
+h2{font-size:18px;line-height:1.3;margin:0 0 12px}
+p{line-height:1.5;color:var(--quiet);margin:7px 0}
+small,.small{font-size:12px;color:var(--quiet)}
+b{font-weight:650}
+a{color:var(--green)}
+.eyebrow{font-size:11px;color:var(--green);letter-spacing:.16em;text-transform:uppercase;font-weight:750}
+.head{display:flex;justify-content:space-between;gap:15px;align-items:start;flex-wrap:wrap}
+.mark{background:#173922;color:var(--green);border:1px solid #356644;border-radius:9px;padding:7px 10px;font-weight:700;white-space:nowrap}
+.muted{color:var(--quiet)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+.notice{border-left:3px solid var(--yellow);padding:9px 13px;margin:17px 0;color:#f4dfb5;background:#1c2017;border-radius:2px 8px 8px 2px;line-height:1.55}
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.control{font:inherit;border-radius:9px;border:1px solid #548b63;background:#1c3b26;color:#f4fff0;padding:10px 14px;cursor:pointer;font-weight:680}
+.control:hover{background:#295b37}
+.control:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.control.secondary{background:transparent;border-color:var(--line);color:var(--ink)}
+input[type=file]{max-width:min(100%,300px);font:inherit;font-size:12px;color:var(--quiet)}
+input[type=file]::file-selector-button{background:#21432e;color:var(--ink);border:1px solid #548b63;border-radius:8px;padding:9px;margin-right:10px;cursor:pointer}
+select{background:#12281b;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:15px 0}
+.stat{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:14px;min-height:102px}
+.stat dt{font-size:11px;letter-spacing:.045em;text-transform:uppercase;color:var(--quiet);font-weight:650}
+.stat dd{font-size:29px;margin:12px 0 0;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+.tag{padding:3px 7px;border:1px solid #4a674f;color:#d5e8d7;border-radius:5px;font-size:11px;white-space:nowrap}
+.good{color:var(--green)}
+.caution{color:var(--yellow)}
+.failure{color:var(--red)}
+.boxes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.symbolTitle{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.marketGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}
+.mode{border:1px solid #2b4436;background:#0a1711;border-radius:10px;padding:12px}
+.mode h3{font-size:15px;margin:0 0 10px}
+.pair{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:7px 0;color:var(--quiet);font-size:12px}
+.pair strong{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.track{height:6px;border-radius:20px;overflow:hidden;background:#304535}
+.fill{height:100%;background:var(--green);transition:width 130ms linear}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+.tableScroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;text-align:left;white-space:nowrap}
+th,td{padding:12px 10px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--quiet);font-weight:650}
+td{font-size:13px}
+code{background:#1c3526;border-radius:4px;padding:2px 5px}
+footer{margin-top:22px;color:var(--quiet);font-size:12px;line-height:1.5}
+[hidden]{display:none!important}
+@media(max-width:900px){.boxes{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){main{padding:18px 12px 55px}.boxes{grid-template-columns:1fr}.panel{padding:14px}.stat{min-height:90px}.stat dd{font-size:25px}.marketGrid{gap:7px}.mode{padding:10px}.head{gap:6px}.controls{gap:9px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div>
+      <div class="eyebrow">CryptoJuju Charts · Laboratoire de recherche</div>
+      <h1>Vector V1.1 <span class="muted">vs</span> V1.4</h1>
+      <p>Résultats prospectifs Bitunix en 1H · Lecture seule · Zéro ordre réel</p>
+    </div>
+    <div class="mark">V1.26.0 · DEV</div>
+  </div>
+  <div class="notice"><b>Départ verrouillé : 28 octobre 2026, 00:00 UTC.</b> Ce tableau ne lit pas directement le marché et n'invente aucune transaction. Il affiche uniquement les observations présentes dans un rapport GitHub Actions que tu importes.</div>
+  <section class="panel" aria-labelledby="loadTitle">
+    <h2 id="loadTitle">Importer le rapport de backtest</h2>
+    <p>Dans l'artefact GitHub <code>vector-forward-paper-v11-v14-bitunix</code>, utilise le fichier <code>vector-forward-paper.json</code>.</p>
+    <div class="controls">
+      <input type="file" id="reportInput" accept=".json,application/json" aria-label="Choisir le rapport JSON de comparaison prospective">
+      <button class="control secondary" type="button" id="clear">Effacer</button>
+      <button class="control secondary" type="button" id="export" disabled>Exporter le résumé CSV</button>
+    </div>
+    <p id="feedback" role="status" aria-live="polite">Aucun rapport chargé. Les chiffres demeurent vides jusqu'à l'import d'un résultat réel.</p>
+    <p class="small" id="meta">Import local uniquement. Le fichier ne quitte pas cet appareil.</p>
+  </section>
+  <section aria-label="Indicateurs de recherche" class="metrics">
+    <dl class="stat"><dt>Transactions clôturées</dt><dd id="totalClosed">—</dd></dl>
+    <dl class="stat"><dt>En attente</dt><dd id="totalPending">—</dd></dl>
+    <dl class="stat"><dt>Censurées</dt><dd id="totalCensored">—</dd></dl>
+    <dl class="stat"><dt>Groupes à 30 trades</dt><dd id="totalReady">—</dd></dl>
+  </section>
+  <section aria-labelledby="marketTitle">
+    <div class="head">
+      <h2 id="marketTitle">Comparaison par cryptomonnaie</h2>
+      <span class="small">Objectif minimal de lecture : 30 transactions clôturées par marché et par version</span>
+    </div>
+    <div class="boxes" id="marketCards">
+      <div class="panel">BTCUSDT — en attente du rapport</div>
+      <div class="panel">ETHUSDT — en attente du rapport</div>
+      <div class="panel">SOLUSDT — en attente du rapport</div>
+    </div>
+  </section>
+  <section class="panel" style="margin-top:16px" aria-labelledby="transactions">
+    <div class="head">
+      <h2 id="transactions">Journal individuel</h2>
+      <select id="marketFilter" aria-label="Filtrer par cryptomonnaie">
+        <option value="ALL">Toutes les cryptos</option>
+        <option>BTCUSDT</option><option>ETHUSDT</option><option>SOLUSDT</option>
+      </select>
+    </div>
+    <p>Une transaction ouverte ou censurée n'a pas de profit comptabilisé.</p>
+    <div class="tableScroll">
+      <table><thead><tr><th>Marché</th><th>Version</th><th>Sens</th><th>Signal UTC</th><th>Statut</th><th>Sortie</th><th>Net simulé</th></tr></thead>
+      <tbody id="trades"><tr><td colspan="7">Aucun rapport chargé.</td></tr></tbody></table>
+    </div>
+  </section>
+  <footer>
+    <b>Attention :</b> stop 1,5 %, objectif 3 %, sortie après 12 bougies, frais 0,06 % et glissement simulé 0,05 % par côté. Les pourcentages moyens ne représentent ni une croissance composée ni une promesse de rendement. Le tableau et les alertes WATCH ne sont pas des instructions de trading.
+  </footer>
+</main>
+<script type="module" src="./vector-forward-dashboard-ui.mjs"></script>
+</body>
+</html>

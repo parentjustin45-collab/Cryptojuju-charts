@@ -1,0 +1,33 @@
+name: Vector Forward Dashboard (DEV, offline self-contained)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - backtest/vector-forward-dashboard.html
+      - backtest/vector-forward-dashboard-ui.mjs
+      - backtest/vector-forward-dashboard-data.mjs
+      - backtest/vector-forward-dashboard-data.test.mjs
+      - backtest/vector-forward-dashboard-build.test.mjs
+      - scripts/build-vector-dashboard.mjs
+      - .github/workflows/vector-forward-dashboard.yml
+  workflow_dispatch:
+jobs:
+  dashboard:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify no pre-start or fabricated gains, local-only HTML and responsive layout
+        run: node --test backtest/vector-forward-dashboard-data.test.mjs backtest/vector-forward-dashboard-build.test.mjs
+      - name: Export offline smartphone dashboard (no publish to Render or main)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptojuju-vector-dashboard-offline
+          path: dashboard-dist/vector-forward-dashboard.html
+          if-no-files-found: error
