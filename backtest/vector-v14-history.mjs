@@ -31,7 +31,7 @@ function getEvents(bars,raw,mode){
 }
 function empty(){return {signalCount:0,closed:0,wins:0,sumNetPct:0,
  censored:0,splitCensored:0,windowCensored:0,pending:0,
- reasons:{stop:0,take:0,timeout:0},rapidOppositePairs:0,oppositePairs:0,
+ reasons:{stop:0,take:0,timeout:0,opposite:0},rapidOppositePairs:0,oppositePairs:0,
  holdBars:0,maximumAdversePct:null,netWorstPct:null};}
 function done(v){return {signals:v.signalCount,trades:v.closed,wins:v.wins,
  winRatePct:v.closed?round(100*v.wins/v.closed):null,
@@ -82,7 +82,7 @@ function flipToFlip(bars,events,{cutoffTime,slippageRate}){
    worst=Math.min(worst,100*dir*(adverse-entry)/entry);
   }
   addResult(b,net,exitIndex-start,worst);
-  b.reasons.timeout++; // purely report a fully observed reverse-to-reverse close.
+  b.reasons.opposite++; // closed only by a confirmed opposite signal, not by a timeout.
   b.oppositePairs++;
   if(exitIndex-start<=V14_HISTORICAL_LOCK.rapidFlipHours)b.rapidOppositePairs++;
  }
