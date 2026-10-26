@@ -1,0 +1,71 @@
+name: Vector 90d individual trades and missed reversals audit (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-event-ledger.yml'
+      - 'backtest/vector-event-ledger.mjs'
+      - 'backtest/vector-event-ledger.test.mjs'
+  workflow_dispatch:
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate causal execution, censored trades and event classification
+        run: node --test backtest/vector-event-ledger.test.mjs
+      - name: Generate Bitunix BTC ETH SOL 90-day evidence log
+        run: node backtest/vector-event-ledger.mjs > vector-event-ledger-90d.json
+      - name: Export review summaries and individual trade CSV
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-event-ledger-90d.json","utf8"));
+          const summary=[];
+          const cases=[];
+          const trades=[];
+          const rejected=[];
+          for(const item of r.results){
+            if(item.status!=="STUDIED")continue;
+            for(const [mode,info] of Object.entries(item.audit.byMode)){
+              for(const side of ["long","short"]){
+                for(const part of ["earlier","later"]){
+                  summary.push({symbol:item.symbol,mode,side,period:part,
+                    ...info.risk[side][part],...info.classification});
+                }
+              }
+              cases.push(...info.reviewSignals.map(x=>({symbol:item.symbol,mode,...x})));
+              trades.push(...info.fixedTrades);
+              rejected.push(...info.signalLedger.filter(x=>x.classification==="rejected"));
+            }
+          }
+          fs.writeFileSync("vector-event-summary.json",JSON.stringify(summary,null,2));
+          fs.writeFileSync("vector-event-cases.json",JSON.stringify(cases,null,2));
+          const csv=(rows,filename,cols)=>{
+            const escape=x=>{const s=x==null?"":String(x);return /[,"\n]/.test(s)?"\""+s.replaceAll("\"","\"\"")+"\"":s;};
+            fs.writeFileSync(filename,[cols.join(","),...rows.map(r=>cols.map(k=>escape(r[k])).join(","))].join("\n")+"\n");
+          };
+          csv(trades,"vector-closed-trades.csv",["symbol","mode","side","period","originTime","signalTime","entryTime","exitTime","status","exitReason","netPct","durationBars","adversePct","favorablePct"]);
+          csv(rejected,"vector-rejected-signals.csv",["symbol","mode","time","side","period","classification","hindsightLabel","close"]);
+          csv(summary,"vector-event-summary.csv",["symbol","mode","side","period","trades","winRatePct","meanNetPct","worstNetPct","worstAdversePct","censored","accepted","rejected","already_aligned","potential_missed_move","possibly_avoided_loss","ambiguous","rejectedWith12h","rejectedCensored12h"]);
+          '
+      - name: Archive immutable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-individual-trade-and-reversal-ledger-90d
+          path: |
+            vector-event-ledger-90d.json
+            vector-event-summary.json
+            vector-event-summary.csv
+            vector-event-cases.json
+            vector-closed-trades.csv
+            vector-rejected-signals.csv
+          if-no-files-found: warn
