@@ -12,7 +12,8 @@ function mocked({end=100,confirm=63,revert=null}={}){
  const v11=bars.map((b,i)=>({time:b.time,direction:i<60?-1:revert!==null&&i>=revert?-1:1,
   signal:i===60?'long':i===revert?'short':null}));
  const v14=bars.map((b,i)=>({time:b.time,direction:confirm!==null&&i>=confirm?1:-1,
-  signal:i===confirm?'long':null,why:i===confirm?'structure_break':null}));
+  signal:i===confirm?'long':null,why:i===confirm?'structure_break':null,
+  sourceIndex:i===confirm?(confirm-60<=3?60:confirm-1):null}));
  return {bars,v11,v14};
 }
 const evalCase=(x,cutoffTime=Number.MAX_SAFE_INTEGER)=>
@@ -29,13 +30,23 @@ test('Only V1.1 NEW countertrend flip can be classified as V1.4 delay',()=>{
  assert.equal(events.length,1);
  const e=events[0];
  assert.equal(e.time,x.bars[60].time);
- assert.equal(e.resolution,'v14_confirmed_later');
+ assert.equal(e.resolution,'v14_aligned_later');
  assert.equal(e.v11EntryTime,x.bars[61].time);
  assert.equal(e.v14ConfirmationTime,x.bars[63].time);
  assert.equal(e.v14EntryTime,x.bars[64].time);
  assert.equal(e.delayBars,3);
  assert.equal(e.v14ConfirmationReason,'structure_break');
+ assert.equal(e.sameSourceConfirmation,true);
+ assert.equal(e.v14SourceTime,x.bars[60].time);
  assert.equal(e.side,'LONG');
+});
+test('Later same-direction flip from DIFFERENT candidate is NOT miscalled original confirmation',()=>{
+ const x=mocked({confirm:89}),e=evalCase(x)[0];
+ assert.equal(e.resolution,'v14_aligned_later');
+ assert.equal(e.delayBars,29);
+ assert.equal(e.sameSourceConfirmation,false);
+ assert.equal(e.v14SourceTime,x.bars[88].time);
+ assert.notEqual(e.v14SourceTime,x.bars[60].time);
 });
 test('The price gap uses both NEXT opens and expresses directional entry disadvantage',()=>{
  const x=mocked();x.bars[64]={...x.bars[64],open:103,high:104};
