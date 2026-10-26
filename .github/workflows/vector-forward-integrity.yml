@@ -17,6 +17,8 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -29,6 +31,15 @@ jobs:
           name: vector-forward-paper-v11-v14-bitunix
           path: input
           github-token: ${{ github.token }}
+      - name: Prove the original run used the frozen checkout pin at its event SHA
+        run: |
+          REPORT_SHA="$(python3 -c 'import json;print(json.load(open("input/vector-forward-paper.json"))["commit"])')"
+          if [[ ! "$REPORT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid historical triggering SHA"; exit 1
+          fi
+          git cat-file -e "$REPORT_SHA^{commit}"
+          git show "$REPORT_SHA:.github/workflows/vector-forward-v11-v14.yml" | grep -Fq 'ref: 744da2b93772f3c5dfdb8876ffcc5784058819d9'
+          echo "Confirmed workflow at triggering commit uses immutable research checkout"
       - name: Independently inspect the ACTUAL recorded Bitunix report
         run: |
           node --input-type=module -e '
