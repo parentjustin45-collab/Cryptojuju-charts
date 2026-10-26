@@ -25,6 +25,7 @@ try{
   {id:'android-390',w:390,h:844,mobile:true}
  ]){
   const ctx=await browser.newContext({viewport:{width:e.w,height:e.h},
+   locale:'fr-CA',timezoneId:'America/Toronto',
    isMobile:e.mobile,hasTouch:e.mobile,deviceScaleFactor:e.mobile?2:1});
   const page=await ctx.newPage(),pageErrors=[];
   page.on('pageerror',err=>pageErrors.push(String(err)));
