@@ -1,0 +1,61 @@
+name: Vector early WATCH vs confirmed V1.4 research (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-watch-shadow.yml'
+      - 'backtest/vector-watch-shadow.mjs'
+      - 'backtest/vector-watch-shadow.test.mjs'
+      - 'backtest/vector-watch-90d-study.mjs'
+      - 'backtest/vector-watch-90d-study.test.mjs'
+  workflow_dispatch:
+jobs:
+  watch-research:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test no-lookahead, watch cancellation, confirmation identity and censoring
+        run: node --test backtest/vector-watch-shadow.test.mjs backtest/vector-watch-90d-study.test.mjs
+      - name: Run historical Bitunix 90-day shadow-only WATCH audit
+        run: node backtest/vector-watch-90d-study.mjs > vector-watch-shadow-90d.json
+      - name: Export audit summary and all nontrading WATCH events
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-watch-shadow-90d.json","utf8"));
+          const summary=[],alerts=[];
+          for(const item of r.reports){
+            if(item.status!=="STUDIED")continue;
+            for(const [period,groups] of Object.entries(item.audit.summary))
+            for(const [side,counts] of Object.entries(groups))
+              summary.push({symbol:item.symbol,period,side,...counts});
+            alerts.push(...item.audit.watches);
+          }
+          fs.writeFileSync("vector-watch-summary.json",JSON.stringify(summary,null,2));
+          fs.writeFileSync("vector-watch-all-alerts.json",JSON.stringify(alerts,null,2));
+          const csv=(data,path,keys)=>{
+            const quote=x=>{const s=x==null?"":String(x);return /[,"\n]/.test(s)?"\""+s.replaceAll("\"","\"\"")+"\"":s;};
+            fs.writeFileSync(path,[keys.join(","),...data.map(row=>keys.map(k=>quote(row[k])).join(","))].join("\n")+"\n");
+          };
+          csv(summary,"vector-watch-summary.csv",["symbol","period","side","count","confirmed","expired","canceled","superseded","censoredEnd","meanLeadBars","confirmedRatePct","outcomeObserved","missedMovePotential","negativeMove","ambiguous","censored12h","diagnosticPotentialMoveRatePct","matchedV11Rejected"]);
+          csv(alerts,"vector-watch-all-alerts.csv",["symbol","period","watchTime","side","heldDirection","watchClose","bodyAtr","resolution","confirmedTime","leadBars","wasV11Rejected","status","gross12hPct","mfe12hPct","mae12hPct"]);
+          '
+      - name: Archive historical research only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-early-watch-no-trades-90d
+          path: |
+            vector-watch-shadow-90d.json
+            vector-watch-summary.json
+            vector-watch-summary.csv
+            vector-watch-all-alerts.json
+            vector-watch-all-alerts.csv
+          if-no-files-found: warn
