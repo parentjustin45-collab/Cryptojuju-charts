@@ -33,7 +33,7 @@ test('A pre-start scan NEVER adds a realized historical trade',()=>{
 });
 test('Pre-start signals are WARMUP ONLY; post-start impulse executes NEXT open',()=>{
  const candles=fixture(115);
- impulse(candles,22,'short'); // before lock (index 60)
+ impulse(candles,56,'short'); // after 55-bar warmup, BEFORE lock at index 60
  impulse(candles,70,'long');
  const result=studyForwardWindows([{candles}],{asOfMs:candles.at(-1).time+H});
  assert.ok(result.quality.signalsBeforeStartExcluded>0);
