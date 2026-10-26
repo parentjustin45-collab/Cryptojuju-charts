@@ -19,8 +19,16 @@ function syntheticInjector(){
  }));
  b[30]={...b[30],open:100.4,high:100.45,low:99.55,close:99.6,volume:10000};
  b[74]={...b[74],open:99.5,high:100.35,low:99.45,close:100.3,volume:10000};
+ // Freeze the failed/offline remote history request before injecting stable
+ // test-only candles. This leaves all real chart UI/library code intact.
+ chart.loadToken=(chart.loadToken||0)+1;
+ stopLive(chart);
  chart.data=b;chart.interval='1h';
  chart.el.querySelector('.tf').value='1h';
+ chart.el.querySelector('.wmTf').textContent='1H';
+ chart.cs.setData(b);
+ renderIndicators(chart);
+ chart.ch.timeScale().fitContent();
  refreshExperimentalWatch(chart);
  return {bars:b.length,model:typeof refreshExperimentalWatch,
   header:document.title};
