@@ -16,6 +16,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          # LOCK: frozen research source, signals and risk simulator (do NOT float dev).
+          ref: 744da2b93772f3c5dfdb8876ffcc5784058819d9
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
