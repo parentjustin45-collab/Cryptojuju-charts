@@ -1,0 +1,50 @@
+name: Vector V1.1 vs V1.4 direction disagreements — Bitunix 1H/4H (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/vector-direction-disagreement.yml'
+      - 'backtest/vector-direction-disagreement.mjs'
+      - 'backtest/vector-direction-disagreement.test.mjs'
+  workflow_dispatch:
+jobs:
+  disagreement-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify equal-time causal signals, 1H/4H and censored retrospective horizons
+        run: node --test backtest/vector-direction-disagreement.test.mjs
+      - name: Fetch Bitunix BTC/ETH/SOL 1H + BTC 4H public 90d OHLC
+        run: node backtest/vector-direction-disagreement.mjs > vector-direction-disagreement-90d.json
+      - name: Export concise per-market direction and disagreement stats
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const r=JSON.parse(fs.readFileSync("vector-direction-disagreement-90d.json","utf8"));
+          const summary=r.reports.map(x=>({symbol:x.market.symbol,tf:x.market.tf,status:x.status,
+            snapshot:x.audit?.snapshot??null,coverage:x.coverage??null,summary:x.audit?.summary??null,error:x.error??null}));
+          fs.writeFileSync("vector-direction-disagreement-summary.json",JSON.stringify(summary,null,2));
+          const cols=["symbol","tf","status","time","v11","v14","opposite","observedBars","oppositeBars","oppositeRatePct","episodes","meanLengthBars","maxLengthBars","resolvedV14","resolvedV11","horizon12Observed","meanFuture12BarV11GrossPct","meanFuture12BarV14GrossPct"];
+          const rows=summary.map(s=>({symbol:s.symbol,tf:s.tf,status:s.status,time:s.snapshot?.time,
+            v11:s.snapshot?.v11,v14:s.snapshot?.v14,opposite:s.snapshot?.opposite,
+            ...s.summary}));
+          fs.writeFileSync("vector-direction-disagreement-summary.csv",[cols.join(","),
+            ...rows.map(row=>cols.map(k=>row[k]??"").join(","))].join("\n")+"\n");
+          '
+      - name: Preserve source quality and each start/end dispute episode
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-v11-v14-bitunix-direction-1h-4h
+          path: |
+            vector-direction-disagreement-90d.json
+            vector-direction-disagreement-summary.json
+            vector-direction-disagreement-summary.csv
+          if-no-files-found: warn
