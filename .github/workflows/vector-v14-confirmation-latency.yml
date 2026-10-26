@@ -45,10 +45,10 @@ jobs:
           csv(all,"vector-v14-latency-events.csv",[
             "symbol","time","side","period","priorV14","resolution",
             "v11EntryTime","v11EntryOpen","resolvedTime",
-            "v14ConfirmationTime","v14ConfirmationReason","v14EntryTime",
+            "v14ConfirmationTime","v14ConfirmationReason","v14SourceTime","sameSourceConfirmation","v14EntryTime",
             "delayBars","waitHours","entryGapPct","v11ShortLivedNetPct"]);
           csv(groups,"vector-v14-latency-cohorts.csv",[
-            "symbol","period","side","counterFlips","lateConfirmed",
+            "symbol","period","side","counterFlips","alignedLater","sameSourceConfirmed","newSourceAligned",
             "revertedV11","unresolvedBoundary","unresolvedGapOrEnd",
             "simultaneousOrOther","pairedFillCount",
             "lateEntryWorse","lateEntryBetter","flatEntry",
