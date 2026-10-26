@@ -51,9 +51,12 @@ test('No lookahead: modifying all future candles never changes prior emitted sig
 });
 test('Symmetrical follow-through SHORT after an initial LONG',()=>{
  const {b}=fixture(),v=raw(b,{30:'long',37:'short'});
+ // Deep background wicks keep the directional 2-close progress INSIDE
+ // previous lows, so this cannot pass the independent structure-break gate.
+ for(const bar of b){bar.open=100;bar.close=100;bar.high=103;bar.low=97;}
  b[37]={...b[37],open:100.1,close:99.98};
- b[38]={...b[38],open:99.98,close:99.6};
- b[39]={...b[39],open:99.6,close:98.85};
+ b[38]={...b[38],open:99.98,close:98.95};
+ b[39]={...b[39],open:98.95,close:97.1};
  const res=applyVectorV15(b,{rawVector:v});
  assert.equal(signals(res).at(-1).side,'short');
  assert.equal(signals(res).at(-1).why,'two_close_follow_through');
