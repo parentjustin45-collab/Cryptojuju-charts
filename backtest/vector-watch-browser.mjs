@@ -14,24 +14,29 @@ export const WATCH_UI_LOCK=Object.freeze({
 const intervalSeconds=Object.freeze({'1m':60,'5m':300,'15m':900,'30m':1800,'1h':3600,'2h':7200,'4h':14400,'6h':21600,'12h':43200,'1d':86400,'1w':604800});
 const fail=(status,label)=>({status,label,confirmedDirection:null,watchDirection:null,ageBars:null,
   sourceTime:null,tradingSignal:false,source:'Vector V1.4 expérimental'});
+/* Strict contiguous closed OHLC suffix, same principle as Bitunix audit.
+ * A malformed candle breaks history; it is NEVER repaired/interpolated and
+ * older candles before it cannot be joined to the newer suffix.
+ * This prevents a single malformed OLD candle from killing the whole badge.
+ */
 function cleanClosed(data,step,nowSeconds){
  if(!Array.isArray(data)||!Number.isFinite(nowSeconds))return [];
  const closed=data.filter(b=>{
-  const t=Number(b?.time);
-  return Number.isSafeInteger(t)&&t>0&&t+step<=nowSeconds &&
-   [b.open,b.high,b.low,b.close,b.volume].every(v=>Number.isFinite(Number(v)))});
- if(!closed.length)return [];
- closed.sort((a,b)=>Number(a.time)-Number(b.time));
- // Never bridge gaps: only use the final uninterrupted block of closed bars.
- const contiguous=[closed.at(-1)];
- for(let i=closed.length-2;i>=0;i--){
-  if(Number(closed[i+1].time)-Number(closed[i].time)!==step)break;
-  contiguous.unshift(closed[i]);
+  const time=Number(b?.time);
+  return Number.isSafeInteger(time)&&time>0&&time+step<=nowSeconds
+ }).sort((a,b)=>Number(a.time)-Number(b.time));
+ const suffix=[];
+ for(let i=closed.length-1;i>=0;i--){
+  const b=closed[i],time=Number(b.time),o=Number(b.open),
+   h=Number(b.high),l=Number(b.low),c=Number(b.close),v=Number(b.volume);
+  const valid=[o,h,l,c,v].every(Number.isFinite)&&
+   o>0&&c>0&&l>0&&h>=l&&
+   h>=Math.max(o,c)&&l<=Math.min(o,c)&&v>=0;
+  if(!valid)break;
+  if(suffix.length&&suffix[0].time-time!==step)break;
+  suffix.unshift({time,open:o,high:h,low:l,close:c,volume:v});
  }
- return contiguous.map(b=>({
-  time:Number(b.time),open:Number(b.open),high:Number(b.high),
-  low:Number(b.low),close:Number(b.close),volume:Number(b.volume)
- }));
+ return suffix;
 }
 export function readVectorWatchState(data,timeframe,nowSeconds=Math.floor(Date.now()/1000)){
  const step=intervalSeconds[timeframe];
