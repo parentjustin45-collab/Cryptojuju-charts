@@ -9,7 +9,7 @@ indicator("Momentum Fusion | CryptoJuju Read-only Webhook DEV", shorttitle="MF A
 // EXACT original defaults, no optimisation, no strategy.entry, no orders.
 groupHook = "CryptoJuju DEV read-only webhook"
 enableHook = input.bool(false, "Enable CLOSED bar audit alerts", group=groupHook)
-hookToken  = input.string("", "Dedicated webhook-only token (32+ chars)", group=groupHook,
+hookToken  = input.string("", "Dedicated webhook-only token (43+ base64url chars)", group=groupHook,
  tooltip="Generate a unique token solely for this endpoint, never a password, Bitunix key, login token, or account credential. Do not share screenshots of this setting.")
 rsiRaw    = ta.rsi(close, 14)
 stochRsi  = ta.sma(ta.stoch(rsiRaw, rsiRaw, rsiRaw, 14), 3)
@@ -55,7 +55,11 @@ msg = '{"auth":"' + hookToken +
       ',"pivotLowConfirmed":' + boolJson(pivotLowConfirmed) +
       ',"pivotHighConfirmed":' + boolJson(pivotHighConfirmed) + '}}'
 
-if enableHook and str.length(hookToken) >= 32 and barstate.isrealtime and barstate.isconfirmed
+// Protect JSON against pasted quotes/newlines, and avoid unsupported TFs.
+tokenLength = str.length(hookToken)
+tokenSafe = tokenLength >= 43 and tokenLength <= 128 and str.match(hookToken, "^[A-Za-z0-9_-]+$") == hookToken
+supportedTf = timeframe.period == "15" or timeframe.period == "30" or timeframe.period == "60" or timeframe.period == "240"
+if enableHook and tokenSafe and supportedTf and barstate.isrealtime and barstate.isconfirmed
     alert(msg, alert.freq_once_per_bar_close)
 
 plot(composite, "Momentum Fusion original", color=color.aqua, linewidth=2)
