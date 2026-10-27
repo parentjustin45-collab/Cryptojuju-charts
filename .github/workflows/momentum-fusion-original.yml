@@ -1,0 +1,62 @@
+name: Momentum Fusion V1 — Original Pine baseline Bitunix audit (DEV ONLY)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/momentum-fusion-original.yml'
+      - 'backtest/momentum-fusion-v1.mjs'
+      - 'backtest/momentum-fusion-v1.test.mjs'
+      - 'backtest/momentum-fusion-bitunix-audit.mjs'
+      - 'backtest/momentum-fusion-bitunix-audit.test.mjs'
+  workflow_dispatch:
+jobs:
+  momentum-source-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify oscillator defaults, pivot confirmation delay and causal computation
+        run: node --test backtest/momentum-fusion-v1.test.mjs backtest/momentum-fusion-bitunix-audit.test.mjs
+      - name: Read-only Bitunix baseline BTC ETH SOL 15M 30M 1H 4H
+        run: node backtest/momentum-fusion-bitunix-audit.mjs > momentum-fusion-bitunix-baseline.json
+      - name: Export outcomes, data quarantine counts and causal signal timestamps
+        if: always()
+        run: |
+          if test -f momentum-fusion-bitunix-baseline.json; then
+            node --input-type=module -e '
+            import fs from "node:fs";
+            const result=JSON.parse(fs.readFileSync("momentum-fusion-bitunix-baseline.json","utf8"));
+            const rows=result.results.map(x=>({
+              symbol:x.market.symbol,tf:x.market.tf,status:x.status,
+              ...(x.data||{}),...(x.counts||{}),error:x.error||""
+            }));
+            fs.writeFileSync("momentum-fusion-market-summary.json",JSON.stringify(rows,null,2));
+            const fields=["symbol","tf","status","expected","validPercent","excludedBars",
+              "eligibleWindows","barsAnalyzed","bull","bear","regBull","regBear",
+              "hiddenBull","hiddenBear","trendBlocksBull","trendBlocksBear",
+              "momentumBullVsVectorShort","momentumBearVsVectorLong","error"];
+            const esc=v=>{
+              const s=v==null?"":String(v);
+              return /[,"\n]/.test(s)?"\""+s.replaceAll("\"","\"\"")+"\"":s;
+            };
+            fs.writeFileSync("momentum-fusion-market-summary.csv",[
+              fields.join(","),...rows.map(r=>fields.map(f=>esc(r[f])).join(","))
+            ].join("\n")+"\n");
+            '
+          fi
+      - name: Archive read-only research output; DO NOT DEPLOY TO MAIN/RENDER
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: momentum-fusion-original-bitunix-baseline
+          path: |
+            momentum-fusion-bitunix-baseline.json
+            momentum-fusion-market-summary.json
+            momentum-fusion-market-summary.csv
+          if-no-files-found: warn
