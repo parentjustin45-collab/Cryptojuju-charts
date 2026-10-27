@@ -37,11 +37,17 @@ function emaArray(src,n){
  return out;
 }
 function smaArray(src,n){
- const out=new Array(src.length).fill(null);
- for(let i=n-1;i<src.length;i++){
-  let sum=0,ok=true;
-  for(let j=i-n+1;j<=i;j++){if(!valid(src[j])){ok=false;break;}sum+=src[j];}
-  if(ok)out[i]=sum/n;
+ // Pine ta.sma(source,length) counts the most recent LENGTH NON-na
+ // observations. In Stoch RSI, zero-range bars can yield na values;
+ // never let one unavailable stochastic reading discard later valid SMA.
+ const out=new Array(src.length).fill(null),window=[];
+ let sum=0;
+ for(let i=0;i<src.length;i++){
+  if(valid(src[i])){
+   window.push(src[i]);sum+=src[i];
+   if(window.length>n)sum-=window.shift();
+  }
+  if(window.length===n)out[i]=sum/n;
  }
  return out;
 }
