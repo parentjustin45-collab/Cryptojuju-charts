@@ -1,0 +1,58 @@
+name: Momentum Fusion — Pine parity prerequisites and longer Bitunix (dev only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/momentum-fusion-parity-precheck.yml'
+      - 'backtest/momentum-fusion-v1.mjs'
+      - 'backtest/momentum-fusion-v1.test.mjs'
+      - 'backtest/momentum-fusion-extended-bitunix.mjs'
+      - 'backtest/momentum-fusion-extended-bitunix.test.mjs'
+  workflow_dispatch:
+jobs:
+  parity-prerequisites:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate original inputs, missing Stoch RSI SMA and pivot confirmation chronology
+        run: node --test backtest/momentum-fusion-v1.test.mjs backtest/momentum-fusion-extended-bitunix.test.mjs
+      - name: Read-only Bitunix ETH 1H and SOL 30M extended to 2016 closed bars
+        run: node backtest/momentum-fusion-extended-bitunix.mjs > momentum-fusion-extended-history.json
+      - name: Build compact machine-readable comparison
+        if: always()
+        run: |
+          if test -f momentum-fusion-extended-history.json; then
+            node --input-type=module -e '
+            import fs from "node:fs";
+            const report=JSON.parse(fs.readFileSync("momentum-fusion-extended-history.json","utf8"));
+            const rows=report.results.map(r=>({
+              symbol:r.symbol,tf:r.tf,status:r.status,received:r.received,
+              ...(r.data||{}),...(r.counts||{}),error:r.error||""
+            }));
+            fs.writeFileSync("momentum-fusion-extended-summary.json",JSON.stringify(rows,null,2));
+            const cols=["symbol","tf","status","expected","received",
+              "valid","invalid","missing","duplicates","eligibleSegments",
+              "longestContinuous","latestContinuous","barsExcludedFromQualifyingSegments",
+              "actualComputed","bull","bear","regBull","regBear","hiddenBull","hiddenBear","error"];
+            fs.writeFileSync("momentum-fusion-extended-summary.csv",[
+              cols.join(","),...rows.map(r=>cols.map(c=>r[c]??"").join(","))
+            ].join("\n")+"\n");
+            '
+          fi
+      - name: Archive quarantined-source evidence (no Render deploy)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: momentum-fusion-extended-bitunix-eth-sol
+          path: |
+            momentum-fusion-extended-history.json
+            momentum-fusion-extended-summary.json
+            momentum-fusion-extended-summary.csv
+          if-no-files-found: warn

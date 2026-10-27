@@ -1,0 +1,41 @@
+//@version=6
+indicator("MomFusion | Parity Probe", shorttitle="MF Check", overlay=false, precision=6)
+
+// Diagnosis ONLY: identical default formulas to the user-provided Momentum Fusion.
+// Not an alternate trading strategy. Compare at SAME symbol, venue, timeframe,
+// exact bar open time and CLOSED candle. Bitunix OHLC may differ from TradingView.
+rsiRaw     = ta.rsi(close, 14)
+stochRsi   = ta.sma(ta.stoch(rsiRaw, rsiRaw, rsiRaw, 14), 3)
+momRaw     = ta.mom(close, 10)
+momNorm    = ta.percentrank(momRaw, 100)
+raw        = (rsiRaw + stochRsi + momNorm) / math.max(3.0, 0.001)
+composite  = ta.ema(raw, 3)
+emaFast    = ta.ema(close, 21)
+emaSlow    = ta.ema(close, 55)
+bullTrend  = emaFast > emaSlow
+bearTrend  = emaFast < emaSlow
+bull       = ta.crossover(composite, 30) and bullTrend
+bear       = ta.crossunder(composite, 70) and bearTrend
+pivLow     = ta.pivotlow(composite, 5, 5)
+pivHigh    = ta.pivothigh(composite, 5, 5)
+
+// One actual plotted oscillator; remaining diagnostics appear in Data Window.
+plot(composite, "Composite original", color=color.aqua, linewidth=2)
+hline(30, "OS 30")
+hline(70, "OB 70")
+plot(rsiRaw, "CHECK RSI14", display=display.data_window)
+plot(stochRsi, "CHECK StochRSI14 SMA3", display=display.data_window)
+plot(momRaw, "CHECK Momentum10", display=display.data_window)
+plot(momNorm, "CHECK PercentRank100", display=display.data_window)
+plot(emaFast, "CHECK EMA21", display=display.data_window)
+plot(emaSlow, "CHECK EMA55", display=display.data_window)
+plot(bull ? 1 : 0, "CHECK BullSignal 1/0", display=display.data_window)
+plot(bear ? 1 : 0, "CHECK BearSignal 1/0", display=display.data_window)
+plot(not na(pivLow) ? 1 : 0, "CHECK PivotLow confirmed NOW", display=display.data_window)
+plot(not na(pivHigh) ? 1 : 0, "CHECK PivotHigh confirmed NOW", display=display.data_window)
+plot(time, "CHECK time Unix milliseconds", display=display.data_window)
+
+// This script displays an oscillator and exposes exact default intermediates
+// in TradingView's Data Window. It does NOT attempt account export by itself.
+// Regular/hidden divergence parity must use the original script because
+// pivots plus prior price/osc comparisons determine the four categories.
