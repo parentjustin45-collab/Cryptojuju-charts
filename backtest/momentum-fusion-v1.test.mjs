@@ -39,6 +39,33 @@ test('Pine percentrank includes ties, returning 100 on a repeating momentum seri
  const result=calculateMomentumFusion(data);
  assert.ok(result[145].momentumRank>=99);
 });
+test('Pine ta.sma ignores na stochastic samples without resetting all later composite values',()=>{
+ // Long flat trend causes multiple zero-range RSI stochastic values.
+ // After volatility resumes, the 3-period stochastic SMA resumes once
+ // THREE VALID stochastic readings have occurred, even with gaps.
+ const data=bars(240);
+ for(let i=120;i<165;i++){
+  data[i]={...data[i],open:100,close:100,high:100.5,low:99.5};
+ }
+ const o=calculateMomentumFusion(data);
+ assert.ok(o.some(x=>x.stochRsi===null));
+ assert.ok(o.slice(180).some(x=>Number.isFinite(x.stochRsi)));
+ assert.ok(o.slice(180).some(x=>Number.isFinite(x.composite)));
+ for(const row of o) if(row.composite!==null)
+  assert.ok(row.composite>=0&&row.composite<=100);
+});
+test('Missing stochastic values cannot create a future-aware pivot or early signal',()=>{
+ const data=bars(240);
+ for(let i=120;i<180;i++)data[i]={
+  ...data[i],open:100,close:100,high:100.5,low:99.5};
+ const o=calculateMomentumFusion(data);
+ for(const row of o)for(const d of row.divergences){
+  assert.equal(d.confirmationIndex-d.pivotIndex,5);
+  assert.ok(d.confirmationTime>d.pivotTime);
+ }
+ const changed=data.map((c,i)=>i<195?{...c}:{...c,open:120,high:123,low:111,close:122});
+ assert.deepEqual(o.slice(0,195),calculateMomentumFusion(changed).slice(0,195));
+});
 test('Every divergence is emitted only at confirmation, not moved back to pivot',()=>{
  const o=calculateMomentumFusion(bars());
  let count=0;
