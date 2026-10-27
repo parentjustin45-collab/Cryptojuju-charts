@@ -1,0 +1,28 @@
+name: Momentum Fusion — TradingView CSV Parity Comparator (DEV ONLY)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/momentum-fusion-v1.mjs'
+      - 'backtest/momentum-fusion-compare-tv-csv.mjs'
+      - 'backtest/momentum-fusion-compare-tv-csv.test.mjs'
+      - '.github/workflows/momentum-fusion-tv-csv-parity.yml'
+  workflow_dispatch:
+jobs:
+  csv-parity-preflight:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check TradingView CSV parser and same-source parity comparison
+        run: node --test backtest/momentum-fusion-v1.test.mjs backtest/momentum-fusion-compare-tv-csv.test.mjs
+      - name: Prevent accidental promotion of fixture checks as true TV parity
+        run: |
+          test ! -e backtest/momentum-fusion-tradingview-export.csv
+          grep -q 'NOT_YET_VALIDATED' backtest/MOMENTUM_FUSION_PARITY_CSV_WORKFLOW.md
