@@ -1,0 +1,68 @@
+//@version=6
+indicator("Momentum Fusion | CryptoJuju Read-only Webhook DEV", shorttitle="MF Audit Hook", overlay=false, precision=6)
+
+// RESEARCH ONLY. Separate from your original Momentum Fusion and Vector.
+// DO NOT paste TradingView passwords, Bitunix keys, or broker credentials.
+// Use a freshly generated, SINGLE-PURPOSE, rotating webhook-only token.
+// This Pine input and alert message will be stored by TradingView.
+// The alert is created MANUALLY in TradingView; indicator code cannot create it.
+// EXACT original defaults, no optimisation, no strategy.entry, no orders.
+groupHook = "CryptoJuju DEV read-only webhook"
+enableHook = input.bool(false, "Enable CLOSED bar audit alerts", group=groupHook)
+hookToken  = input.string("", "Dedicated webhook-only token (32+ chars)", group=groupHook,
+ tooltip="Generate a unique token solely for this endpoint, never a password, Bitunix key, login token, or account credential. Do not share screenshots of this setting.")
+rsiRaw    = ta.rsi(close, 14)
+stochRsi  = ta.sma(ta.stoch(rsiRaw, rsiRaw, rsiRaw, 14), 3)
+momRaw    = ta.mom(close, 10)
+momNorm   = ta.percentrank(momRaw, 100)
+raw       = (rsiRaw + stochRsi + momNorm) / math.max(3.0, 0.001)
+composite = ta.ema(raw, 3)
+emaFast   = ta.ema(close, 21)
+emaSlow   = ta.ema(close, 55)
+bull      = ta.crossover(composite, 30) and (emaFast > emaSlow)
+bear      = ta.crossunder(composite, 70) and (emaFast < emaSlow)
+pivotLowConfirmed  = not na(ta.pivotlow(composite, 5, 5))
+pivotHighConfirmed = not na(ta.pivothigh(composite, 5, 5))
+
+numberOrNull(x) =>
+    na(x) ? "null" : str.tostring(x, "#.##########")
+boolJson(x) =>
+    x ? "true" : "false"
+
+// One JSON payload on each REALTIME CLOSED candle, not historical replays.
+// No trading action, merely OHLC + the mathematical intermediate values.
+msg = '{"auth":"' + hookToken +
+      '","protocol":"cj-tv-momfusion-closedbar-v1"' +
+      ',"profile":"momfusion-pine-v6-defaults-2026-10-26"' +
+      ',"source":"TradingView"' +
+      ',"symbol":"' + syminfo.tickerid +
+      '","timeframe":"' + timeframe.period +
+      '","barOpenMs":' + str.tostring(time) +
+      ',"barCloseMs":' + str.tostring(time_close) +
+      ',"ohlc":{"open":' + numberOrNull(open) +
+      ',"high":' + numberOrNull(high) +
+      ',"low":' + numberOrNull(low) +
+      ',"close":' + numberOrNull(close) +
+      '},"values":{"composite":' + numberOrNull(composite) +
+      ',"rsi":' + numberOrNull(rsiRaw) +
+      ',"stochRsi":' + numberOrNull(stochRsi) +
+      ',"momRaw":' + numberOrNull(momRaw) +
+      ',"momentumRank":' + numberOrNull(momNorm) +
+      ',"emaFast":' + numberOrNull(emaFast) +
+      ',"emaSlow":' + numberOrNull(emaSlow) +
+      ',"bullSignal":' + boolJson(bull) +
+      ',"bearSignal":' + boolJson(bear) +
+      ',"pivotLowConfirmed":' + boolJson(pivotLowConfirmed) +
+      ',"pivotHighConfirmed":' + boolJson(pivotHighConfirmed) + '}}'
+
+if enableHook and str.length(hookToken) >= 32 and barstate.isrealtime and barstate.isconfirmed
+    alert(msg, alert.freq_once_per_bar_close)
+
+plot(composite, "Momentum Fusion original", color=color.aqua, linewidth=2)
+hline(70, "Overbought", color=color.orange)
+hline(30, "Oversold", color=color.aqua)
+plot(rsiRaw, "RSI", display=display.data_window)
+plot(stochRsi, "Stoch RSI", display=display.data_window)
+plot(momNorm, "Momentum percentrank", display=display.data_window)
+plot(emaFast, "EMA21", display=display.data_window)
+plot(emaSlow, "EMA55", display=display.data_window)

@@ -1,0 +1,42 @@
+name: TradingView Momentum webhook bridge — DEV isolated security checks
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'bridge/tv-momentum-core.mjs'
+      - 'bridge/tv-momentum-server.mjs'
+      - 'bridge/tv-momentum-report.mjs'
+      - 'bridge/tv-momentum.test.mjs'
+      - 'bridge/tradingview-momentum-readonly-alert.pine'
+      - '.github/workflows/tradingview-momentum-webhook-bridge.yml'
+  workflow_dispatch:
+jobs:
+  isolated-webhook-bridge:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify webhook auth, fsync storage, restart idempotency and parity
+        run: node --test bridge/tv-momentum.test.mjs
+      - name: Refuse trade commands and production secrets in developer alert code
+        run: |
+          test -f bridge/tradingview-momentum-readonly-alert.pine
+          ! grep -Eiq 'strategy\.entry|strategy\.order|strategy\.exit|apiSecret|brokerApiKey' bridge/tradingview-momentum-readonly-alert.pine
+          test ! -e bridge/.env
+      - name: Preserve code as a development-only artifact (no Render deployment)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cryptojuju-tv-momentum-bridge-dev-only
+          path: |
+            bridge/tv-momentum-core.mjs
+            bridge/tv-momentum-server.mjs
+            bridge/tv-momentum-report.mjs
+            bridge/tradingview-momentum-readonly-alert.pine
+            bridge/README.md
+          if-no-files-found: error
