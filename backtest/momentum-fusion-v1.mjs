@@ -155,7 +155,9 @@ export function calculateMomentumFusion(candles,overrides={}){
    c<=p.osLevel?'Oversold':'Neutral';
   const trendText=!p.useEmaFilter?'Off':bullTrend?'Bull':bearTrend?'Bear':'Flat';
   const divergences=[];
-  if(confirmedPivot(composite,i,p.pivotLeft,p.pivotRight,'low')){
+  const pivotLowConfirmed=confirmedPivot(composite,i,p.pivotLeft,p.pivotRight,'low');
+  const pivotHighConfirmed=confirmedPivot(composite,i,p.pivotLeft,p.pivotRight,'high');
+  if(pivotLowConfirmed){
    const k=i-p.pivotRight,cur={index:k,time:candles[k].time,
     osc:composite[k],price:Number(candles[k].low)};
    if(prevLow&&k-prevLow.index<=p.maxPivotLookback){
@@ -170,7 +172,7 @@ export function calculateMomentumFusion(candles,overrides={}){
    }
    prevLow=cur;
   }
-  if(confirmedPivot(composite,i,p.pivotLeft,p.pivotRight,'high')){
+  if(pivotHighConfirmed){
    const k=i-p.pivotRight,cur={index:k,time:candles[k].time,
     osc:composite[k],price:Number(candles[k].high)};
    if(prevHigh&&k-prevHigh.index<=p.maxPivotLookback){
@@ -196,7 +198,7 @@ export function calculateMomentumFusion(candles,overrides={}){
    momentumRank:rank[i],composite:c,emaFast:emaFast[i],
    emaSlow:emaSlow[i],zone,trend:trendText,bullTrend,bearTrend,
    crossUpFromOS:crossUp,crossDnFromOB:crossDown,bullSignal,bearSignal,
-   divergences,lastDivText,
+   pivotLowConfirmed,pivotHighConfirmed,divergences,lastDivText,
    // Alert conditions are independent of visualization toggles.
    alerts:p.alertsOn?{bullSignal,bearSignal,
     regBull:divergences.some(x=>x.type==='regBull'),
