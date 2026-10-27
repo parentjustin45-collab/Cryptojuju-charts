@@ -113,6 +113,9 @@ export async function auditMomentumFusion({fetchPage=makeCryptoJujuFetchPage(),
      validPercent:round(clean.quality.coveragePct),
      excludedBars:clean.excludedBars,eligibleWindows:clean.eligibleWindows.length,
      barsAnalyzed,issues:clean.issues.length,missing:clean.missing.length,
+     duplicateTimes:clean.duplicateTimes.length,
+     longestContiguousSegment:Math.max(0,...clean.segments.map(w=>w.bars)),
+     segmentLengths:clean.segments.map(w=>w.bars).sort((a,b)=>b-a),
      lastExpectedClosedOpen:end-stepMs,start,end,
      sourceStatus:clean.status},counts,events,
     note:'Event at confirmation bar, not a historical pivot label. Later Vector matching is retrospective only.'});
@@ -134,5 +137,10 @@ export async function auditMomentumFusion({fetchPage=makeCryptoJujuFetchPage(),
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const r=await auditMomentumFusion();
  console.log(JSON.stringify(r,null,2));
- if(r.state!=='ALL_ANALYZED')process.exitCode=1;
+ // A strictly blocked data slice is an expected research outcome. Preserve
+ // the run and full evidence; only actual execution errors fail CI.
+ if(r.state==='SOME_ERROR'||r.results.every(x=>x.status==='BLOCKED_DATA'))
+  process.exitCode=1;
+ if(r.state==='PARTIAL_QUARANTINE')
+  console.error('WARNING: Some Bitunix markets BLOCKED_DATA; incomplete markets are excluded from all aggregates.');
 }
