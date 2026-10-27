@@ -1,0 +1,30 @@
+name: TradingView Render free pilot — security + Postgres adapter (DEV ONLY)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'bridge/tv-momentum-render.mjs'
+      - 'bridge/tv-momentum-render.test.mjs'
+      - 'bridge/tv-momentum-core.mjs'
+      - 'bridge/package.json'
+      - '.github/workflows/tv-momentum-render-pilot.yml'
+  workflow_dispatch:
+jobs:
+  pilot-predeploy:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: 
+          node-version: '22'
+      - name: Test strict closed-bar authentication and Postgres idempotence offline
+        run: node --test bridge/tv-momentum-render.test.mjs bridge/tv-momentum.test.mjs
+      - name: Validate package without deploying
+        run: |
+          node -e "const p=require('./bridge/package.json'); if(!p.dependencies.pg)process.exit(1)"
+          test ! -f bridge/.env
+          test ! -f bridge/alerts.ndjson
