@@ -1,0 +1,30 @@
+name: CryptoJuju TradingView private dashboard (development only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'bridge/tv-momentum-dashboard.mjs'
+      - 'bridge/tv-momentum-dashboard.test.mjs'
+      - 'bridge/tv-momentum-render.mjs'
+      - '.github/workflows/tv-momentum-private-dashboard.yml'
+  workflow_dispatch:
+jobs:
+  private-dashboard:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify owner authentication and data privacy without public secrets
+        run: node --test bridge/tv-momentum-dashboard.test.mjs bridge/tv-momentum-render.test.mjs bridge/tv-momentum.test.mjs
+      - name: Assert no credentials in repository
+        run: |
+          test ! -f bridge/.env
+          test ! -f bridge/alerts.ndjson
+          grep -q 'CJ_TV_DASHBOARD_PASSWORD' bridge/tv-momentum-render.mjs
+          grep -q 'no-store' bridge/tv-momentum-dashboard.mjs
