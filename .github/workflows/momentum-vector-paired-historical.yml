@@ -1,0 +1,71 @@
+name: Momentum vs Vector — Bitunix paired historical audit (DEV ONLY)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/momentum-vector-paired-gate.mjs'
+      - 'backtest/momentum-vector-paired-gate.test.mjs'
+      - '.github/workflows/momentum-vector-paired-historical.yml'
+  workflow_dispatch:
+jobs:
+  causal-audit:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test causal gate, historical cutoff, quarantine and fixed costs
+        run: node --test backtest/momentum-vector-paired-gate.test.mjs
+      - name: Read public historical Bitunix OHLC before forward start only
+        run: node backtest/momentum-vector-paired-gate.mjs > momentum-vector-paired-historical.json
+      - name: Export short JSON and CSV
+        if: always()
+        run: |
+          if test -f momentum-vector-paired-historical.json; then
+            node --input-type=module -e '
+            import fs from "node:fs";
+            const r=JSON.parse(fs.readFileSync("momentum-vector-paired-historical.json","utf8"));
+            const summary=r.results.flatMap(x=>
+              Object.entries(x.report?.models??{}).map(([model,v])=>({
+                symbol:x.symbol,tf:x.timeframe,status:x.status,model,
+                received:x.received,excludedBars:x.excludedBars,
+                qualifyingWindows:x.windows,baseline:v.all,
+                accepted:v.accepted,rejected:v.rejected,unavailable:v.unavailable
+              })));
+            fs.writeFileSync("momentum-vector-paired-summary.json",JSON.stringify(summary,null,2));
+            const c=["symbol","tf","status","model","received","excludedBars",
+              "qualifyingWindows","events","accepted","rejected","baselineClosed",
+              "baselineWinRatePct","baselineMeanNetPct","acceptedClosed",
+              "acceptedWinRatePct","acceptedMeanNetPct","rejectedClosed","rejectedMeanNetPct"];
+            const rows=summary.map(r=>({
+              symbol:r.symbol,tf:r.tf,status:r.status,model:r.model,
+              received:r.received,excludedBars:r.excludedBars,
+              qualifyingWindows:r.qualifyingWindows,events:r.baseline.events,
+              accepted:r.accepted.events,rejected:r.rejected.events,
+              baselineClosed:r.baseline.closed,baselineWinRatePct:r.baseline.winRatePct,
+              baselineMeanNetPct:r.baseline.meanNetPct,
+              acceptedClosed:r.accepted.closed,
+              acceptedWinRatePct:r.accepted.winRatePct,
+              acceptedMeanNetPct:r.accepted.meanNetPct,
+              rejectedClosed:r.rejected.closed,rejectedMeanNetPct:r.rejected.meanNetPct
+            }));
+            const esc=x=>x==null?"":String(x).includes(",")?JSON.stringify(x):String(x);
+            fs.writeFileSync("momentum-vector-paired-summary.csv",
+              [c.join(","),...rows.map(r=>c.map(k=>esc(r[k])).join(","))].join("\n")+"\n");
+            '
+          fi
+      - name: Archive per-signal Bitunix historical research, never deploy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-momentum-vector-paired-pre-forward-bitunix
+          path: |
+            momentum-vector-paired-historical.json
+            momentum-vector-paired-summary.json
+            momentum-vector-paired-summary.csv
+          if-no-files-found: warn
