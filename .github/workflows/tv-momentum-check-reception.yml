@@ -1,0 +1,45 @@
+name: TradingView Momentum pilot — verify real reception count (DEV ONLY)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - '.github/workflows/tv-momentum-check-reception.yml'
+  workflow_dispatch:
+jobs:
+  read-only-pilot-check:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Read Render live health and persisted observation count
+        env:
+          CHECK_URL: https://cryptojuju-tv-momentum-pilot.onrender.com/healthz
+        run: |
+          node - <<'NODE'
+          const url=process.env.CHECK_URL;
+          const result=await fetch(url,{signal:AbortSignal.timeout(120000),
+            headers:{'User-Agent':'CryptoJuju-Dev-ReadOnly-Health-Check/1.0'}});
+          const body=await result.text();
+          let parsed={};
+          try{parsed=JSON.parse(body)}catch{}
+          console.log('LIVE HEALTH HTTP:',result.status);
+          console.log('LIVE PILOT STATUS:',parsed.status??'UNKNOWN');
+          console.log('PERSISTED TRADINGVIEW OBSERVATIONS:',parsed.storedObservations??'NOT_AVAILABLE');
+          if(result.status!==200||parsed.status!=='READY'||
+             !Number.isSafeInteger(parsed.storedObservations))process.exitCode=1;
+          NODE
+      - name: Confirm unauthenticated POST is rejected without storing an event
+        if: success()
+        run: |
+          node - <<'NODE'
+          const u='https://cryptojuju-tv-momentum-pilot.onrender.com/tv/momentum';
+          const res=await fetch(u,{method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({auth:'DELIBERATELY_INVALID_TOKEN_FOR_TEST_ONLY'}),
+            signal:AbortSignal.timeout(20000)});
+          console.log('INVALID-TOKEN TEST HTTP:',res.status);
+          console.log('EXPECTED: 401 UNAUTHORIZED (NOT A TRADINGVIEW DELIVERY)');
+          if(res.status!==401)process.exitCode=1;
+          NODE
