@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {validateTradingViewBar,observationId,canonicalObservation}
  from './tv-momentum-core.mjs';
+import {createPrivateDashboardHandler} from './tv-momentum-dashboard.mjs';
 
 const LIMIT=8192;
 export const CREATE_SQL='CREATE TABLE IF NOT EXISTS cj_tv_momentum_pilot (id TEXT PRIMARY KEY, content_hash CHAR(64) NOT NULL, payload JSONB NOT NULL, first_received TIMESTAMPTZ NOT NULL DEFAULT NOW())';
@@ -30,6 +31,13 @@ export function createPostgresStore(query){
   ready:async()=>{
    const x=await query('SELECT COUNT(*)::int AS received FROM cj_tv_momentum_pilot');
    return {received:Number(x.rows[0]?.received??0)};
+  },
+  dashboardSnapshot:async()=>{
+   const [count,recents]=await Promise.all([
+    query('SELECT COUNT(*)::int AS received FROM cj_tv_momentum_pilot'),
+    query('SELECT payload FROM cj_tv_momentum_pilot ORDER BY first_received DESC LIMIT 1000')
+   ]);
+   return {total:Number(count.rows[0]?.received??0),observations:recents.rows};
   }
  };
 }
@@ -43,10 +51,12 @@ const send=(res,code,payload)=>{
   'cache-control':'no-store','x-content-type-options':'nosniff'});
  res.end(JSON.stringify(payload));
 };
-export function createPilotReceiver({secret,store,now=Date.now}={}){
+export function createPilotReceiver({secret,store,now=Date.now,dashboardPassword}={}){
+ const handleDashboard=createPrivateDashboardHandler({password:dashboardPassword,store});
  const enabled=typeof secret==='string'&&Buffer.byteLength(secret,'utf8')>=32
   &&store&&typeof store.persist==='function'&&typeof store.ready==='function';
  return http.createServer(async(req,res)=>{
+  if(await handleDashboard(req,res))return;
   if(req.url==='/healthz'&&req.method==='GET'){
    if(!enabled){send(res,503,{status:'NOT_CONFIGURED',service:'Momentum research pilot'});return;}
    try{
@@ -109,7 +119,8 @@ async function main(){
    console.error('Momentum pilot DB not ready:',String(err?.code??err?.name??'DB_ERROR'));
   }
  }
- const server=createPilotReceiver({secret:process.env.CJ_TV_WEBHOOK_TOKEN,store});
+ const server=createPilotReceiver({secret:process.env.CJ_TV_WEBHOOK_TOKEN,
+  store,dashboardPassword:process.env.CJ_TV_DASHBOARD_PASSWORD});
  const port=Number(process.env.PORT??3000);
  if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid PORT');
  server.listen(port,'0.0.0.0',()=>{
