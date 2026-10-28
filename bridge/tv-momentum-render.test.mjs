@@ -20,6 +20,7 @@ function db(){
  return async(sql,args=[])=>{
   if(sql===CREATE_SQL)return {rowCount:0,rows:[]};
   if(sql==='SELECT 1 AS ok')return {rowCount:1,rows:[{ok:1}]};
+  if(sql.startsWith('SELECT COUNT(*)::int AS received'))return {rowCount:1,rows:[{received:rows.size}]};
   if(sql.startsWith('INSERT')){
    const [id,hash,payload]=args;
    if(rows.has(id))return {rowCount:0,rows:[]};
@@ -55,11 +56,16 @@ test('Postgres schema uses a primary key and JSONB, never an exchange API key',(
 test('Secured payload persistence, duplicate and conflict detection',async()=>{
  const query=db(),store=createPostgresStore(query),s=await onServer({secret:token,store});
  try{
-  assert.equal((await fetch(s.base+'/healthz')).status,200);
+  let state=await (await fetch(s.base+'/healthz')).json();
+  assert.equal(state.status,'READY');
+  assert.equal(state.storedObservations,0);
   const bad=observation();bad.auth='wrong';
   assert.equal((await s.post(bad)).status,401);
   assert.equal((await s.post(observation())).status,202);
   assert.equal((await s.post(observation())).status,200);
+  state=await (await fetch(s.base+'/healthz')).json();
+  assert.equal(state.storedObservations,1);
+  assert.ok(!JSON.stringify(state).includes(token));
   const changed=observation();changed.values.rsi=44;
   assert.equal((await s.post(changed)).status,409);
   assert.equal((await s.post({...observation(),order:'BUY'})).status,422);
