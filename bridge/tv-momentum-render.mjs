@@ -27,7 +27,10 @@ export function createPostgresStore(query){
    if(prev.rows.length!==1)throw Error('Database race; retry');
    return prev.rows[0].content_hash===fingerprint?'DUPLICATE':'CONFLICT';
   },
-  ready:async()=>{await query('SELECT 1 AS ok');return true;}
+  ready:async()=>{
+   const x=await query('SELECT COUNT(*)::int AS received FROM cj_tv_momentum_pilot');
+   return {received:Number(x.rows[0]?.received??0)};
+  }
  };
 }
 const constantTimeSecret=(a,b)=>{
@@ -46,8 +49,11 @@ export function createPilotReceiver({secret,store,now=Date.now}={}){
  return http.createServer(async(req,res)=>{
   if(req.url==='/healthz'&&req.method==='GET'){
    if(!enabled){send(res,503,{status:'NOT_CONFIGURED',service:'Momentum research pilot'});return;}
-   try{await store.ready();send(res,200,{status:'READY',service:'Momentum research pilot'});}
-   catch{send(res,503,{status:'DATABASE_UNAVAILABLE'});}
+   try{
+    const r=await store.ready();
+    send(res,200,{status:'READY',service:'Momentum research pilot',
+     storedObservations:Number(r?.received??0)});
+   }catch{send(res,503,{status:'DATABASE_UNAVAILABLE'});}
    return;
   }
   if(req.url!=='/tv/momentum'||req.method!=='POST'){
@@ -75,10 +81,15 @@ export function createPilotReceiver({secret,store,now=Date.now}={}){
   catch(e){send(res,422,{error:String(e?.message??e)});return;}
   try{
    const state=await store.persist(item);
-   if(state==='CONFLICT'){send(res,409,{status:'conflict'});return;}
+   if(state==='CONFLICT'){
+    console.info('Momentum webhook: CONFLICT, no observation changed');
+    send(res,409,{status:'conflict'});return;
+   }
+   console.info('Momentum webhook:',state==='INSERTED'?'INSERTED':'DUPLICATE');
    send(res,state==='INSERTED'?202:200,{status:state.toLowerCase(),
     id:observationId(item)});
   }catch{
+   console.warn('Momentum webhook: PERSISTENCE_FAILED');
    send(res,503,{error:'durable storage unavailable'});
   }
  });
