@@ -8,11 +8,18 @@ export async function auditBitunixBlocks(fetchPage,{symbol,startTime,endTime,blo
   startTime%H||endTime%H||!Number.isInteger(blockBars)||blockBars<1||blockBars>200||
   !Number.isInteger(retries)||retries<0||retries>5)throw Error('Invalid diagnostic configuration');
  const raw=[],blocks=[],attempts=[];
+ const accepted=new Map(),conflicts=new Set();
+ const same=(a,b)=>['open','high','low','close','volume'].every(k=>Number(a[k])===Number(b[k]));
  const request=async (from,to,kind,round)=>{
   try{
    const page=await fetchPage({symbol,interval:'1h',startTime:from,endTime:to,limit:Math.min(200,(to-from)/H)});
    if(!Array.isArray(page))throw Error('Non-array page');
    const kept=page.filter(x=>Number.isSafeInteger(Number(x?.time))&&Number(x.time)>=from&&Number(x.time)<to);
+   for(const row of kept){
+    const t=Number(row.time),prior=accepted.get(t);
+    if(prior&&!same(prior,row))conflicts.add(t);
+    else if(!prior)accepted.set(t,row);
+   }
    raw.push(...kept);
    attempts.push({kind,round,from,to,received:page.length,kept:kept.length,status:'OK'});
   }catch(e){attempts.push({kind,round,from,to,status:'ERROR',error:String(e?.message??e)});}
@@ -37,12 +44,12 @@ export async function auditBitunixBlocks(fetchPage,{symbol,startTime,endTime,blo
   }
   if(from!==null)groups.push([from,prev+H]);
   for(const [a,b] of groups)await request(a,b,'targeted',round);
-  const current=classifyHistory(raw,{startTime,endTime,intervalMs:H});
+  const current=classifyHistory([...accepted.values()],{startTime,endTime,intervalMs:H});
   for(const t of [...current.missing,...current.issues.map(x=>x.time)])
    if(!current.duplicates.includes(t))retryTimes.add(t);
  }
- const final=classifyHistory(raw,{startTime,endTime,intervalMs:H});
- const duplicateTimes=[...new Set(final.duplicates)].sort((a,b)=>a-b);
+ const final=classifyHistory([...accepted.values()],{startTime,endTime,intervalMs:H});
+ const duplicateTimes=[...conflicts].sort((a,b)=>a-b);
  const quarantined=new Set([...final.unusable,...duplicateTimes]);
  const clean=final.candles.filter(x=>!quarantined.has(x.time));
  return {symbol,window:{startTime,endTime},blocks,attempts,
