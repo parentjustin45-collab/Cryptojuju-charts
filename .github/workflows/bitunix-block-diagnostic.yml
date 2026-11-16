@@ -1,0 +1,23 @@
+name: DEV Bitunix 1H block ingestion diagnostics (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/bitunix-block-diagnostic.mjs'
+      - 'backtest/bitunix-block-diagnostic.test.mjs'
+      - '.github/workflows/bitunix-block-diagnostic.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test strict recovery and quarantine without simulated candles
+        run: node --test backtest/bitunix-block-diagnostic.test.mjs
