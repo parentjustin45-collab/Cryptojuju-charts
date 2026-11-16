@@ -5,6 +5,7 @@ on:
     paths:
       - 'backtest/bitunix-block-diagnostic.mjs'
       - 'backtest/bitunix-block-diagnostic.test.mjs'
+      - 'backtest/bitunix-real-ingestion-audit.mjs'
       - '.github/workflows/bitunix-block-diagnostic.yml'
   workflow_dispatch:
 jobs:
@@ -21,3 +22,12 @@ jobs:
           node-version: '22'
       - name: Test strict recovery and quarantine without simulated candles
         run: node --test backtest/bitunix-block-diagnostic.test.mjs
+      - name: Compare real Bitunix 1H ingestion before and after targeted retries
+        run: node backtest/bitunix-real-ingestion-audit.mjs > bitunix-ingestion-report.json
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-bitunix-real-ingestion-diagnostic
+          path: bitunix-ingestion-report.json
+          if-no-files-found: warn
