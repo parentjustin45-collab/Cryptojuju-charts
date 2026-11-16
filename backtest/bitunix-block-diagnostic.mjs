@@ -53,7 +53,7 @@ export async function auditBitunixBlocks(fetchPage,{symbol,startTime,endTime,blo
  const quarantined=new Set([...final.unusable,...duplicateTimes]);
  const clean=final.candles.filter(x=>!quarantined.has(x.time));
  return {symbol,window:{startTime,endTime},blocks,attempts,
-  initial:{expected:initial.quality.expected,missing:initial.missing.length,invalid:initial.issues.length,duplicates:initial.duplicates.length},
+  initial:{expected:initial.quality.expected,missing:initial.missing.length,invalid:initial.issues.length,duplicates:initial.quality.duplicates},
   final:{expected:final.quality.expected,received:raw.length,validUnique:clean.length,
    missing:final.missing,invalid:final.issues.map(x=>({time:x.time,reasons:x.reasons})),
    duplicateTimes,quarantinedTimes:[...quarantined].sort((a,b)=>a-b),
