@@ -22,3 +22,14 @@ test('invalid OHLC is never silently corrected',async()=>{
  const r=await auditBitunixBlocks(async()=>[{...candle(0),high:90}],{symbol:'BTCUSDT',startTime:0,endTime:H,retries:0});
  assert.equal(r.final.validUnique,0);assert.equal(r.final.invalid.length,1);
 });
+
+test('identical refetched candle is deduplicated rather than quarantined',async()=>{
+ let n=0;
+ const r=await auditBitunixBlocks(async q=>{
+  n++;
+  if(n===1)return [candle(0),{...candle(H),high:90}];
+  return [candle(H)];
+ },{symbol:'BTCUSDT',startTime:0,endTime:2*H,retries:1});
+ assert.equal(r.final.validUnique,1);
+ assert.deepEqual(r.final.duplicateTimes,[H]);
+});
