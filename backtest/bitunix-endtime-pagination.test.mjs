@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {loadBitunixHistory} from './bitunix-history.mjs';
 import {makeBitunixFetchPage} from './bitunix-adapter.mjs';
 import {makeCryptoJujuFetchPage} from './cryptojuju-adapter.mjs';
-const H=3600000;
-const bars=Array.from({length:7},(_,i)=>({time:i*H,open:String(100+i),high:String(102+i),low:String(99+i),close:String(101+i),baseVol:'1'}));
+const H=3600000,BASE=Date.UTC(2026,10,10);
+const bars=Array.from({length:7},(_,i)=>({time:BASE+i*H,open:String(100+i),high:String(102+i),low:String(99+i),close:String(101+i),baseVol:'1'}));
 const requested=[];
 function fakeBitunixResponse(url){
  const upstream=new URL(new URL(url).pathname==='/api/bitunix/proxy'?new URL(url).searchParams.get('url'):url);
@@ -17,11 +17,11 @@ function fakeBitunixResponse(url){
 }
 async function checkPaging(fetchPage){
  requested.length=0;
- const result=await loadBitunixHistory({symbol:'BTCUSDT',interval:'1h',startTime:0,endTime:5*H,intervalMs:H,limit:2,fetchPage,maxPages:10});
- assert.deepEqual(result.candles.map(b=>b.time),[0,H,2*H,3*H,4*H]);
+ const result=await loadBitunixHistory({symbol:'BTCUSDT',interval:'1h',startTime:BASE,endTime:BASE+5*H,intervalMs:H,limit:2,fetchPage,maxPages:10});
+ assert.deepEqual(result.candles.map(b=>b.time),[BASE,BASE+H,BASE+2*H,BASE+3*H,BASE+4*H]);
  assert.equal(result.quality.gaps.length,0);
  assert.equal(result.quality.pages,3);
- assert.deepEqual(requested.map(x=>x.end),[2*H,4*H,5*H],'fetch each historical page forward, despite API backward semantics');
+ assert.deepEqual(requested.map(x=>x.end),[BASE+2*H,BASE+4*H,BASE+5*H],'fetch each historical page forward, despite API backward semantics');
  assert.deepEqual(requested.map(x=>x.limit),[2,2,2]);
 }
 test('official Bitunix REST adapter correctly pages historic 1h bars',async()=>{
