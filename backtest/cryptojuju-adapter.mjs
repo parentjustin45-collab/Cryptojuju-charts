@@ -9,8 +9,13 @@ export function makeCryptoJujuFetchPage({fetchImpl=globalThis.fetch}={}){
   if(!/^(1m|3m|5m|15m|30m|1h|2h|4h|6h|12h|1d|1w)$/.test(interval))throw Error('Invalid interval');
   if(!Number.isInteger(limit)||limit<1||limit>200)throw Error('Invalid limit');
   if(![startTime,endTime].every(Number.isSafeInteger)||startTime>=endTime)throw Error('Invalid range');
+  const steps={ '1m':60000,'3m':180000,'5m':300000,'15m':900000,'30m':1800000,
+   '1h':3600000,'2h':7200000,'4h':14400000,'6h':21600000,'12h':43200000,
+   '1d':86400000,'1w':604800000 };
+  // Bitunix does not support startTime (2026-10-27 docs).
+  const pageEnd=Math.min(endTime,startTime+limit*steps[interval]);
   const upstream=new URL('https://fapi.bitunix.com/api/v1/futures/market/kline');
-  for(const [k,v] of Object.entries({symbol,interval,startTime,endTime,limit,type:'LAST_PRICE'}))upstream.searchParams.set(k,String(v));
+  for(const [k,v] of Object.entries({symbol,interval,endTime:pageEnd,limit,type:'LAST_PRICE'}))upstream.searchParams.set(k,String(v));
   const url=new URL('https://cryptojuju-api.onrender.com/api/bitunix/proxy');
   url.searchParams.set('url',upstream.href);
   const response=await fetchImpl(url.href,{signal,cache:'no-store',credentials:'omit'});
@@ -22,6 +27,6 @@ export function makeCryptoJujuFetchPage({fetchImpl=globalThis.fetch}={}){
   return raw.map(k=>{
    const t=Number(Array.isArray(k)?k[0]:(k.time??k.ts??k.openTime));
    return {time:t<1e11?t*1000:t,open:Array.isArray(k)?k[1]:k.open,high:Array.isArray(k)?k[2]:k.high,low:Array.isArray(k)?k[3]:k.low,close:Array.isArray(k)?k[4]:k.close,volume:Array.isArray(k)?k[5]:(k.baseVol??k.volume??0)};
-  });
+  }).filter(k=>k.time>=startTime&&k.time<pageEnd);
  };
 }
