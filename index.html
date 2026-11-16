@@ -408,15 +408,12 @@ async function tryHistory(s,f){
  // V1.20.1 — CORS.SH was a single point of failure. Keep Bitunix as the data source,
  // but rotate the transport proxy before EVER authorizing another exchange.
  // A proxy failure must not be interpreted as a Bitunix market-data failure.
- // V1.22.6 — our own backend is the primary transport for Bitunix history.
- // /candles returns {ok, source, data:<raw Bitunix response>}; unwrap it before normalizing.
+ // DEV V1.26.0 — /candles returned HTTP 404 on the deployed backend.
+ // The working CryptoJuju proxy remains a Bitunix-only transport (not a fallback exchange).
  async function cryptoJujuServerHistory(){
-   const url=`${CRYPTOJUJU_API}/candles?symbol=${encodeURIComponent(s)}&interval=${encodeURIComponent(bitunixInterval)}&limit=500`;
-   const j=await fetchJson(url,12000);
-   if(j?.ok===false)throw Error(j?.message||"CryptoJuju /candles erreur");
-   const rows=normalizeRestRows(j?.data??j);
-   if(!rows.length)throw Error("CryptoJuju /candles vide");
-   console.info(`[CJ V1.22.6] Bitunix historique via CryptoJuju /candles: ${s} ${f}, ${rows.length} chandelles`);
+   const rows=await bitunix500(u=>fetchJson(`${CRYPTOJUJU_API}/api/bitunix/proxy?url=${encodeURIComponent(u)}`,12000));
+   if(!rows.length)throw Error("CryptoJuju proxy Bitunix vide");
+   console.info(`[CJ DEV] Bitunix historique via CryptoJuju proxy: ${s} ${f}, ${rows.length} chandelles`);
    return clean(rows);
  }
 
@@ -470,8 +467,8 @@ async function tryHistory(s,f){
    const rows=await cryptoJujuServerHistory();
    return{rows:clean(rows),source:"Bitunix Futures"};
  }catch(e){
-   bitunixErrors.push(`CRYPTOJUJU /candles: ${errText(e)}`);
-   console.warn(`[CJ V1.22.6] CryptoJuju /candles indisponible ${s} ${f}: ${errText(e)}; essai proxy serveur puis routes de secours.`);
+   bitunixErrors.push(`CRYPTOJUJU proxy: ${errText(e)}`);
+   console.warn(`[CJ DEV] CryptoJuju proxy indisponible ${s} ${f}: ${errText(e)}; essai proxy serveur puis routes de secours.`);
  }
  for(const [label,wrap] of bitunixRoutes){
    try{
