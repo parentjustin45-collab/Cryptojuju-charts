@@ -23,7 +23,7 @@ test('invalid OHLC is never silently corrected',async()=>{
  assert.equal(r.final.validUnique,0);assert.equal(r.final.invalid.length,1);
 });
 
-test('identical refetched candle is deduplicated rather than quarantined',async()=>{
+test('conflicting refetched candle remains quarantined',async()=>{
  let n=0;
  const r=await auditBitunixBlocks(async q=>{
   n++;
