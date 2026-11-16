@@ -367,7 +367,7 @@ async function tryHistory(s,f){
  async function raceUrls(name,jobs){try{let rows=await Promise.any(jobs);if(rows&&rows.length)return{rows:clean(rows),source:name}}catch(_){}throw Error(name+" indisponible")}
  const bitunixBase=`https://fapi.bitunix.com/api/v1/futures/market/kline`;
  const bitunixInterval = f==="1w" ? "1w" : f;
- function bitunixUrl(endTime){return `${bitunixBase}?symbol=${encodeURIComponent(s)}&startTime=${Math.floor(start)}&endTime=${Math.floor(endTime)}&interval=${encodeURIComponent(bitunixInterval)}&limit=200&type=LAST_PRICE`}
+ function bitunixUrl(endTime){return `${bitunixBase}?symbol=${encodeURIComponent(s)}&endTime=${Math.floor(endTime)}&interval=${encodeURIComponent(bitunixInterval)}&limit=200&type=LAST_PRICE`}
  const bgInt={"1m":"1m","5m":"5m","15m":"15m","30m":"30m","1h":"1H","2h":"2H","4h":"4H","6h":"6H","12h":"12H","1d":"1D","1w":"1W"}[f]||"15m";
  const bitget=`https://api.bitget.com/api/v2/mix/market/history-candles?symbol=${encodeURIComponent(s)}&productType=usdt-futures&granularity=${encodeURIComponent(bgInt)}&limit=200`;
  const base=s.replace(/USDT$/,'');const okBar={"1m":"1m","5m":"5m","15m":"15m","30m":"30m","1h":"1H","2h":"2H","4h":"4H","6h":"6H","12h":"12H","1d":"1Dutc","1w":"1Wutc"}[f]||"15m";
@@ -426,7 +426,7 @@ async function tryHistory(s,f){
 
  async function bitunixDailyToWeekly(){
    if(f!=="1w")throw Error("non-weekly");
-   const dailyUrl=(endTime)=>`${bitunixBase}?symbol=${encodeURIComponent(s)}&startTime=${Math.floor(now-1440*60000*900)}&endTime=${Math.floor(endTime)}&interval=1d&limit=200&type=LAST_PRICE`;
+   const dailyUrl=(endTime)=>`${bitunixBase}?symbol=${encodeURIComponent(s)}&endTime=${Math.floor(endTime)}&interval=1d&limit=200&type=LAST_PRICE`;
    async function getDaily(fetcher){
      let all=[],endTime=now;
      for(let page=0;page<5 && all.length<800;page++){
@@ -493,7 +493,7 @@ async function tryHistory(s,f){
     try{
      const targetSec=f==="12h"?43200:86400;
      const repairStart=now-360*60000*1200;
-     const sixUrl=endTime=>`${bitunixBase}?symbol=${encodeURIComponent(s)}&startTime=${Math.floor(repairStart)}&endTime=${Math.floor(endTime)}&interval=6h&limit=200&type=LAST_PRICE`;
+     const sixUrl=endTime=>`${bitunixBase}?symbol=${encodeURIComponent(s)}&endTime=${Math.floor(endTime)}&interval=6h&limit=200&type=LAST_PRICE`;
      let six=[],endTime=now;
      for(let page=0;page<6 && six.length<1000;page++){
        let j=null,lastProxyErr=null;
