@@ -46,7 +46,7 @@ export async function auditBitunixBlocks(fetchPage,{symbol,startTime,endTime,blo
   for(const [a,b] of groups)await request(a,b,'targeted',round);
   const current=classifyHistory([...accepted.values()],{startTime,endTime,intervalMs:H});
   for(const t of [...current.missing,...current.issues.map(x=>x.time)])
-   if(!current.duplicates.includes(t))retryTimes.add(t);
+   if(!conflicts.has(t))retryTimes.add(t);
  }
  const final=classifyHistory([...accepted.values()],{startTime,endTime,intervalMs:H});
  const duplicateTimes=[...conflicts].sort((a,b)=>a-b);
