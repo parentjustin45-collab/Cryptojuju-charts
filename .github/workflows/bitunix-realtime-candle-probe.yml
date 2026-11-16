@@ -1,0 +1,22 @@
+name: DEV Bitunix BTCUSDT 1H WebSocket/REST probe (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/bitunix-realtime-probe.mjs'
+      - '.github/workflows/bitunix-realtime-candle-probe.yml'
+  workflow_dispatch:
+jobs:
+  check-live:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only public Bitunix REST and 13s WebSocket cadence check
+        run: node backtest/bitunix-realtime-probe.mjs
