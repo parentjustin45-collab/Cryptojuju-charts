@@ -1,0 +1,27 @@
+name: DEV Bitunix 1H browser WS-to-chart parity
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'index.html'
+      - 'backtest/frontend-bitunix-browser-parity.mjs'
+      - '.github/workflows/frontend-bitunix-browser-parity.yml'
+  workflow_dispatch:
+jobs:
+  browser-parity:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated real Chromium and chart library
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium and runtime libraries
+        run: npx playwright install --with-deps chromium
+      - name: Verify WebSocket event to visible candle/series pipeline
+        run: node backtest/frontend-bitunix-browser-parity.mjs
