@@ -1,0 +1,26 @@
+name: DEV real Bitunix WS inside Chromium frontend
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/frontend-bitunix-live-browser-smoke.mjs'
+      - '.github/workflows/frontend-bitunix-live-browser-smoke.yml'
+  workflow_dispatch:
+jobs:
+  live-browser:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated real Chromium and chart library
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium and runtime dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Receive real Bitunix WebSocket inside CryptoJuju and trace to series
+        run: node backtest/frontend-bitunix-live-browser-smoke.mjs
