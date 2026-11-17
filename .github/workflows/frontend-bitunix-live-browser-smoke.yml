@@ -3,6 +3,7 @@ on:
   push:
     branches: [dev/v1.26.0]
     paths:
+      - 'index.html'
       - 'backtest/frontend-bitunix-live-browser-smoke.mjs'
       - '.github/workflows/frontend-bitunix-live-browser-smoke.yml'
   workflow_dispatch:
