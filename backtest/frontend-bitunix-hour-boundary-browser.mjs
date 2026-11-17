@@ -124,6 +124,8 @@ try{
     firstNewMerged=events.find(e=>e.atMs>=m.target&&e.stage==='bar_merged'&&e.action==='appended');
    return {tf:d.tf,source:o.historySource,wsState:o.ws?.readyState,
     lastBar:o.data.at(-1)?.time,seriesLast:o.cs?.data?.()?.at(-1)?.time,
+    previousOHLC:o.data.at(-2)?{...o.data.at(-2)}:null,
+    finalOHLC:o.data.at(-1)?{...o.data.at(-1)}:null,
     first:d.first,firstPacket:firstPacket?{deltaMs:firstPacket.atMs-m.target,
      rawKlineTime:firstPacket.rawKlineTime,
      normalizedFirstBarTime:firstPacket.normalizedFirstBarTime}:null,
@@ -152,14 +154,29 @@ try{
   possiblePreviousOHLClone:t.firstNewMerged?.identicalOHL??null,
   newBarSource:t.firstNewMerged?.source??null,
   staleKlineQuarantined:t.quarantinedKlineCount,
-  tradeBarSeriesUpdates:t.tradeBarSeriesUpdates}));
+  tradeBarSeriesUpdates:t.tradeBarSeriesUpdates,
+  finalOHLC:t.finalOHLC,
+  finalPreviousOHLClone:!!t.finalOHLC&&!!t.previousOHLC&&
+   ['open','high','low'].every(k=>t.finalOHLC[k]===t.previousOHLC[k])
+ }));
  const timely=report.checks.every(c=>c.sourceOK&&c.dataNewBarWithin10s&&c.seriesNewBarWithin10s);
  const safeOHL=report.checks.every(c=>c.possiblePreviousOHLClone===false&&
   c.firstAppendedOHLC?.currentOHLC?.time===target/1000);
- const newByTrades=report.checks.every(c=>c.newBarSource==='trade'&&c.tradeBarSeriesUpdates>0);
- report.status=timely&&safeOHL&&newByTrades?'PASS_NEW_TRADE_OHLC_NO_COPY':
-  'FAIL_OR_INCONCLUSIVE_ROLLOVER';
- if(report.status!=='PASS_NEW_TRADE_OHLC_NO_COPY')process.exitCode=1;
+ // A fresh zero-range first Kline is legitimate: Bitunix can send that
+ // snapshot milliseconds before the first trade frame reaches the browser.
+ // Require trade updates during the new bucket and no stale OHLC at either
+ // the first append or the final observation, rather than requiring that a
+ // trade packet win the race to be the FIRST source.
+ const tradeConfirmed=report.checks.every(c=>c.tradeBarSeriesUpdates>0);
+ const finalOHLCValid=report.checks.every(c=>c.finalOHLC?.time===target/1000&&
+  ['open','high','low','close'].every(k=>Number.isFinite(c.finalOHLC[k]))&&
+  c.finalOHLC.low<=Math.min(c.finalOHLC.open,c.finalOHLC.close)&&
+  c.finalOHLC.high>=Math.max(c.finalOHLC.open,c.finalOHLC.close)&&
+  !c.finalPreviousOHLClone);
+ const staleProtected=report.checks.every(c=>c.staleKlineQuarantined>0);
+ report.status=timely&&safeOHL&&tradeConfirmed&&finalOHLCValid&&staleProtected?
+  'PASS_NO_OHL_CLONE_WITH_TRADE_CONFIRMATION':'FAIL_OR_INCONCLUSIVE_ROLLOVER';
+ if(report.status!=='PASS_NO_OHL_CLONE_WITH_TRADE_CONFIRMATION')process.exitCode=1;
 }catch(e){
  report.status='TEST_ERROR';report.errors.push(String(e?.stack??e));process.exitCode=1;
 }finally{
