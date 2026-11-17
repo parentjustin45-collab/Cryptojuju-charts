@@ -61,26 +61,37 @@ try{
  // Per-frame observer captures the first real update after the boundary,
  // including while 200-event debug trace rolls over during heavy trading.
  await page.evaluate(({target})=>{
-  const m=window.__CJ_BOUNDARY_MONITOR__={target,tf:{},traceCursor:{},ended:false};
+  const m=window.__CJ_BOUNDARY_MONITOR__={target,tf:{},ended:false};
   for(let i of [0,1]){
    const o=cards[i];
    m.tf[i]={tf:o.interval,first:{},atBoundary:null,events:[],snapshots:[]};
-   m.traceCursor[i]=0;
    o.cjFeedTrace=[];
   }
+  // Hook the exact in-app trace at emission time. Polling the app's bounded
+  // 200-event buffer can miss high-volume packets during an hour rollover.
+  const originalTrace=window.cjFeedTrace;
+  if(typeof originalTrace!=='function')throw Error('Diagnostic hook missing from dev frontend');
+  window.cjFeedTrace=function(o,stage,details={}){
+   originalTrace(o,stage,details);
+   const i=cards.indexOf(o),at=Date.now();
+   if(i<0||i>1||at<target-10000||at>target+120000)return;
+   const record=m.tf[i];if(!record)return;
+   const e={atMs:at,stage,...details};
+   if(stage==='bar_merged'){
+    const prev=o.data.at(-2),next=o.data.at(-1);
+    if(prev)e.previousOHLC={open:prev.open,high:prev.high,low:prev.low,close:prev.close,time:prev.time};
+    if(next)e.currentOHLC={open:next.open,high:next.high,low:next.low,close:next.close,time:next.time};
+    if(e.action==='appended'&&e.previousOHLC&&e.currentOHLC){
+     e.identicalOHLC=['open','high','low','close'].every(k=>e.previousOHLC[k]===e.currentOHLC[k]);
+    }
+   }
+   if(record.events.length<900)record.events.push(e);
+   if(at>=target&&record.first[stage]===undefined)record.first[stage]=at-target;
+  };
   m.timer=setInterval(()=>{
    const at=Date.now();
    for(let i of [0,1]){
-    const o=cards[i],r=m.tf[i],log=o.cjFeedTrace||[];
-    let from=m.traceCursor[i];
-    if(from>log.length)from=0; // trace bounded; recover on rollover
-    for(const e of log.slice(from)){
-     if(e.atMs>=target-10000&&e.atMs<=target+120000){
-      if(r.events.length<650)r.events.push(e);
-      if(e.atMs>=target&&r.first[e.stage]===undefined)r.first[e.stage]=e.atMs-target;
-     }
-    }
-    m.traceCursor[i]=log.length;
+    const o=cards[i],r=m.tf[i];
     const barTime=Number(o.data?.at(-1)?.time??0);
     const seriesTime=Number(o.cs?.data?.()?.at(-1)?.time??0);
     const boundarySec=target/1000;
@@ -115,7 +126,9 @@ try{
     first:d.first,firstPacket:firstPacket?{deltaMs:firstPacket.atMs-m.target,
      rawKlineTime:firstPacket.rawKlineTime,
      normalizedFirstBarTime:firstPacket.normalizedFirstBarTime}:null,
-    firstNewMerged:firstNewMerged?{deltaMs:firstNewMerged.atMs-m.target,barTime:firstNewMerged.barTime}:null,
+    firstNewMerged:firstNewMerged?{deltaMs:firstNewMerged.atMs-m.target,barTime:firstNewMerged.barTime,
+     previousOHLC:firstNewMerged.previousOHLC,currentOHLC:firstNewMerged.currentOHLC,
+     identicalOHLC:firstNewMerged.identicalOHLC}:null,
     atBoundary:d.atBoundary,snapshots:d.snapshots,
     eventCounts:events.reduce((acc,e)=>(acc[e.stage]=(acc[e.stage]||0)+1,acc),{}),
     lastErrors:events.filter(e=>e.stage==='ws_parse_error').slice(-3)};
@@ -126,7 +139,10 @@ try{
   dataNewBarWithin10s:t.first.dataNewBar!==undefined&&t.first.dataNewBar<10000,
   seriesNewBarWithin10s:t.first.seriesNewBar!==undefined&&t.first.seriesNewBar<10000,
   firstDataDelayMs:t.first.dataNewBar??null,
-  firstSeriesDelayMs:t.first.seriesNewBar??null}));
+  firstSeriesDelayMs:t.first.seriesNewBar??null,
+  firstPacketDelayMs:t.firstPacket?.deltaMs??null,
+  firstAppendedOHLC:t.firstNewMerged??null,
+  possiblePreviousOHLCClone:t.firstNewMerged?.identicalOHLC??null}));
  report.status=report.checks.every(c=>c.sourceOK&&c.dataNewBarWithin10s&&c.seriesNewBarWithin10s)?
   'PASS_NO_90S_DELAY':'INCONCLUSIVE_OR_DELAY_DETECTED';
  if(report.status!=='PASS_NO_90S_DELAY')process.exitCode=1;
