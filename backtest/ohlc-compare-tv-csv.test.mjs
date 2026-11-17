@@ -28,8 +28,8 @@ test('reject timezone-naive TradingView export',()=>{
 test('reject wrong timeframe rather than pretending parity',()=>{
  assert.throws(()=>compareTVExport({tvCSV:tv,parityCSV:ref,tf:'4h'}),/does not contain timeframe/);
 });
-test('no zero-overlap perfect score',()=>{
+test('missing overlap never earns a perfect score',()=>{
  const shifted=tv.replaceAll(String(base/1000),'1525870000');
  const bad=compareTVExport({tvCSV:shifted,parityCSV:ref,minimumOverlap:12});
- assert.equal(bad.status,'BLOCKED_DATA_QUALITY');
+ assert.equal(bad.status,'INSUFFICIENT_OVERLAP');
 });
