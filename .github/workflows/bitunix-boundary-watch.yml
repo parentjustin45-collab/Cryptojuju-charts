@@ -1,0 +1,29 @@
+name: DEV Bitunix live 1H boundary observation (read-only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/bitunix-boundary-watch.mjs'
+      - '.github/workflows/bitunix-boundary-watch.yml'
+  workflow_dispatch:
+jobs:
+  observe:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Capture real Bitunix BTCUSDT 1H rollover at the next hour (UTC)
+        run: node backtest/bitunix-boundary-watch.mjs > bitunix-boundary-report.json
+      - name: Preserve actual observed market data and event timestamps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitunix-1h-boundary-evidence
+          path: bitunix-boundary-report.json
+          if-no-files-found: warn
