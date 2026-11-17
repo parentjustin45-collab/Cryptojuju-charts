@@ -67,8 +67,28 @@ try{
    const previous=(hour-3600)*1000+55_000;
    ws.onmessage({data:JSON.stringify(message(previous,{c:'65001.1'}))});
    const late={lastData:o.data.at(-1),count:o.data.length};
+   const prior={...o.data.at(-1)},nextHour=hour+3600;
+   const countBefore=o.data.length;
+   ws.onmessage({data:JSON.stringify(message(nextHour*1000+149,{
+    o:String(prior.open),h:String(prior.high),l:String(prior.low),c:'65010.4'
+   }))});
+   const quarantine={count:o.data.length,lastData:{...o.data.at(-1)},
+    traced:o.cjFeedTrace.some(e=>e.stage==='kline_quarantined')};
+   const tradeMessage={ch:'trade',symbol:'BTCUSDT',ts:(nextHour+2)*1000,
+    data:[{t:new Date((nextHour+2)*1000).toISOString(),p:'65077.8',v:'0.2',s:'buy'},
+     {t:new Date((nextHour+3)*1000).toISOString(),p:'65079.6',v:'0.1',s:'sell'}]};
+   ws.onmessage({data:JSON.stringify(tradeMessage)});
+   const afterTrade={bar:{...o.data.at(-1)},count:o.data.length,
+    source:o.cjBarSource,seriesLast:o.cs.data().at(-1)};
+   const staleWhileTrade={...prior};
+   ws.onmessage({data:JSON.stringify(message((nextHour+4)*1000,{
+    o:String(staleWhileTrade.open),h:String(staleWhileTrade.high),
+    l:String(staleWhileTrade.low),c:'65072.2'
+   }))});
+   const afterRepeat={bar:{...o.data.at(-1)},source:o.cjBarSource};
    stopLive(o);
-   return {hour,subscribed,first,second,ignored,late,wsUrl:ws.url,traceStages:first.trace.map(x=>x.stage)};
+   return {hour,subscribed,first,second,ignored,late,quarantine,afterTrade,afterRepeat,
+    countBefore,nextHour,wsUrl:ws.url,traceStages:first.trace.map(x=>x.stage)};
   });
   assert.equal(observed.subscribed.args[0].ch,'market_kline_60min');
   assert.equal(observed.first.lastData.time,observed.hour,'new candle appended at exact hour');
@@ -80,6 +100,19 @@ try{
   assert.equal(observed.second.count,101,'one bar on repeated same-hour WS messages');
   assert.equal(observed.ignored.lastData.close,observed.second.lastData.close,'wrong channel must be ignored');
   assert.equal(observed.late.lastData.time,observed.hour,'old packet must not change current bar timestamp');
+  assert.equal(observed.quarantine.traced,true,'previous-period Kline should be quarantined');
+  assert.equal(observed.quarantine.count,observed.countBefore,'stale Kline must not append');
+  assert.equal(observed.quarantine.lastData.time,observed.hour,'stale Kline must not change current period');
+  assert.equal(observed.afterTrade.count,observed.countBefore+1,'new trade creates one fresh period');
+  assert.equal(observed.afterTrade.bar.time,observed.nextHour,'trade candle correctly bucketed');
+  assert.equal(observed.afterTrade.bar.open,65077.8);
+  assert.equal(observed.afterTrade.bar.high,65079.6);
+  assert.equal(observed.afterTrade.bar.low,65077.8);
+  assert.equal(observed.afterTrade.bar.close,65079.6);
+  assert.equal(observed.afterTrade.source,'trade');
+  assert.equal(observed.afterTrade.seriesLast.time,observed.nextHour);
+  assert.equal(observed.afterRepeat.bar.high,65079.6,'repeated stale Kline must not inflate high');
+  assert.equal(observed.afterRepeat.bar.low,65077.8,'repeated stale Kline must not inflate low');
   for(const stage of ['ws_open','ws_market_packet','merge_received','bar_merged','series_update','frame_callback'])
    assert.ok(observed.traceStages.includes(stage),'missing diagnostic stage '+stage);
   assert.ok(observed.first.processMs<5000,'browser pipeline is unreasonably slow');
@@ -87,6 +120,7 @@ try{
    wsToSeriesMs:Math.round(observed.first.processMs*100)/100,
    readbackSeriesTime:observed.first.seriesLast?.time??null,
    sameHourDedupe:'PASS',wrongChannel:'PASS',latePacket:'PASS',
+   staleKlineQuarantine:'PASS',realTradeCandleRollover:'PASS',
    stages:observed.traceStages.slice(-7),pageErrors:pageErrors.slice(0,3)};
   console.log(JSON.stringify(summary));
   await context.close();
