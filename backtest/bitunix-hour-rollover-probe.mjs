@@ -87,6 +87,6 @@ report.websocket.seenBarTimesUtc=[...seenTimes].sort();
 report.websocket.connectedBeforeRollover=everOpen;
 report.websocket.marketGapBeforeRolloverMs=lastMarketAt?boundary-lastMarketAt:null;
 report.status=report.websocket.firstNewCandleAtUtc&&report.websocket.firstNewCandleDelayMs<=90_000?'ROLLOVER_OBSERVED':'ROLLOVER_DELAY_OR_INCOMPLETE';
-report.warning='This records external Bitunix, not a user's CryptoJuju browser rendering delay; dashboard confirmation remains separate.';
+report.warning="This records external Bitunix, not a user's CryptoJuju browser rendering delay; dashboard confirmation remains separate.";
 console.log(JSON.stringify(report,null,2));
 if(report.status!=='ROLLOVER_OBSERVED')process.exitCode=1;
