@@ -8,6 +8,15 @@ const source=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const code=source.match(/function shouldRecoverBitunixCandle\(o,now=Date\.now\(\)\)\{[\s\S]*?\n\}/)?.[0];
 assert.ok(code,'Bitunix frontend rollover guard must exist');
 const detect=vm.runInNewContext(code+';shouldRecoverBitunixCandle',{Date,intervalSeconds:f=>f==='1h'?3600:60});
+const healthCode=source.match(/function streamHealthLimitMs\(f\)\{[^\n]+\}/)?.[0];
+assert.ok(healthCode,'Bitunix watchdog must be present in current frontend');
+const healthLimit=vm.runInNewContext(healthCode+';streamHealthLimitMs',{
+ intervalSeconds:f=>f==='1h'?3600:f==='1m'?60:900
+});
+test('WebSocket watchdog starts without undefined timeframe variables',()=>{
+ assert.equal(healthLimit('1m'),45000);
+ assert.equal(healthLimit('1h'),180000);
+});
 const H=3600000;
 const open=Date.UTC(2026,10,16,20);
 const old=Math.floor((open-H)/1000);
