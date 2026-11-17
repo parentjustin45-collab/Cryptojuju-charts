@@ -1373,45 +1373,109 @@ function cjTraceNextFrame(o,receivedAtMs,barTime){
   latestDataTime:o.data?.at(-1)?.time??null
  }));
 }
+/* DEV V1.26.0 — avoid applying the previous period's Kline OHLC to a
+   new bucket. Bitunix kline WS messages carry event ts but not candle-open
+   timestamp, so ts alone cannot prove that the payload is a new candle.
+   Use real public trade prints for an immediate, provisional new candle. */
 function mergeLive(o,k){
  const receivedAtMs=Date.now();
- const bt=bucketTime(k.time,o.interval), last=o.data.at(-1);
+ const bt=bucketTime(k.time,o.interval),last=o.data.at(-1);
  cjFeedTrace(o,"merge_received",{packetBarTime:k.time,bucketTime:bt,previousBarTime:last?.time??null});
+ if(cjSuspectStaleKline(o,k,bt)){
+  cjFeedTrace(o,"kline_quarantined",{reason:"previous_period_open_high_low",barTime:bt,
+   incomingOHLC:{open:k.open,high:k.high,low:k.low,close:k.close}});
+  return false;
+ }
  if(!last){
-  k={...k,time:bt};o.data.push(k);o.cs.update(k);updateLastUI(o,k,true);cjFeedTrace(o,"series_update",{action:"first",barTime:bt});cjTraceNextFrame(o,receivedAtMs,bt);return;
+  const bar={...k,time:bt};o.data.push(bar);o.cs.update(bar);
+  o.cjBarSource="kline";o.cjBarTime=bt;
+  updateLastUI(o,bar,true);cjFeedTrace(o,"series_update",{action:"first",barTime:bt});
+  cjTraceNextFrame(o,receivedAtMs,bt);return true;
  }
  const lastBt=bucketTime(last.time,o.interval);
  let bar;
  if(bt===lastBt){
-  // Bitunix can publish repeated snapshots/ticks every few seconds.
-  // They all belong to the SAME timeframe candle.
-  bar={time:lastBt,open:last.open,high:Math.max(last.high,k.high,k.open,k.close),low:Math.min(last.low,k.low,k.open,k.close),close:k.close,volume:Math.max(last.volume||0,k.volume||0)};
-  o.data[o.data.length-1]=bar;
-  cjFeedTrace(o,"bar_merged",{action:"updated",barTime:bt});
- }else if(bt>lastBt){
+  // A genuine kline snapshot is authoritative: replace trade-provisional
+  // high/low/open instead of retaining a previous stale range forever.
   bar={...k,time:bt};
-  o.data.push(bar);
-  cjFeedTrace(o,"bar_merged",{action:"appended",barTime:bt,previousBarTime:lastBt});
+  o.data[o.data.length-1]=bar;
+  cjFeedTrace(o,"bar_merged",{action:"updated",barTime:bt,source:"kline"});
+ }else if(bt>lastBt){
+  bar={...k,time:bt};o.data.push(bar);
+  cjFeedTrace(o,"bar_merged",{action:"appended",barTime:bt,previousBarTime:lastBt,source:"kline"});
   if(o.data.length>500)o.data.shift();
  }else{
-  // Late packet: update its existing timeframe bucket only; never append it.
-  let i=o.data.findIndex(x=>bucketTime(x.time,o.interval)===bt);
-  if(i<0){cjFeedTrace(o,"bar_ignored",{reason:"late_bar_not_in_history",barTime:bt});return;}
-  const old=o.data[i];
-  bar={time:bt,open:old.open,high:Math.max(old.high,k.high),low:Math.min(old.low,k.low),close:k.close,volume:Math.max(old.volume||0,k.volume||0)};
-  o.data[i]=bar;
-  o.cs.setData(o.data);
+  // Explicitly timestamped late snapshots can update an old completed bar.
+  const i=o.data.findIndex(x=>bucketTime(x.time,o.interval)===bt);
+  if(i<0){cjFeedTrace(o,"bar_ignored",{reason:"late_bar_not_in_history",barTime:bt});return false}
+  bar={...k,time:bt};
+  o.data[i]=bar;o.cs.setData(o.data);
   cjFeedTrace(o,"series_update",{action:"late_history_replace",barTime:bt});
   cjTraceNextFrame(o,receivedAtMs,bt);
   updateLastUI(o,o.data.at(-1),true);
-  return;
+  clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300);
+  return true;
  }
+ o.cjBarSource="kline";o.cjBarTime=bt;
  o.cs.update(bar);updateLastUI(o,bar,true);
- cjFeedTrace(o,"series_update",{barTime:bar.time,latestDataTime:o.data.at(-1)?.time});
+ cjFeedTrace(o,"series_update",{barTime:bar.time,latestDataTime:o.data.at(-1)?.time,source:"kline"});
  cjTraceNextFrame(o,receivedAtMs,bar.time);
- clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300)
+ clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300);
+ return true;
 }
-function stopLive(o){clearInterval(o.countdownTimer);o.wsToken=(o.wsToken||0)+1;clearTimeout(o.reconnectTimer);clearInterval(o.pinger);clearInterval(o.healthTimer);o.healthTimer=null;o.lastWsMessageAt=0;o.lastMarketTickAt=0;if(o.ws){try{o.ws.onclose=null;o.ws.close()}catch(e){}}o.ws=null}
+function cjSuspectStaleKline(o,k,newBt){
+ const prevBt=newBt-intervalSeconds(o.interval);
+ let prev=null;
+ for(let i=(o.data?.length||0)-1;i>=0;i--){
+  if(bucketTime(o.data[i].time,o.interval)===prevBt){prev=o.data[i];break}
+ }
+ // The exact preceding period's O/H/L recurring immediately after rollover
+ // with non-zero range is a strong stale-snapshot signature. We quarantine
+ // rather than insert unknown OHLC as a confirmed new candle.
+ return !!prev&&prev.high>prev.low&&
+  k.open===prev.open&&k.high===prev.high&&k.low===prev.low;
+}
+function normalizeWsTrades(msg){
+ const raw=Array.isArray(msg?.data)?msg.data:[msg?.data];
+ return raw.map((x,i)=>{
+  if(!x||typeof x!=="object")return null;
+  const p=Number(x.p),v=Number(x.v);
+  const t=typeof x.t==="string"&&Number.isNaN(Number(x.t))?
+   Date.parse(x.t):Number(x.t??msg.ts);
+  const ms=t>1e12?t:t>1e9?t*1000:NaN;
+  return Number.isFinite(p)&&p>0&&Number.isFinite(ms)&&ms>0&&
+   Number.isFinite(v)&&v>=0?{time:Math.floor(ms/1000),price:p,volume:v,order:i}:null;
+ }).filter(Boolean).sort((a,b)=>a.time-b.time||a.order-b.order);
+}
+function mergeTrades(o,trades){
+ if(!trades.length)return false;
+ const receivedAtMs=Date.now();
+ let bar=null,changed=false,appended=false;
+ for(const t of trades){
+  const bt=bucketTime(t.time,o.interval),last=o.data.at(-1);
+  if(last&&bt<bucketTime(last.time,o.interval))continue;
+  if(!last||bt>bucketTime(last.time,o.interval)){
+   bar={time:bt,open:t.price,high:t.price,low:t.price,close:t.price,volume:t.volume};
+   o.data.push(bar);if(o.data.length>500)o.data.shift();
+   o.cjBarSource="trade";o.cjBarTime=bt;appended=true;changed=true;
+   cjFeedTrace(o,"bar_merged",{action:"appended",barTime:bt,source:"trade",price:t.price});
+  }else{
+   const fromTrades=o.cjBarSource==="trade"&&o.cjBarTime===bt;
+   bar={...last,high:Math.max(last.high,t.price),low:Math.min(last.low,t.price),
+    close:t.price,volume:fromTrades?(last.volume||0)+t.volume:last.volume||0};
+   o.data[o.data.length-1]=bar;changed=true;
+  }
+ }
+ if(!changed)return false;
+ o.cs.update(bar);updateLastUI(o,bar,true);
+ cjFeedTrace(o,"series_update",{barTime:bar.time,source:"trade",
+  action:appended?"appended_from_exchange_trades":"updated_from_exchange_trades",
+  latestDataTime:o.data.at(-1)?.time});
+ cjTraceNextFrame(o,receivedAtMs,bar.time);
+ clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300);
+ return true;
+}
+function stopLive(o){clearInterval(o.countdownTimer);o.wsToken=(o.wsToken||0)+1;clearTimeout(o.reconnectTimer);clearInterval(o.pinger);clearInterval(o.healthTimer);o.healthTimer=null;o.lastWsMessageAt=0;o.lastMarketTickAt=0;o.cjBarSource=null;o.cjBarTime=null;if(o.ws){try{o.ws.onclose=null;o.ws.close()}catch(e){}}o.ws=null}
 function streamHealthLimitMs(f){const sec=intervalSeconds(f);return Math.max(45000,Math.min(180000,sec*1000*.25))}
 /* DEV V1.26.0 — Detect a missing Bitunix candle after a TF boundary.
    This guard never synthesizes an OHLC bar; reconnect waits for an exchange snapshot. */
@@ -1461,8 +1525,34 @@ function startLive(o,s,f){
   if(token!==o.wsToken)return;setWsState(o,"wait","🟡 Bitunix • WS connexion…");let ws;
   try{ws=new WebSocket(cjAssertSafeWsUrl("wss://fapi.bitunix.com/public/"))}catch(e){schedule();return}
   o.ws=ws;
-  ws.onopen=()=>{if(token!==o.wsToken)return;o.wsConnectedAt=Date.now();cjFeedTrace(o,"ws_open",{connectedAt:o.wsConnectedAt,channel:ch});attempts=0;setWsState(o,"wait","🟡 Bitunix • WS connecté • attente tick");ws.send(JSON.stringify({op:"subscribe",args:[{symbol:s,ch}]}));clearInterval(o.pinger);o.pinger=setInterval(()=>{try{if(ws.readyState===1)ws.send(JSON.stringify({op:"ping",ping:Math.floor(Date.now()/1000)}))}catch(e){}},5000);startStreamHealth(o,ws,token,s,f,schedule)};
-  ws.onmessage=ev=>{if(token!==o.wsToken)return;o.lastWsMessageAt=Date.now();try{let m=JSON.parse(ev.data);if(m&&m.ch===ch&&m.symbol===s){let rows=normalizeWsKline(m);cjFeedTrace(o,"ws_market_packet",{exchangeEventTimestamp:m.ts??null,rawKlineTime:(Array.isArray(m.data)?m.data[0]:m.data)?.time??null,normalizedCount:rows.length,normalizedFirstBarTime:rows[0]?.time??null});for(let k of rows){o.lastMarketTickAt=Date.now();mergeLive(o,k);setWsState(o,"live","🟢 Bitunix • WS LIVE • HEALTH OK")}}}catch(e){cjFeedTrace(o,"ws_parse_error",{error:String(e)});console.warn("WS parse",e)}};
+  ws.onopen=()=>{if(token!==o.wsToken)return;o.wsConnectedAt=Date.now();cjFeedTrace(o,"ws_open",{connectedAt:o.wsConnectedAt,channel:ch});attempts=0;setWsState(o,"wait","🟡 Bitunix • WS connecté • attente tick");ws.send(JSON.stringify({op:"subscribe",args:[{symbol:s,ch},{symbol:s,ch:"trade"}]}));clearInterval(o.pinger);o.pinger=setInterval(()=>{try{if(ws.readyState===1)ws.send(JSON.stringify({op:"ping",ping:Math.floor(Date.now()/1000)}))}catch(e){}},5000);startStreamHealth(o,ws,token,s,f,schedule)};
+  ws.onmessage=ev=>{
+   if(token!==o.wsToken)return;o.lastWsMessageAt=Date.now();
+   try{
+    const m=JSON.parse(ev.data);
+    if(m?.symbol!==s)return;
+    if(m.ch==="trade"){
+     const trades=normalizeWsTrades(m);
+     if(trades.length){
+      o.lastMarketTickAt=Date.now();
+      const updated=mergeTrades(o,trades);
+      if(updated)setWsState(o,"live",o.cjBarSource==="trade"?
+       "🟡 Bitunix • TRADES LIVE • bougie provisoire":"🟢 Bitunix • TRADES LIVE • HEALTH OK");
+     }
+    }else if(m.ch===ch){
+     const rows=normalizeWsKline(m);
+     cjFeedTrace(o,"ws_market_packet",{exchangeEventTimestamp:m.ts??null,
+      rawKlineTime:(Array.isArray(m.data)?m.data[0]:m.data)?.time??null,
+      normalizedCount:rows.length,normalizedFirstBarTime:rows[0]?.time??null});
+     for(const k of rows){
+      o.lastMarketTickAt=Date.now();
+      const accepted=mergeLive(o,k);
+      if(accepted)setWsState(o,"live","🟢 Bitunix • WS LIVE • HEALTH OK");
+      else setWsState(o,"wait","🟡 Bitunix • KLINE périmée ignorée • TRADES LIVE");
+     }
+    }
+   }catch(e){cjFeedTrace(o,"ws_parse_error",{error:String(e)});console.warn("WS parse",e)}
+  };
   ws.onerror=()=>setWsState(o,"off","🔴 Bitunix • WS erreur • Stream Health");
   ws.onclose=()=>{if(token!==o.wsToken)return;clearInterval(o.healthTimer);o.healthTimer=null;setWsState(o,"off","🔴 Bitunix • WS OFF • reconnexion…");schedule()}
  }
@@ -1473,7 +1563,7 @@ const market24Cache={at:0,rows:[],loading:null};
    References only: validated WebSocket/countdown implementations remain unchanged. */
 cjModule("stream",{
   intervalSeconds,candleCloseTime,formatCountdown,updateCountdown,startCountdown,
-  mergeLive,stopLive,streamHealthLimitMs,startStreamHealth,startLive
+  mergeLive,mergeTrades,normalizeWsTrades,cjSuspectStaleKline,stopLive,streamHealthLimitMs,startStreamHealth,startLive
 });
 
 function marketSymbol(x){return String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
