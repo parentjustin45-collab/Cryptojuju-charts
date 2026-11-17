@@ -173,8 +173,9 @@ try{
   c.finalOHLC.low<=Math.min(c.finalOHLC.open,c.finalOHLC.close)&&
   c.finalOHLC.high>=Math.max(c.finalOHLC.open,c.finalOHLC.close)&&
   !c.finalPreviousOHLClone);
- const staleProtected=report.checks.every(c=>c.staleKlineQuarantined>0);
- report.status=timely&&safeOHL&&tradeConfirmed&&finalOHLCValid&&staleProtected?
+ // Zero quarantined packets can also be healthy if the exchange is clean.
+ // Count rejects for evidence but do not require Bitunix to emit stale data.
+ report.status=timely&&safeOHL&&tradeConfirmed&&finalOHLCValid?
   'PASS_NO_OHL_CLONE_WITH_TRADE_CONFIRMATION':'FAIL_OR_INCONCLUSIVE_ROLLOVER';
  if(report.status!=='PASS_NO_OHL_CLONE_WITH_TRADE_CONFIRMATION')process.exitCode=1;
 }catch(e){
