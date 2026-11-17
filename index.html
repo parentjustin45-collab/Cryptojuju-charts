@@ -1412,7 +1412,7 @@ function mergeLive(o,k){
  clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300)
 }
 function stopLive(o){clearInterval(o.countdownTimer);o.wsToken=(o.wsToken||0)+1;clearTimeout(o.reconnectTimer);clearInterval(o.pinger);clearInterval(o.healthTimer);o.healthTimer=null;o.lastWsMessageAt=0;o.lastMarketTickAt=0;if(o.ws){try{o.ws.onclose=null;o.ws.close()}catch(e){}}o.ws=null}
-function streamHealthLimitMs(f){const sec=framesSec[f]||60;return Math.max(45000,Math.min(180000,sec*1000*.25))}
+function streamHealthLimitMs(f){const sec=intervalSeconds(f);return Math.max(45000,Math.min(180000,sec*1000*.25))}
 /* DEV V1.26.0 — Detect a missing Bitunix candle after a TF boundary.
    This guard never synthesizes an OHLC bar; reconnect waits for an exchange snapshot. */
 function shouldRecoverBitunixCandle(o,now=Date.now()){
