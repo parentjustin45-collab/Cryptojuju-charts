@@ -1355,10 +1355,30 @@ function normalizeHistoryBuckets(rows,f){
  }
  return [...u.values()].sort((a,b)=>a.time-b.time)
 }
+/* DEV-ONLY opt-in trace (?cjdiag=1). Read-only, per-card, in memory.
+   Separates socket receipt -> normalized bar -> series update -> next frame.
+   No telemetry upload, no secrets, no strategy or price mutation. */
+const CJ_FEED_TRACE_ENABLED=new URL(location.href).searchParams.get("cjdiag")==="1";
+function cjFeedTrace(o,stage,details={}){
+ if(!CJ_FEED_TRACE_ENABLED||!o)return;
+ const entry={atUtc:new Date().toISOString(),atMs:Date.now(),stage,symbol:o.el?.querySelector(".sym")?.value||"",tf:o.interval,...details};
+ const log=o.cjFeedTrace||(o.cjFeedTrace=[]);
+ log.push(entry);if(log.length>200)log.shift();
+ console.info("[CJ DEV FEED]",entry);
+}
+function cjTraceNextFrame(o,receivedAtMs,barTime){
+ if(!CJ_FEED_TRACE_ENABLED)return;
+ requestAnimationFrame(()=>cjFeedTrace(o,"frame_callback",{
+  barTime,delayFromReceiptMs:Math.max(0,Date.now()-receivedAtMs),
+  latestDataTime:o.data?.at(-1)?.time??null
+ }));
+}
 function mergeLive(o,k){
+ const receivedAtMs=Date.now();
  const bt=bucketTime(k.time,o.interval), last=o.data.at(-1);
+ cjFeedTrace(o,"merge_received",{packetBarTime:k.time,bucketTime:bt,previousBarTime:last?.time??null});
  if(!last){
-  k={...k,time:bt};o.data.push(k);o.cs.update(k);updateLastUI(o,k,true);return;
+  k={...k,time:bt};o.data.push(k);o.cs.update(k);updateLastUI(o,k,true);cjFeedTrace(o,"series_update",{action:"first",barTime:bt});cjTraceNextFrame(o,receivedAtMs,bt);return;
  }
  const lastBt=bucketTime(last.time,o.interval);
  let bar;
@@ -1367,22 +1387,28 @@ function mergeLive(o,k){
   // They all belong to the SAME timeframe candle.
   bar={time:lastBt,open:last.open,high:Math.max(last.high,k.high,k.open,k.close),low:Math.min(last.low,k.low,k.open,k.close),close:k.close,volume:Math.max(last.volume||0,k.volume||0)};
   o.data[o.data.length-1]=bar;
+  cjFeedTrace(o,"bar_merged",{action:"updated",barTime:bt});
  }else if(bt>lastBt){
   bar={...k,time:bt};
   o.data.push(bar);
+  cjFeedTrace(o,"bar_merged",{action:"appended",barTime:bt,previousBarTime:lastBt});
   if(o.data.length>500)o.data.shift();
  }else{
   // Late packet: update its existing timeframe bucket only; never append it.
   let i=o.data.findIndex(x=>bucketTime(x.time,o.interval)===bt);
-  if(i<0)return;
+  if(i<0){cjFeedTrace(o,"bar_ignored",{reason:"late_bar_not_in_history",barTime:bt});return;}
   const old=o.data[i];
   bar={time:bt,open:old.open,high:Math.max(old.high,k.high),low:Math.min(old.low,k.low),close:k.close,volume:Math.max(old.volume||0,k.volume||0)};
   o.data[i]=bar;
   o.cs.setData(o.data);
+  cjFeedTrace(o,"series_update",{action:"late_history_replace",barTime:bt});
+  cjTraceNextFrame(o,receivedAtMs,bt);
   updateLastUI(o,o.data.at(-1),true);
   return;
  }
  o.cs.update(bar);updateLastUI(o,bar,true);
+ cjFeedTrace(o,"series_update",{barTime:bar.time,latestDataTime:o.data.at(-1)?.time});
+ cjTraceNextFrame(o,receivedAtMs,bar.time);
  clearTimeout(o.indTimer);o.indTimer=setTimeout(()=>renderIndicators(o),300)
 }
 function stopLive(o){clearInterval(o.countdownTimer);o.wsToken=(o.wsToken||0)+1;clearTimeout(o.reconnectTimer);clearInterval(o.pinger);clearInterval(o.healthTimer);o.healthTimer=null;o.lastWsMessageAt=0;o.lastMarketTickAt=0;if(o.ws){try{o.ws.onclose=null;o.ws.close()}catch(e){}}o.ws=null}
@@ -1435,8 +1461,8 @@ function startLive(o,s,f){
   if(token!==o.wsToken)return;setWsState(o,"wait","🟡 Bitunix • WS connexion…");let ws;
   try{ws=new WebSocket(cjAssertSafeWsUrl("wss://fapi.bitunix.com/public/"))}catch(e){schedule();return}
   o.ws=ws;
-  ws.onopen=()=>{if(token!==o.wsToken)return;o.wsConnectedAt=Date.now();attempts=0;setWsState(o,"wait","🟡 Bitunix • WS connecté • attente tick");ws.send(JSON.stringify({op:"subscribe",args:[{symbol:s,ch}]}));clearInterval(o.pinger);o.pinger=setInterval(()=>{try{if(ws.readyState===1)ws.send(JSON.stringify({op:"ping",ping:Math.floor(Date.now()/1000)}))}catch(e){}},5000);startStreamHealth(o,ws,token,s,f,schedule)};
-  ws.onmessage=ev=>{if(token!==o.wsToken)return;o.lastWsMessageAt=Date.now();try{let m=JSON.parse(ev.data);if(m&&m.ch===ch&&m.symbol===s){let rows=normalizeWsKline(m);for(let k of rows){o.lastMarketTickAt=Date.now();mergeLive(o,k);setWsState(o,"live","🟢 Bitunix • WS LIVE • HEALTH OK")}}}catch(e){console.warn("WS parse",e)}};
+  ws.onopen=()=>{if(token!==o.wsToken)return;o.wsConnectedAt=Date.now();cjFeedTrace(o,"ws_open",{connectedAt:o.wsConnectedAt,channel:ch});attempts=0;setWsState(o,"wait","🟡 Bitunix • WS connecté • attente tick");ws.send(JSON.stringify({op:"subscribe",args:[{symbol:s,ch}]}));clearInterval(o.pinger);o.pinger=setInterval(()=>{try{if(ws.readyState===1)ws.send(JSON.stringify({op:"ping",ping:Math.floor(Date.now()/1000)}))}catch(e){}},5000);startStreamHealth(o,ws,token,s,f,schedule)};
+  ws.onmessage=ev=>{if(token!==o.wsToken)return;o.lastWsMessageAt=Date.now();try{let m=JSON.parse(ev.data);if(m&&m.ch===ch&&m.symbol===s){let rows=normalizeWsKline(m);cjFeedTrace(o,"ws_market_packet",{exchangeEventTimestamp:m.ts??null,rawKlineTime:(Array.isArray(m.data)?m.data[0]:m.data)?.time??null,normalizedCount:rows.length,normalizedFirstBarTime:rows[0]?.time??null});for(let k of rows){o.lastMarketTickAt=Date.now();mergeLive(o,k);setWsState(o,"live","🟢 Bitunix • WS LIVE • HEALTH OK")}}}catch(e){cjFeedTrace(o,"ws_parse_error",{error:String(e)});console.warn("WS parse",e)}};
   ws.onerror=()=>setWsState(o,"off","🔴 Bitunix • WS erreur • Stream Health");
   ws.onclose=()=>{if(token!==o.wsToken)return;clearInterval(o.healthTimer);o.healthTimer=null;setWsState(o,"off","🔴 Bitunix • WS OFF • reconnexion…");schedule()}
  }
