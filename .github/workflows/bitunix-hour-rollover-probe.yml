@@ -1,0 +1,32 @@
+name: DEV real Bitunix BTCUSDT 1H hour rollover (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/bitunix-hour-rollover-probe.mjs'
+      - '.github/workflows/bitunix-hour-rollover-probe.yml'
+  workflow_dispatch:
+jobs:
+  observe-rollover:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Monitor live Bitunix WebSocket and REST around next 1H opening
+        run: node backtest/bitunix-hour-rollover-probe.mjs > bitunix-hour-rollover.json
+      - name: Show diagnostic summary
+        if: always()
+        run: test -f bitunix-hour-rollover.json && cat bitunix-hour-rollover.json || true
+      - name: Preserve real Bitunix read-only observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-bitunix-one-hour-rollover-observation
+          path: bitunix-hour-rollover.json
+          if-no-files-found: warn
