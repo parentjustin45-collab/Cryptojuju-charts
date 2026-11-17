@@ -1,0 +1,40 @@
+name: DEV BTCUSDT 1H + 15m real frontend hour rollover
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/frontend-bitunix-hour-boundary-browser.mjs'
+      - '.github/workflows/frontend-bitunix-hour-boundary-browser.yml'
+  workflow_dispatch:
+jobs:
+  real-boundary:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Chromium and chart library for browser observation
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium runtime dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Observe one real BTCUSDT hourly rollover for both 1H and 15m, read only
+        run: node backtest/frontend-bitunix-hour-boundary-browser.mjs
+      - name: Print summarized evidence even if diagnostic fails
+        if: always()
+        run: |
+          test -f bitunix-frontend-hour-boundary-report.json && python3 -c "import json; r=json.load(open('bitunix-frontend-hour-boundary-report.json')); print(json.dumps({'targetUtc':r['targetUtc'],'status':r['status'],'checks':r.get('checks'),'errors':r.get('errors')},indent=2))" || true
+      - name: Preserve timestamped Bitunix browser evidence and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-bitunix-hour-boundary-real-frontend
+          path: |
+            bitunix-frontend-hour-boundary-report.json
+            bitunix-boundary-plus7s.png
+            bitunix-boundary-plus105s.png
+          if-no-files-found: warn
