@@ -83,6 +83,7 @@ try{
     if(next)e.currentOHLC={open:next.open,high:next.high,low:next.low,close:next.close,time:next.time};
     if(e.action==='appended'&&e.previousOHLC&&e.currentOHLC){
      e.identicalOHLC=['open','high','low','close'].every(k=>e.previousOHLC[k]===e.currentOHLC[k]);
+     e.identicalOHL=['open','high','low'].every(k=>e.previousOHLC[k]===e.currentOHLC[k]);
     }
    }
    if(record.events.length<900)record.events.push(e);
@@ -128,9 +129,14 @@ try{
      normalizedFirstBarTime:firstPacket.normalizedFirstBarTime}:null,
     firstNewMerged:firstNewMerged?{deltaMs:firstNewMerged.atMs-m.target,barTime:firstNewMerged.barTime,
      previousOHLC:firstNewMerged.previousOHLC,currentOHLC:firstNewMerged.currentOHLC,
-     identicalOHLC:firstNewMerged.identicalOHLC}:null,
+     identicalOHLC:firstNewMerged.identicalOHLC,
+     identicalOHL:firstNewMerged.identicalOHL,
+     source:firstNewMerged.source}:null,
     atBoundary:d.atBoundary,snapshots:d.snapshots,
     eventCounts:events.reduce((acc,e)=>(acc[e.stage]=(acc[e.stage]||0)+1,acc),{}),
+    quarantinedKlineCount:events.filter(e=>e.stage==='kline_quarantined').length,
+    quarantinedKlineSamples:events.filter(e=>e.stage==='kline_quarantined').slice(0,3),
+    tradeBarSeriesUpdates:events.filter(e=>e.stage==='series_update'&&e.source==='trade').length,
     lastErrors:events.filter(e=>e.stage==='ws_parse_error').slice(-3)};
   });
  });
@@ -142,10 +148,18 @@ try{
   firstSeriesDelayMs:t.first.seriesNewBar??null,
   firstPacketDelayMs:t.firstPacket?.deltaMs??null,
   firstAppendedOHLC:t.firstNewMerged??null,
-  possiblePreviousOHLCClone:t.firstNewMerged?.identicalOHLC??null}));
- report.status=report.checks.every(c=>c.sourceOK&&c.dataNewBarWithin10s&&c.seriesNewBarWithin10s)?
-  'PASS_NO_90S_DELAY':'INCONCLUSIVE_OR_DELAY_DETECTED';
- if(report.status!=='PASS_NO_90S_DELAY')process.exitCode=1;
+  possiblePreviousOHLCClone:t.firstNewMerged?.identicalOHLC??null,
+  possiblePreviousOHLClone:t.firstNewMerged?.identicalOHL??null,
+  newBarSource:t.firstNewMerged?.source??null,
+  staleKlineQuarantined:t.quarantinedKlineCount,
+  tradeBarSeriesUpdates:t.tradeBarSeriesUpdates}));
+ const timely=report.checks.every(c=>c.sourceOK&&c.dataNewBarWithin10s&&c.seriesNewBarWithin10s);
+ const safeOHL=report.checks.every(c=>c.possiblePreviousOHLClone===false&&
+  c.firstAppendedOHLC?.currentOHLC?.time===target/1000);
+ const newByTrades=report.checks.every(c=>c.newBarSource==='trade'&&c.tradeBarSeriesUpdates>0);
+ report.status=timely&&safeOHL&&newByTrades?'PASS_NEW_TRADE_OHLC_NO_COPY':
+  'FAIL_OR_INCONCLUSIVE_ROLLOVER';
+ if(report.status!=='PASS_NEW_TRADE_OHLC_NO_COPY')process.exitCode=1;
 }catch(e){
  report.status='TEST_ERROR';report.errors.push(String(e?.stack??e));process.exitCode=1;
 }finally{
