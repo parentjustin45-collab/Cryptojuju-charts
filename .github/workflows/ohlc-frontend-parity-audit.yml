@@ -1,0 +1,44 @@
+name: DEV CryptoJuju OHLC parity BTCUSDT 15m 1h 4h (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/ohlc-parity-core.mjs'
+      - 'backtest/ohlc-parity-core.test.mjs'
+      - 'backtest/ohlc-frontend-parity-audit.mjs'
+      - '.github/workflows/ohlc-frontend-parity-audit.yml'
+  workflow_dispatch:
+jobs:
+  ohlc-parity:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deterministic closed-candle comparator regression tests
+        run: node --test backtest/ohlc-parity-core.test.mjs
+      - name: Install isolated Chromium and LightweightCharts
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Compare frontend historical OHLC against official Bitunix and CryptoJuju proxy
+        run: node backtest/ohlc-frontend-parity-audit.mjs
+      - name: Print quality and mismatch summary even if blocked
+        if: always()
+        run: |
+          test -f cj-ohlc-parity-report.json && python3 -c "import json; r=json.load(open('cj-ohlc-parity-report.json')); print(json.dumps({'status':r['status'],'results':[{'tf':x['tf'],'status':x['status'],'frontendVsDirect':(x.get('parity',{}).get('frontendVsDirect') or {}).get('status'),'priceMismatches':(x.get('parity',{}).get('frontendVsDirect') or {}).get('priceMismatches'),'directInvalid':(x.get('sourceQuality',{}).get('direct') or {}).get('invalid'),'errors':x.get('errors')} for x in r.get('results',[])],'errors':r.get('errors')},indent=2))" || true
+      - name: Preserve exact UTC OHLC pairwise differences and source quality
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-bitunix-ohlc-parity-15m-1h-4h
+          path: |
+            cj-ohlc-parity-report.json
+            cj-ohlc-parity-BTCUSDT.csv
+          retention-days: 30
+          if-no-files-found: warn
