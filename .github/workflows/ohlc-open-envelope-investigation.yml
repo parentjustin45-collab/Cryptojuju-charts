@@ -1,0 +1,34 @@
+name: DEV Bitunix OHLC 1m envelope source investigation (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/ohlc-open-envelope-investigation.mjs'
+      - '.github/workflows/ohlc-open-envelope-investigation.yml'
+  workflow_dispatch:
+jobs:
+  investigate:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source compiles and Vector strict quality contracts
+        run: |
+          node --check backtest/ohlc-open-envelope-investigation.mjs
+          node --test backtest/quality-gate.test.mjs backtest/quarantine.test.mjs backtest/vector-ait-v1.test.mjs
+      - name: Inspect Bitunix 1m source at every malformed 15m/1h bar and Vector what-if
+        run: node backtest/ohlc-open-envelope-investigation.mjs
+      - name: Preserve evidence even if upstream service errors occur
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-ohlc-1m-envelope-investigation
+          path: cj-open-envelope-investigation.json
+          retention-days: 30
+          if-no-files-found: warn
