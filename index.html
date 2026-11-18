@@ -1402,6 +1402,24 @@ function cjPrepareBitunixHistoricalEnvelope(rows,tf,nowMs=Date.now()){
   "DERIVED_WITH_RAW_PROVENANCE":"CLEAN_RAW";
  return out;
 }
+/* Recover only the missing REAL preceding Bitunix candle when the oldest
+ * of the 500 displayed candles needs previous-close evidence. Query the same
+ * official Bitunix source through our existing transport proxy; no synthesis.
+ */
+async function cjFetchBitunixHistoryAnchors(symbol,tf,oldestTime){
+ if(!/^[A-Z0-9_]{3,40}$/.test(symbol)||!Number.isSafeInteger(oldestTime))
+  throw Error("Invalid historical anchor request");
+ const step=intervalSeconds(tf),u=new URL("https://fapi.bitunix.com/api/v1/futures/market/kline");
+ for(const [k,v] of Object.entries({symbol,interval:tf,
+  endTime:oldestTime*1000-1,limit:8,type:"LAST_PRICE"}))u.searchParams.set(k,String(v));
+ const proxy=CRYPTOJUJU_API+"/api/bitunix/proxy?url="+encodeURIComponent(u.href);
+ const rows=normalizeRestRows(await fetchJson(proxy,12000))
+  .filter(k=>k.time<oldestTime&&k.time>=oldestTime-8*step)
+  .sort((a,b)=>a.time-b.time);
+ if(!rows.some(k=>k.time===oldestTime-step))
+  throw Error("Missing contiguous Bitunix historical anchor");
+ return rows;
+}
 function cjValidateBitunixLiveEnvelope(o,k,bt){
  const valid=[k.open,k.high,k.low,k.close,Number(k.volume??0)].every(Number.isFinite)&&
   k.open>0&&k.high>0&&k.low>0&&k.close>0&&k.high>=k.low&&Number(k.volume??0)>=0;
@@ -1966,9 +1984,24 @@ cjModule("chartFactory",{
 });
 
 const historyCache=new Map();
-async function load(o){stopLive(o);o.cjHistoryRaw=null;o.cjHistoryQuality=null;o.cjWatchSerial=(o.cjWatchSerial||0)+1;o.cjWatchKey=null;o.cjWatchValue=null;const oldWatchBadge=o.el.querySelector(".cjWatchBadge");if(oldWatchBadge&&!oldWatchBadge.hidden){oldWatchBadge.dataset.status="insufficient";oldWatchBadge.textContent="WATCH · changement de graphique…"}const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;const prep=String(h.source||"").startsWith("Bitunix")?
+async function load(o){stopLive(o);o.cjHistoryRaw=null;o.cjHistoryQuality=null;o.cjWatchSerial=(o.cjWatchSerial||0)+1;o.cjWatchKey=null;o.cjWatchValue=null;const oldWatchBadge=o.el.querySelector(".cjWatchBadge");if(oldWatchBadge&&!oldWatchBadge.hidden){oldWatchBadge.dataset.status="insufficient";oldWatchBadge.textContent="WATCH · changement de graphique…"}const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;let prep=String(h.source||"").startsWith("Bitunix")?
  cjPrepareBitunixHistoricalEnvelope(h.rows,f):
  {data:normalizeHistoryBuckets(h.rows,f),status:"NOT_BITUNIX",audited:false,raw:null,corrected:[],issues:[]};
+ if(prep.audited&&prep.status==="BLOCKED"&&prep.raw?.length&&
+  prep.issues.length===1&&prep.issues[0].reason==="UNVERIFIED_OPEN_ENVELOPE"&&
+  prep.issues[0].time===prep.raw[0].time){
+  // Do not reject a legitimate first bar merely because display is capped at 500.
+  const originalFirst=prep.raw[0].time;
+  const anchors=await cjFetchBitunixHistoryAnchors(s,f,originalFirst);
+  if(loadToken!==o.loadToken)return;
+  const extended=cjPrepareBitunixHistoricalEnvelope([...anchors,...h.rows],f);
+  if(extended.status!=="BLOCKED"&&extended.data.length>=prep.data.length){
+   const keep=prep.data.length,trimmed=extended.data.slice(-keep),
+    earliest=trimmed[0].time;
+   prep={...extended,data:trimmed,raw:extended.raw.slice(-keep),
+    corrected:extended.corrected.filter(x=>x.time>=earliest)};
+  }
+ }
  o.cjHistoryRaw=prep.raw;o.cjHistoryQuality=prep;
  if(prep.status==="BLOCKED")throw Error("OHLC BITUNIX BLOQUÉ : "+prep.issues.length+
   " anomalie(s) non vérifiée(s) dans les chandelles historiques");
