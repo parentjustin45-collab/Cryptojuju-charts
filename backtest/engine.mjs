@@ -1,4 +1,5 @@
 import {classifyHistory,requireCleanHistory} from './quality-gate.mjs';
+import {normalizeBitunixOpenEnvelope} from './ohlc-bitunix-open-envelope.mjs';
 /* CryptoJuju Charts V1.26.0 — deterministic backtest core.
    Standalone ES module. No UI or network side effects.
    Signals: [{time,side:'long'|'short'|'flat'}] computed using closed candles only.
@@ -14,8 +15,21 @@ export function runBacktest(candles, signals, options = {}) {
   }
   if (initialCapital <= 0 || allocation > 1 || feeRate >= 1 || slippageRate >= 1) throw new Error('Invalid configuration');
   if (!Array.isArray(candles) || !Array.isArray(signals)) throw new Error('Candles and signals must be arrays');
-  // A caller supplying a history window opts into strict, complete data validation.
-  // Never repair OHLC values or silently skip missing intervals.
+  // Optional RESEARCH-ONLY exchange-specific derivation: never implicit, never
+  // allowed without an explicit history window and confirmed source label.
+  let derivedOhlcResearch = null;
+  if (options.bitunixOpenEnvelopeResearch===true) {
+    if(!options.historyWindow||options.sourceExchange!=='Bitunix')
+      throw Error('Bitunix envelope research requires a strict historyWindow and sourceExchange Bitunix');
+    const result=normalizeBitunixOpenEnvelope(candles,options.historyWindow);
+    if(result.status==='BLOCKED')
+      throw Error('Backtest blocked: Bitunix OHLC envelope could not be verified');
+    candles=result.candles;
+    derivedOhlcResearch={version:result.version,correctedBars:result.changes.length,
+      source:'Bitunix LAST_PRICE',researchOnly:true,
+      warning:'Derived OHLC, not independently verified TradingView parity or proof of profitability'};
+  }
+  // Strict data validation remains mandatory for every historyWindow.
   if (options.historyWindow) {
     candles = requireCleanHistory(classifyHistory(candles, options.historyWindow));
   }
@@ -68,5 +82,5 @@ export function runBacktest(candles, signals, options = {}) {
     equityCurve[equityCurve.length-1].equity=equity;
   }
   const wins=trades.filter(t=>t.pnl>0);
-  return {initialCapital,finalCapital:equity,netProfit:equity-initialCapital,returnPct:(equity/initialCapital-1)*100,tradeCount:trades.length,winRate:trades.length?wins.length/trades.length*100:0,maxDrawdownPct:maxDrawdown*100,trades,equityCurve,assumptions:{feeRate,slippageRate,allocation,execution:'next-bar-open',finalExit:'last-close'}};
+  return {initialCapital,finalCapital:equity,netProfit:equity-initialCapital,returnPct:(equity/initialCapital-1)*100,tradeCount:trades.length,winRate:trades.length?wins.length/trades.length*100:0,maxDrawdownPct:maxDrawdown*100,trades,equityCurve,assumptions:{feeRate,slippageRate,allocation,execution:'next-bar-open',finalExit:'last-close',...(derivedOhlcResearch?{derivedOhlcResearch}:{})}};
 }
