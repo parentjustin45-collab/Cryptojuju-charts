@@ -38,3 +38,4 @@ jobs:
             bitunix-boundary-plus7s.png
             bitunix-boundary-plus105s.png
           if-no-files-found: warn
+          retention-days: 30
