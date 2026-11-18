@@ -14,7 +14,8 @@ import {chromium} from 'playwright';
 import {makeBitunixFetchPage} from './bitunix-adapter.mjs';
 import {normalizeCandles,publicQuality,STEP_MS} from './ohlc-parity-core.mjs';
 import {normalizeBitunixOpenEnvelope} from './ohlc-bitunix-open-envelope.mjs';
-const SYMBOL='BTCUSDT',TFS=['15m','1h','4h'],N=480;
+const SYMBOL=process.env.CJ_SYMBOL||'BTCUSDT',TFS=['15m','1h','4h'],N=480;
+if(!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(SYMBOL))throw Error('Unsupported audited symbol');
 const at=Date.now(),iso=t=>new Date(t).toISOString(),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const result={protocol:'CJ_DEV_REAL_FRONTEND_DERIVED_OHLC_PARITY_V1',branch:'dev/v1.26.0',
  startedUTC:iso(at),symbol:SYMBOL,closedBarsEach:N,source:'Bitunix Futures LAST_PRICE',
