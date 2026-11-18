@@ -16,6 +16,7 @@ const grab=(begin,end)=>{
 const normalizeSrc=html.match(/function normalizeWsKline\(msg\)\{[^\n]+\}/)?.[0];
 assert.ok(normalizeSrc);
 const mergeSrc=grab('function mergeLive(o,k){','function stopLive(o){');
+const envelopeSrc=grab('function cjValidateBitunixLiveEnvelope(o,k,bt){','/* DEV-ONLY opt-in trace');
 const ctx={
  Math,Number,Array,Date,JSON,Map,
  bucketTime:(t,tf)=>Math.floor(Number(t)/(tf==='1h'?3600:900))*(tf==='1h'?3600:900),
@@ -24,7 +25,7 @@ const ctx={
  clearTimeout:()=>{},setTimeout:()=>0,renderIndicators:()=>{}
 };
 const {normalizeWsKline,mergeLive,normalizeWsTrades,mergeTrades}=vm.runInNewContext(
- normalizeSrc+'\n'+mergeSrc+'\n;({normalizeWsKline,mergeLive,normalizeWsTrades,mergeTrades})',ctx);
+ normalizeSrc+'\n'+envelopeSrc+'\n'+mergeSrc+'\n;({normalizeWsKline,mergeLive,normalizeWsTrades,mergeTrades})',ctx);
 const H=3600, M=900,base=Date.UTC(2026,10,17,14)/1000; // 09:00 EST
 const previous={
  '1h':{time:base-H,open:65035,high:65146.6,low:64846.4,close:65124.7,volume:100},
