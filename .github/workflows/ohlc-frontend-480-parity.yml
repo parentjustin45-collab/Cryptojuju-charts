@@ -1,0 +1,38 @@
+name: DEV chart 480-candle Bitunix 15m 1h 4h parity (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/ohlc-frontend-480-parity.mjs'
+      - '.github/workflows/ohlc-frontend-480-parity.yml'
+  workflow_dispatch:
+jobs:
+  parity:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify static source and strict history comparison regression
+        run: |
+          node --check backtest/ohlc-frontend-480-parity.mjs
+          node --test backtest/ohlc-parity-core.test.mjs backtest/bitunix-duplicate-rollover-replay.test.mjs
+      - name: Install browser test dependencies without changing project files
+        run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
+      - name: Install Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: Audit 480 real CLOSED bars per timeframe between actual dev chart, Bitunix REST and proxy
+        run: node backtest/ohlc-frontend-480-parity.mjs
+      - name: Preserve complete results even if quality is blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-frontend-480-15m-1h-4h-parity
+          path: cj-frontend-480-parity.json
+          retention-days: 30
+          if-no-files-found: warn
