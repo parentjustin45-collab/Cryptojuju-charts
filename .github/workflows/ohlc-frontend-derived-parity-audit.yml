@@ -4,6 +4,9 @@ on:
     branches: [dev/v1.26.0]
     paths:
       - 'backtest/ohlc-frontend-derived-parity-audit.mjs'
+      - 'index.html'
+      - 'backtest/ohlc-frontend-history-integration.test.mjs'
+      - 'backtest/ohlc-bitunix-open-envelope.mjs'
       - '.github/workflows/ohlc-frontend-derived-parity-audit.yml'
   workflow_dispatch:
 jobs:
