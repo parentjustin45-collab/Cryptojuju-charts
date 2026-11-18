@@ -6,6 +6,7 @@
 import {pathToFileURL} from 'node:url';
 import {makeCryptoJujuFetchPage} from './cryptojuju-adapter.mjs';
 import {readVectorWatchState} from './vector-watch-browser.mjs';
+import {normalizeBitunixOpenEnvelope} from './ohlc-bitunix-open-envelope.mjs';
 const H=3600000;
 export const LIVE_WATCH_LOCK=Object.freeze({
  protocol:'vector-watch-real-bitunix-futures-readonly-smoke-v1',
@@ -36,12 +37,25 @@ async function upstream(symbol,startTime,endTime,fetchImpl){
  if(!Array.isArray(raw))throw Error('Unexpected Bitunix direct response');
  return raw.map(convert);
 }
-export function assessBitunixPage(rows,nowMs,{symbol='BTCUSDT',source='Bitunix'}={}){
+export function assessBitunixPage(rows,nowMs,{symbol='BTCUSDT',source='Bitunix',allowDerivedEnvelope=false}={}){
  if(!Array.isArray(rows)||!Number.isSafeInteger(nowMs))
   throw Error('Invalid OHLC assessment');
- const bars=rows.map(convert).sort((a,b)=>a.time-b.time);
+ let bars=rows.map(convert).sort((a,b)=>a.time-b.time);
  if(bars.length<LIVE_WATCH_LOCK.minContinuousClosedBars)
   throw Error(symbol+' insufficient Bitunix raw OHLC');
+ let envelope={policy:'STRICT_RAW',corrections:0,rawPreserved:true,samples:[]};
+ if(allowDerivedEnvelope){
+  // Same guarded research candidate as the CryptoJuju dev chart.
+  // Unclosed current bucket is excluded from historical derivation.
+  const completed=bars.filter(x=>x.time+H<=nowMs);
+  const e=normalizeBitunixOpenEnvelope(completed,{intervalMs:H});
+  if(e.status==='BLOCKED')throw Error(symbol+' unverified Bitunix OPEN/H/L envelope ('+e.issues.length+')');
+  const byTime=new Map(e.candles.map(x=>[x.time,x]));
+  bars=bars.map(x=>byTime.get(x.time)??x);
+  envelope={policy:e.version,corrections:e.changes.length,rawPreserved:true,
+   samples:e.changes.slice(0,10),researchDerived:true};
+ }
+
  const unique=new Map(),excludedInvalid=[];
  for(const b of bars){
   if(unique.has(b.time))throw Error(symbol+' duplicate Bitunix OHLC');
@@ -70,7 +84,7 @@ export function assessBitunixPage(rows,nowMs,{symbol='BTCUSDT',source='Bitunix'}
  const state=readVectorWatchState(normalized,'1h',nowSeconds);
  if(!['possible','confirmed_idle','neutral'].includes(state.status))
   throw Error(symbol+' cannot evaluate WATCH from fresh Bitunix closed candles: '+state.status);
- return {symbol,source,latestClosedUtc:new Date(contiguous.at(-1).time).toISOString(),
+ return {symbol,source,envelope,latestClosedUtc:new Date(contiguous.at(-1).time).toISOString(),
   barsReceived:bars.length,excludedInvalidCount:excludedInvalid.length,
   excludedInvalidPreview:excludedInvalid.slice(0,4),
   continuousClosed:contiguous.length,
@@ -92,7 +106,7 @@ export async function captureRealBitunix({nowMs=Date.now(),fetchPage=null,direct
     const page=source.startsWith('CryptoJuju')?
      await proxy({symbol,interval:'1h',startTime:start,endTime:end,limit:200}):
      await upstream(symbol,start,end,directFetch);
-    verified=assessBitunixPage(page,nowMs,{symbol,source});
+    verified=assessBitunixPage(page,nowMs,{symbol,source,allowDerivedEnvelope:true});
     break;
    }catch(e){failures.push({source,error:String(e?.message??e)});}
   }
