@@ -1,0 +1,32 @@
+name: DEV OHLC 7d root-cause and Vector quarantine audit (read only)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/ohlc-root-cause-7d.mjs'
+      - '.github/workflows/ohlc-root-cause-7d.yml'
+  workflow_dispatch:
+jobs:
+  root-cause:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify rollover, quarantine and Vector V1.1 contracts without mock production data
+        run: node --test backtest/bitunix-duplicate-rollover-replay.test.mjs backtest/quality-gate.test.mjs backtest/quarantine.test.mjs backtest/vector-ait-v1.test.mjs backtest/vector-frontend-parity.test.mjs
+      - name: Audit 7 days actual Bitunix BTCUSDT 15m 1h 4h data (read only)
+        run: node backtest/ohlc-root-cause-7d.mjs
+      - name: Preserve full evidence including data quality failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-ohlc-7d-root-cause-vector
+          path: cj-ohlc-root-cause-7d.json
+          if-no-files-found: warn
+          retention-days: 30
