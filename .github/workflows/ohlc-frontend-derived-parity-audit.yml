@@ -11,6 +11,12 @@ jobs:
     if: github.ref == 'refs/heads/dev/v1.26.0'
     runs-on: ubuntu-24.04
     timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        symbol: [BTCUSDT, ETHUSDT, SOLUSDT]
+    env:
+      CJ_SYMBOL: ${{ matrix.symbol }}
     permissions:
       contents: read
     steps:
@@ -30,7 +36,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cj-real-chart-provenanced-ohlc-480-15m-1h-4h
+          name: cj-real-chart-provenanced-ohlc-480-${{ matrix.symbol }}
           path: cj-derived-frontend-parity-report.json
           retention-days: 30
           if-no-files-found: warn
