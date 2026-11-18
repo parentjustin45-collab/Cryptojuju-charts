@@ -12,6 +12,16 @@ Il ne s'agit **pas** encore de six agents de langage indépendants ni d'une exé
 | 5 — Validation | Contrôles de non-régression du pipeline | Tests GitHub Actions à chaque push dev |
 | 6 — Coordination | Rapport structuré et Markdown | Exécutable, sans notifications planifiées depuis GitHub |
 
+## Répétition générale du pipeline (CI)
+Un test complet **SYNTHÉTIQUE** est disponible via `node backtest/agents/ci-smoke.mjs`.
+Il génère de fausses chandelles et de faux signaux, passe par les six rôles et vérifie que les rapports
+JSON/Markdown existent. Un second scénario comporte une chandelle manquante et doit être BLOQUÉ.
+
+Le workflow `.github/workflows/ai-agents-phase1.yml` effectue la répétition à chaque push
+pertinent sur `dev/ai-agents-phase1` et conserve une archive
+`cj-six-role-SYNTHETIC-smoke` pendant sept jours. Les rapports sont des **tests
+d'intégration de l'orchestrateur**, ni des données réelles Bitunix, ni des mesures de rentabilité.
+
 ## Conditions avant autonomie nocturne réelle
 - Source d'historique Bitunix vérifiée et chargement continu des données sans trous.
 - Connecteurs de signaux Vector / SPEED / Momentum / Frank (et futur Cipher) contrôlés contre les versions Pine,
@@ -27,5 +37,6 @@ Il ne s'agit **pas** encore de six agents de langage indépendants ni d'une exé
 
 ## Statut actuel
 Un orchestrateur **hors ligne** à six rôles fonctionne sur des séries/stratégies fournies,
-mais n'analyse pas encore les marchés réels en boucle autonome.
+et peut désormais produire des rapports CI synthétiques à chaque push.
+Il n'analyse pas encore les marchés réels en boucle autonome.
 La réussite CI n'est pas une preuve de rentabilité ou de fidélité TradingView.
