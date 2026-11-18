@@ -4,7 +4,7 @@ import {normalizeBitunixOpenEnvelope} from './ohlc-bitunix-open-envelope.mjs';
 import {classifyHistory} from './quality-gate.mjs';
 import {vectorAIT} from './vector-ait-v1.mjs';
 const S=900000;
-const prev=(close=65014.6)=>({time:0,open:65000,high:65100,low:64900,close,volume:15});
+const prev=(close=65014.6)=>({time:0,open:65000,high:74000,low:63000,close,volume:15});
 const bad=(change={})=>({time:S,open:65014.6,high:65010.4,low:64765.6,close:64799.9,volume:10,...change});
 test('Screenshot verified 15m 4.20 high deficit derives high=open but preserves raw',()=>{
  const data=[prev(),bad()],snapshot=JSON.stringify(data);
@@ -38,7 +38,7 @@ test('Lower than open 9.60 low excess is preserved as evidence',()=>{
 });
 test('Reject invalid highs from CLOSE, not just OPEN',()=>{
  const r=normalizeBitunixOpenEnvelope([
-  prev(100),bad({open:100,high:110,low:90,close:111})
+  {time:0,open:100,high:105,low:95,close:100,volume:15},bad({open:100,high:110,low:90,close:111})
  ],{intervalMs:S});
  assert.equal(r.status,'BLOCKED');
  assert.equal(r.changes.length,0);
