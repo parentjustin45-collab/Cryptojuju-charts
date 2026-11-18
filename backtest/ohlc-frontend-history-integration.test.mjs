@@ -78,3 +78,31 @@ test('Chart passes exactly the validated series to indicators and data renderer'
  assert.match(html,/o\.cs\.setData\(o\.data\)/);
  assert.match(html,/renderIndicators\(o\);o\.ch\.timeScale\(\)\.fitContent\(\)/);
 });
+
+test('Bitunix oldest invalid bar is recovered from real preceding history before retaining 500 display bars',()=>{
+ for(const tf of ['15m','1h','4h']){
+  const raw=clean(tf),step=steps[tf],t=raw[0].time;
+  raw[0]={...raw[0],open:100,high:99.9,low:96,close:97};
+  raw[1]={...raw[1],open:97,high:103,low:96,close:100};
+  const unavailable=cjPrepareBitunixHistoricalEnvelope(raw,tf,(raw.at(-1).time+2*step)*1000);
+  assert.equal(unavailable.status,'BLOCKED');
+  assert.equal(unavailable.issues[0].time,t);
+  const preceding=Array.from({length:8},(_,i)=>({
+   time:t-(8-i)*step,open:100,high:105,low:95,close:100,volume:10
+  }));
+  const resolved=cjPrepareBitunixHistoricalEnvelope([...preceding,...raw],tf,(raw.at(-1).time+2*step)*1000);
+  assert.equal(resolved.status,'DERIVED_WITH_RAW_PROVENANCE');
+  assert.equal(resolved.corrected.length,1);
+  const trimmed=resolved.data.slice(-500);
+  assert.equal(trimmed.length,500);
+  assert.equal(trimmed[0].time,t);
+  assert.equal(trimmed[0].high,100);
+  assert.equal(resolved.raw.at(-500).high,99.9);
+ }
+});
+test('Production-source loading recovers only the exact first candle on the same Bitunix source',()=>{
+ assert.match(html,/async function cjFetchBitunixHistoryAnchors\(symbol,tf,oldestTime\)/);
+ assert.match(html,/endTime:oldestTime\*1000-1,limit:8,type:"LAST_PRICE"/);
+ assert.match(html,/rows\.some\(k=>k\.time===oldestTime-step\)/);
+ assert.match(html,/prep\.issues\.length===1&&prep\.issues\[0\]\.reason==="UNVERIFIED_OPEN_ENVELOPE"/);
+});
