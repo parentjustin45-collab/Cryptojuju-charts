@@ -5,6 +5,7 @@ on:
     paths:
       - backtest/vector-watch-bitunix-readonly.mjs
       - backtest/vector-watch-bitunix-readonly.test.mjs
+      - backtest/vector-watch-bitunix-derived-quality.test.mjs
       - backtest/vector-watch-bitunix-browser-smoke.mjs
       - backtest/vector-watch-browser.mjs
       - index.html
@@ -13,7 +14,7 @@ on:
 jobs:
   real-bitunix-watch:
     if: github.ref == 'refs/heads/dev/v1.26.0'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -23,7 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test no-orders, data freshness and strict Bitunix-only OHLC
-        run: node --test backtest/vector-watch-bitunix-readonly.test.mjs backtest/vector-watch-browser.test.mjs
+        run: node --test backtest/vector-watch-bitunix-readonly.test.mjs backtest/vector-watch-bitunix-derived-quality.test.mjs backtest/vector-watch-browser.test.mjs
       - name: Capture current read-only BTC ETH SOL 1h Bitunix OHLC
         run: node backtest/vector-watch-bitunix-readonly.mjs > vector-watch-bitunix-snapshot.json
       - name: Prepare isolated Chromium browser and candlestick renderer
