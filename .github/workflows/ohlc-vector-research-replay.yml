@@ -1,0 +1,32 @@
+name: DEV Vector V1.1 real 7d Bitunix derived-OHLC research replay (no trading)
+on:
+  push:
+    branches: [dev/v1.26.0]
+    paths:
+      - 'backtest/ohlc-vector-research-replay.mjs'
+      - '.github/workflows/ohlc-vector-research-replay.yml'
+  workflow_dispatch:
+jobs:
+  research:
+    if: github.ref == 'refs/heads/dev/v1.26.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify strict gate, derived OHLC and next-open execution
+        run: node --test backtest/ohlc-bitunix-open-envelope.test.mjs backtest/engine-bitunix-open-envelope.test.mjs backtest/engine-quality-integration.test.mjs backtest/vector-ait-v1.test.mjs
+      - name: Run real BTCUSDT seven-day in-sample research replay without trading
+        run: node backtest/ohlc-vector-research-replay.mjs
+      - name: Preserve research results even on data quality failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-vector-v11-7d-bitunix-derived-ohlc
+          path: cj-vector-ohlc-7d-replay.json
+          if-no-files-found: warn
+          retention-days: 30
