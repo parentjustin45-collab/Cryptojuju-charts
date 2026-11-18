@@ -130,7 +130,21 @@ try{
    out.issues.push({type:'UNEXPECTED_SOURCE',source:front.source});
   if(front.historyLength<480)out.issues.push({type:'TOO_FEW_CHART_BARS',count:front.historyLength});
   if(front.quality.issues.length)out.issues.push({type:'FRONTEND_QUALITY_BLOCKED',items:front.quality.issues});
-  if(independent.status==='BLOCKED')out.issues.push({type:'SHARED_ENGINE_CANNOT_VALIDATE'});
+  // A first displayed bar may need its real preceding REST candle.
+  // The frontend fetched and verified that anchor, then retained only 500.
+  // The independent 500-bar replay cannot re-check that boundary without
+  // the 501st candle; it must still match for all 480 audited CLOSED bars.
+  const firstRawMs=Number(front.raw[0]?.time)*1000;
+  const anchorOnlyOutsideAudit=independent.status==='BLOCKED'&&
+   independent.issues.length===1&&
+   independent.issues[0].time===firstRawMs&&firstRawMs<w.startTime&&
+   independent.issues[0].reason==='UNCONFIRMED_OPEN_ENVELOPE'&&
+   front.quality?.status!=='BLOCKED'&&front.quality?.issues?.length===0&&
+   front.quality?.corrected?.some(c=>c.time*1000===firstRawMs&&
+    eqBar(c.raw,front.raw[0])&&eqBar(c.derived,front.data[0]));
+  out.engine.frontendRealAnchorValidated=anchorOnlyOutsideAudit;
+  if(independent.status==='BLOCKED'&&!anchorOnlyOutsideAudit)
+   out.issues.push({type:'SHARED_ENGINE_CANNOT_VALIDATE',issues:independent.issues.slice(0,6)});
   if(Object.values(out.audit).some((n,i)=>i<4&&n>0))
    out.issues.push({type:'AUDIT_NUMERIC_DISCREPANCIES',summary:out.audit});
   if(out.quality.derived.quality!=='CLEAN'||out.quality.series.quality!=='CLEAN')
