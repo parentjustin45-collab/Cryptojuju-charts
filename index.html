@@ -1355,6 +1355,68 @@ function normalizeHistoryBuckets(rows,f){
  }
  return [...u.values()].sort((a,b)=>a.time-b.time)
 }
+/* DEV V1.26.0 — validate Bitunix REST OHLC before using chart/indicators.
+ * Raw records are preserved; only a contiguous, previous-close-confirmed
+ * opening outside high/low may be derived, with before/after provenance.
+ * Unknown/invalid completed candles block the chart, not silently skipped.
+ * This is NOT an independent TradingView price feed.
+ */
+function cjPrepareBitunixHistoricalEnvelope(rows,tf,nowMs=Date.now()){
+ const raw=normalizeHistoryBuckets(rows,tf),data=raw.map(x=>({...x}));
+ const out={policy:"BITUNIX_OPEN_ENVELOPE_V1",
+  raw:raw.map(x=>({...x})),data,corrected:[],issues:[],checkedClosed:0,
+  audited:["15m","1h","4h"].includes(tf)};
+ if(!out.audited)return {...out,status:"NOT_AUDITED"};
+ const step=intervalSeconds(tf),currentOpen=bucketTime(Math.floor(nowMs/1000),tf);
+ for(let i=0;i<data.length;i++){
+  const b=data[i],before=raw[i],p=raw[i-1],previous=data[i-1];
+  if(!Number.isSafeInteger(b.time)||b.time%step!==0||
+   ![b.open,b.high,b.low,b.close,Number(b.volume??0)].every(Number.isFinite)||
+   b.open<=0||b.high<=0||b.low<=0||b.close<=0||
+   Number(b.volume??0)<0||b.high<b.low){
+    out.issues.push({time:b.time,reason:"INVALID_BASIC_OHLC"});continue;
+  }
+  if(p&&b.time-p.time!==step){
+   out.issues.push({time:b.time,reason:"MISSING_OR_REPEATED_BUCKET"});continue;
+  }
+  if(b.time>=currentOpen)continue; // Partial bar handled by live stream.
+  out.checkedClosed++;
+  const badHigh=b.high<Math.max(b.open,b.close),badLow=b.low>Math.min(b.open,b.close);
+  if(!badHigh&&!badLow)continue;
+  const highOnlyOpen=badHigh&&!badLow&&b.high<b.open&&b.high>=b.close;
+  const lowOnlyOpen=badLow&&!badHigh&&b.low>b.open&&b.low<=b.close;
+  const continuity=p&&previous&&b.time-p.time===step&&
+   Math.abs(b.open-p.close)<=0.000001&&
+   previous.high>=Math.max(previous.open,previous.close)&&
+   previous.low<=Math.min(previous.open,previous.close);
+  if(!(highOnlyOpen||lowOnlyOpen)||!continuity){
+   out.issues.push({time:b.time,reason:"UNVERIFIED_OPEN_ENVELOPE",
+    raw:{open:before.open,high:before.high,low:before.low,close:before.close}});
+   continue;
+  }
+  b.high=Math.max(b.high,b.open);b.low=Math.min(b.low,b.open);
+  out.corrected.push({time:b.time,raw:{...before},derived:{...b},
+   reason:"PREVIOUS_CLOSE_CONFIRMS_OPEN_OUTSIDE_RAW_HIGH_LOW"});
+ }
+ out.status=out.issues.length?"BLOCKED":out.corrected.length?
+  "DERIVED_WITH_RAW_PROVENANCE":"CLEAN_RAW";
+ return out;
+}
+function cjValidateBitunixLiveEnvelope(o,k,bt){
+ const valid=[k.open,k.high,k.low,k.close,Number(k.volume??0)].every(Number.isFinite)&&
+  k.open>0&&k.high>0&&k.low>0&&k.close>0&&k.high>=k.low&&Number(k.volume??0)>=0;
+ if(!valid)return {ok:false,reason:"invalid_kline_ohlc"};
+ const badHigh=k.high<Math.max(k.open,k.close),badLow=k.low>Math.min(k.open,k.close);
+ if(!badHigh&&!badLow)return {ok:true,bar:k,derived:false};
+ const previous=o.data.find(x=>bucketTime(x.time,o.interval)===bt-intervalSeconds(o.interval));
+ const consecutive=previous&&Math.abs(previous.close-k.open)<=0.000001;
+ const highOnlyOpen=badHigh&&!badLow&&k.high<k.open&&k.high>=k.close;
+ const lowOnlyOpen=badLow&&!badHigh&&k.low>k.open&&k.low<=k.close;
+ if(!consecutive||!(highOnlyOpen||lowOnlyOpen))
+  return {ok:false,reason:"unverified_live_open_envelope"};
+ return {ok:true,bar:{...k,high:Math.max(k.high,k.open),
+  low:Math.min(k.low,k.open)},derived:true};
+}
 /* DEV-ONLY opt-in trace (?cjdiag=1). Read-only, per-card, in memory.
    Separates socket receipt -> normalized bar -> series update -> next frame.
    No telemetry upload, no secrets, no strategy or price mutation. */
@@ -1386,6 +1448,16 @@ function mergeLive(o,k){
    incomingOHLC:{open:k.open,high:k.high,low:k.low,close:k.close}});
   return false;
  }
+ const checked=cjValidateBitunixLiveEnvelope(o,k,bt);
+ if(!checked.ok){
+  cjFeedTrace(o,"kline_quarantined",{reason:checked.reason,barTime:bt,
+   incomingOHLC:{open:k.open,high:k.high,low:k.low,close:k.close}});
+  return false;
+ }
+ if(checked.derived)cjFeedTrace(o,"kline_envelope_derived",{
+  barTime:bt,originalHigh:k.high,originalLow:k.low,
+  derivedHigh:checked.bar.high,derivedLow:checked.bar.low});
+ k=checked.bar;
  if(!last){
   const bar={...k,time:bt};o.data.push(bar);o.cs.update(bar);
   o.cjBarSource="kline";o.cjBarTime=bt;
@@ -1894,7 +1966,15 @@ cjModule("chartFactory",{
 });
 
 const historyCache=new Map();
-async function load(o){stopLive(o);o.cjWatchSerial=(o.cjWatchSerial||0)+1;o.cjWatchKey=null;o.cjWatchValue=null;const oldWatchBadge=o.el.querySelector(".cjWatchBadge");if(oldWatchBadge&&!oldWatchBadge.hidden){oldWatchBadge.dataset.status="insufficient";oldWatchBadge.textContent="WATCH · changement de graphique…"}const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;o.data=normalizeHistoryBuckets(h.rows,f);if(o.data.length)applyDisplayPricePrecision(o,o.data.at(-1).close);o.cs.setData(o.data);try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}renderIndicators(o);o.ch.timeScale().fitContent();requestAnimationFrame(()=>{try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}syncAxisGeometry(o);if(o.frankCh)syncLogicalRange(o.ch,o.frankCh,o);if(o.momCh)syncLogicalRange(o.ch,o.momCh,o);if(o.zCh)syncLogicalRange(o.ch,o.zCh,o)});o.historySource=h.source;o.historyFetchedAt=Date.now();const sameSource=String(h.source||"").startsWith("Bitunix");o.el.querySelector(".feed").textContent=`${o.data.length} chandelle(s) • SOURCE: ${h.source}${historyCache.has(key)?" • cache TF":""}${sameSource?" • LIVE compatible":" • historique seulement"}`;if(o.data.length)updateLastUI(o,o.data.at(-1),false)}catch(e){if(loadToken!==o.loadToken)return;console.error(e);o.data=[];o.historySource="";o.cs.setData([]);refreshExperimentalWatch(o);o.el.querySelector(".feed").textContent=e.message}if(loadToken!==o.loadToken)return;startLive(o,s,f);startCountdown(o)}
+async function load(o){stopLive(o);o.cjHistoryRaw=null;o.cjHistoryQuality=null;o.cjWatchSerial=(o.cjWatchSerial||0)+1;o.cjWatchKey=null;o.cjWatchValue=null;const oldWatchBadge=o.el.querySelector(".cjWatchBadge");if(oldWatchBadge&&!oldWatchBadge.hidden){oldWatchBadge.dataset.status="insufficient";oldWatchBadge.textContent="WATCH · changement de graphique…"}const loadToken=(o.loadToken||0)+1;o.loadToken=loadToken;let s=o.el.querySelector(".sym").value,f=o.el.querySelector(".tf").value,key=s+"|"+f;o.interval=f;o.ch.applyOptions({timeScale:{tickMarkFormatter:t=>dateLabel(t,f)}});o.el.querySelector(".wmSymbol").textContent=s.replace("USDT"," / USDT");o.el.querySelector(".wmTf").textContent=Object.keys(frames).find(k=>frames[k]===f)||f;o.el.querySelector(".tick").textContent="Aucun tick LIVE reçu";localStorage.setItem("cj16_"+o.i,JSON.stringify({s,f}));try{let h=historyCache.get(key);if(h && !String(h.source||"").startsWith("Bitunix")){historyCache.delete(key);h=null}if(h){o.el.querySelector(".feed").textContent="Cache Bitunix instantané…"}else{o.el.querySelector(".feed").textContent="Chargement historique Bitunix…";h=await tryHistory(s,f);if(loadToken!==o.loadToken)return;if(String(h.source||"").startsWith("Bitunix"))historyCache.set(key,h)}if(loadToken!==o.loadToken)return;const prep=String(h.source||"").startsWith("Bitunix")?
+ cjPrepareBitunixHistoricalEnvelope(h.rows,f):
+ {data:normalizeHistoryBuckets(h.rows,f),status:"NOT_BITUNIX",audited:false,raw:null,corrected:[],issues:[]};
+ o.cjHistoryRaw=prep.raw;o.cjHistoryQuality=prep;
+ if(prep.status==="BLOCKED")throw Error("OHLC BITUNIX BLOQUÉ : "+prep.issues.length+
+  " anomalie(s) non vérifiée(s) dans les chandelles historiques");
+ o.data=prep.data;if(o.data.length)applyDisplayPricePrecision(o,o.data.at(-1).close);o.cs.setData(o.data);try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}renderIndicators(o);o.ch.timeScale().fitContent();requestAnimationFrame(()=>{try{o.ch.priceScale("right").applyOptions({autoScale:true,scaleMargins:{top:.08,bottom:.08}})}catch(_){}syncAxisGeometry(o);if(o.frankCh)syncLogicalRange(o.ch,o.frankCh,o);if(o.momCh)syncLogicalRange(o.ch,o.momCh,o);if(o.zCh)syncLogicalRange(o.ch,o.zCh,o)});o.historySource=h.source;o.historyFetchedAt=Date.now();const sameSource=String(h.source||"").startsWith("Bitunix");o.el.querySelector(".feed").textContent=`${o.data.length} chandelle(s) • SOURCE: ${h.source}${historyCache.has(key)?" • cache TF":""}${sameSource?" • LIVE compatible":" • historique seulement"}`;if(prep.audited)o.el.querySelector(".feed").textContent+=" • OHLC "+prep.status+
+ " ("+prep.corrected.length+" dérivée(s))";
+ if(o.data.length)updateLastUI(o,o.data.at(-1),false)}catch(e){if(loadToken!==o.loadToken)return;console.error(e);o.data=[];o.historySource="";o.cs.setData([]);refreshExperimentalWatch(o);o.el.querySelector(".feed").textContent=e.message}if(loadToken!==o.loadToken)return;startLive(o,s,f);startCountdown(o)}
 /* V1.22.1 P2 — scanner boundary.
    Scanner calculations and UI behavior are not changed. */
 cjModule("scanner",{
