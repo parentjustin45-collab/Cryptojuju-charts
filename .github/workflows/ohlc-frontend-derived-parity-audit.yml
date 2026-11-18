@@ -29,7 +29,7 @@ jobs:
       - name: Install isolated browser testing tools
         run: npm install --no-save --no-package-lock playwright@1.56.1 lightweight-charts@4.2.2
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium --only-shell
       - name: Verify 480 closed candles each in actual frontend, original Bitunix REST and derived engine
         run: node backtest/ohlc-frontend-derived-parity-audit.mjs
       - name: Upload complete raw provenance and chart comparison report
