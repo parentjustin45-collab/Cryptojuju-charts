@@ -4,6 +4,8 @@ on:
     branches: [dev/v1.26.0]
     paths:
       - 'backtest/frontend-bitunix-hour-boundary-browser.mjs'
+      - 'index.html'
+      - 'backtest/ohlc-frontend-history-integration.test.mjs'
       - '.github/workflows/frontend-bitunix-hour-boundary-browser.yml'
   workflow_dispatch:
 jobs:
