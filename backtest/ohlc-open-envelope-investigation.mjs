@@ -9,6 +9,8 @@ import {makeBitunixFetchPage} from './bitunix-adapter.mjs';
 import {STEP_MS,normalizeCandles} from './ohlc-parity-core.mjs';
 import {vectorAIT} from './vector-ait-v1.mjs';
 import {planCleanBacktestWindows} from './quarantine.mjs';
+import {normalizeBitunixOpenEnvelope} from './ohlc-bitunix-open-envelope.mjs';
+import {classifyHistory} from './quality-gate.mjs';
 const symbol='BTCUSDT',frames={'15m':672,'1h':168},today=Date.now(),iso=t=>new Date(t).toISOString();
 const page=makeBitunixFetchPage({
  fetchImpl:(url,opts)=>fetch(url,{...opts,signal:AbortSignal.timeout(18000)})
@@ -74,6 +76,19 @@ for(const [tf,count] of Object.entries(frames)){
   frame.expected=count;frame.found=clean.count;frame.invalid=clean.invalid.length;
   frame.missing=clean.missing.length;frame.duplicates=clean.duplicates.length;
   frame.vector=summaryVector(rows,window);
+  const normalized=normalizeBitunixOpenEnvelope(rows,{intervalMs:step});
+  const candidateQuality=classifyHistory(normalized.candles,window);
+  frame.actualNormalizer={
+   status:normalized.status,corrections:normalized.changes.length,
+   unreconciled:normalized.issues.length,
+   strictBacktestReady:candidateQuality.canBacktest,
+   rawWasBlocked:clean.quality==='BLOCKED',
+   correctionSamples:normalized.changes.slice(0,5),
+   issueSamples:normalized.issues.slice(0,5),
+   note:'Derived, non-production research series. Raw remains untouched. No independent TradingView proof beyond user screenshots.'
+  };
+  const normalMap=new Map(normalized.candles.map(x=>[x.time,x]));
+
   const invalid=[...clean.invalid].sort((a,b)=>a.time-b.time);
   for(const bad of invalid){
    const t=bad.time,r=bad.bar,p=byTime.get(t-step),v=Number(p?.close);
@@ -104,8 +119,23 @@ for(const [tf,count] of Object.entries(frames)){
   frame.previousCloseCount=frame.diagnostics.filter(x=>x.openingEqualsPreviousClose).length;
   frame.oneMinuteCompleteCount=frame.diagnostics.filter(x=>x.oneMinute?.found===x.oneMinute?.expected&&
    x.oneMinute.invalid===0&&x.oneMinute.missing===0).length;
+  frame.oneMinuteAllBarsCount=frame.diagnostics.filter(x=>x.oneMinute?.found===x.oneMinute?.expected&&
+   x.oneMinute.missing===0&&x.oneMinute.duplicates===0).length;
+  frame.oneMinuteEnvelopeAgreement=frame.diagnostics.filter(x=>{
+   const a=x.oneMinute?.envelopeOfOneMinute,b=normalMap.get(x.time);
+   return a&&b&&x.oneMinute.found===x.oneMinute.expected&&
+    ['open','high','low','close'].every(k=>Math.abs(a[k]-b[k])<=0.011);
+  }).length;
+  frame.actualNormalizer.oneMinuteEnvelopeAgreement=frame.oneMinuteEnvelopeAgreement;
+  frame.actualNormalizer.oneMinuteEligible=frame.oneMinuteAllBarsCount;
+  if(normalized.issues.length||!candidateQuality.canBacktest||
+    normalized.changes.length!==frame.invalid||
+    frame.oneMinuteEnvelopeAgreement!==frame.invalid)
+    frame.errors.push({error:'DERIVED_ENVELOPE_NOT_FULLY_VERIFIED_IN_THIS_RESEARCH_WINDOW'});
+
   console.log('TIMEFRAME '+JSON.stringify({tf,expected:count,found:frame.found,invalid:frame.invalid,
    openingEqualsPreviousClose:frame.previousCloseCount,oneMinuteComplete:frame.oneMinuteCompleteCount,
+   derived:frame.actualNormalizer,
    errors:frame.errors,vector:frame.vector?{strict:frame.vector.rawStrictStatus,
     strictExcluded:frame.vector.strictExcludedBars,scenarioSignals:
      frame.vector.envelopeSimulation.vectorResult?.signalCount}:null}));
