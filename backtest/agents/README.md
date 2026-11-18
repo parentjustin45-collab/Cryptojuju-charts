@@ -16,9 +16,8 @@ mais **ne doivent jamais fabriquer des chandelles, valider eux-mêmes leurs prop
 
 ## Code disponible maintenant
 `runResearchBatch` dans `research-batch.mjs` est l'interface initiale hors ligne. Il accepte uniquement
-Bitunix LAST_PRICE (BTCUSDT ou autre symbole correctement identifié) sur les timeframes
-**15m, 1h, 4h**, pour lesquels on dispose d'une acceptation ciblée de la qualité historique en dev.
-Le contrôle qualité de la fenêtre fournie est effectué à chaque exécution.
+Bitunix LAST_PRICE sur **15m, 1h, 4h**, unités ayant fait l'objet d'une acceptation ciblée sur BTC/ETH/SOL.
+Cela ne prouve pas que chaque fenêtre ou symbole futur est correct : la qualité est revérifiée à chaque appel.
 
 Chaque expérience fournit :
 - `id` unique et `signals: [{time,side}]` où `side` vaut `long`, `short` ou `flat`.
@@ -31,7 +30,19 @@ Ne transmettre à ce module que des séries **fermées et déjà normalisées av
 Le module ne répare aucune chandelle et refuse les trous, doublons ou incohérences OHLC.
 Aucune comparaison indépendante complète TradingView n'est supposée.
 
-### Tests
+### Comparaison chronologique figée (ajout)
+`runFixedHoldout` dans `fixed-holdout.mjs` accepte les mêmes fenêtres et expériences ainsi qu'un
+`holdoutStartTime` fixé **avant** la recherche de paramètres. Il contrôle d'abord la continuité de
+**tout** l'historique, sépare les chandelles chronologiquement, puis produit deux tableaux de résultats
+séparés : `training` et `holdout`. Il ne classe aucun gagnant et n'optimise aucun paramètre.
+
+Au début de chaque phase, la position est remise à plat et le capital initial est réinitialisé.
+Une alerte confirmée sur la **dernière chandelle d'entraînement** ne peut pas être exécutée sur la
+première chandelle holdout : elle est rejetée de cette évaluation avec journal `droppedAtBoundary`.
+Cette séparation permet la comparaison de phases indépendantes, mais **ne prouve pas** qu'un
+indicateur ne repeint pas, ni que la période holdout était réellement inconnue à l'opérateur.
+
+### Tests hors ligne
 `node --test backtest/agents/*.test.mjs`
 
 ## Prochaines étapes (non réalisées)
