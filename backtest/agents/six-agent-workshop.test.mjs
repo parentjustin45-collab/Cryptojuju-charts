@@ -47,6 +47,24 @@ test('no fabricated candles allowed to rescue raw Bitunix OHLC anomalies',()=>{
  assert.ok(result.agents[3].details.proposals.some(p=>p.code==='DATA_PROVENANCE'));
 });
 
+test('unexpected or out-of-window OHLC rows block the six-role pipeline',()=>{
+ const stray={...candles[0],time:candles.length*step};
+ const result=runSixAgentWorkshop({...input,candles:[...candles,stray]});
+ assert.equal(result.status,'BLOCKED');
+ assert.equal(result.agents[0].status,'BLOCKED');
+ assert.equal(result.agents[0].details.quality.outOfRange,1);
+ assert.equal(result.agents[1].status,'BLOCKED');
+ assert.equal(result.agents[4].status,'BLOCKED');
+ assert.ok(result.agents[2].details.findings.some(f=>f.code==='SOURCE_DATA'));
+});
+
+test('unaligned timestamps cannot be silently ignored',()=>{
+ const stray={...candles[0],time:step+1000};
+ const result=runSixAgentWorkshop({...input,candles:[...candles,stray]});
+ assert.equal(result.status,'BLOCKED');
+ assert.equal(result.agents[0].details.quality.outOfRange,1);
+});
+
 test('invalid signal confirmation conventions are BLOCKED, not silently traded',()=>{
  const bad={...input,experiments:[{...input.experiments[0],signalTimeConvention:'pivot-bar'}]};
  const result=runSixAgentWorkshop(bad);

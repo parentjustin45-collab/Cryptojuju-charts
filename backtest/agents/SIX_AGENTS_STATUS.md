@@ -40,3 +40,13 @@ Un orchestrateur **hors ligne** à six rôles fonctionne sur des séries/straté
 et peut désormais produire des rapports CI synthétiques à chaque push.
 Il n'analyse pas encore les marchés réels en boucle autonome.
 La réussite CI n'est pas une preuve de rentabilité ou de fidélité TradingView.
+
+## Contrôle supplémentaire — 18 novembre 2026, nuit 1
+Le rôle de qualité Bitunix refuse désormais également les lots contenant des lignes
+OHLC hors de la fenêtre demandée ou mal alignées sur la grille temporelle,
+même si toutes les chandelles attendues sont présentes. Ce contrôle empêche un
+faux succès lorsque des lignes inattendues ont été silencieusement écartées.
+Deux tests de régression vérifient le blocage de ces cas. Le changement concerne
+l'orchestrateur de recherche isolé, **pas** la qualité-gate commune ni le site public.
+Les données du test CI restent **synthétiques** ; aucune parité Pine ou ingestion
+Bitunix réelle n'est démontrée par ces tests.

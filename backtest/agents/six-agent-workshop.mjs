@@ -29,7 +29,7 @@ function auditData(input) {
     return record('bitunix-data','BLOCKED',{reason:'Unsupported or non-verified market/timeframe'});
   try {
     const audit=classifyHistory(candles,window);
-    return record('bitunix-data',audit.status==='READY'?'PASS':'BLOCKED',{
+    return record('bitunix-data',audit.status==='READY' && audit.quality.outOfRange===0?'PASS':'BLOCKED',{
       status:audit.status,quality:audit.quality,
       examples:{invalid:audit.issues.slice(0,3),missing:audit.missing.slice(0,3),duplicates:audit.quality.duplicates}
     });
