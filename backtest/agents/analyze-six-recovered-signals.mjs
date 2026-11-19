@@ -207,7 +207,27 @@ for(const symbol of INTEGRATED_RECOVERY_LOCK.symbols){
    soloStressReturnDeltaPctPoints:byFriction.stress.soloMinusStrictPctPoints,
    actualFullRecoveryEntry:byFriction.base.recoveredCommandCreatesFullVariantEntry,
    nextOpen:o.nextOpenPrice,
-   forward6h:o.fixedHorizonRawDirectionOnly[6]?.directionalCloseChangePct??null
+   forward3h:o.fixedHorizonRawDirectionOnly[3]?.directionalCloseChangePct??null,
+   forward6h:o.fixedHorizonRawDirectionOnly[6]?.directionalCloseChangePct??null,
+   forward12h:o.fixedHorizonRawDirectionOnly[12]?.directionalCloseChangePct??null,
+   soloBaseTrade:byFriction.base.soloEntryIfAny?{
+     entryTimeUtc:iso(byFriction.base.soloEntryIfAny.entryTime),
+     exitTimeUtc:iso(byFriction.base.soloEntryIfAny.exitTime),
+     exitReason:byFriction.base.soloEntryIfAny.exitReason,
+     netSimulatedPnl:byFriction.base.soloEntryIfAny.netPnl,
+     entryPrice:byFriction.base.soloEntryIfAny.entryPrice,
+     exitPrice:byFriction.base.soloEntryIfAny.exitPrice,
+     hitStopAndTargetSameCandle:byFriction.base.soloEntryIfAny.stopTargetCollision
+   }:null,
+   fullBaseTrade:byFriction.base.fullVariantEntryIfAny?{
+     exitTimeUtc:iso(byFriction.base.fullVariantEntryIfAny.exitTime),
+     exitReason:byFriction.base.fullVariantEntryIfAny.exitReason,
+     netSimulatedPnl:byFriction.base.fullVariantEntryIfAny.netPnl
+   }:null,
+   soloStressTrade:byFriction.stress.soloEntryIfAny?{
+     exitReason:byFriction.stress.soloEntryIfAny.exitReason,
+     netSimulatedPnl:byFriction.stress.soloEntryIfAny.netPnl
+   }:null
   }));
  }
  groups.push(per);
