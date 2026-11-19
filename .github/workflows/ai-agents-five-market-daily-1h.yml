@@ -29,6 +29,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cj-FIVE-MARKET-DAILY-15M-1H-4H-VECTOR-RESEARCH
-          path: ${{ runner.temp }}/cj-five-daily-1h/
+          path: ${{ runner.temp }}/cj-five-daily-mtf/
           retention-days: 7
           if-no-files-found: warn
