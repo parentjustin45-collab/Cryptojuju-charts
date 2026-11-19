@@ -76,3 +76,14 @@ en recherche. Les rapports sont conservés dans l'artefact
 Les tests critiques de causalité (signaux après clôture, exécution
 suivante) passent par `vector-v11-real-research.test.mjs`.
 Aucune parité TradingView n'est considérée certifiée.
+
+## Révision — 19 novembre : relecture intégrale de la même fenêtre
+Après un blocage `SOLUSDT 1h` pendant une courte deuxième lecture de 24
+chandelles, l'orchestrateur utilise maintenant **exactement la même fenêtre
+de 480 chandelles fermées, avec 3 ancres, pour les deux captures**. La
+normalisation initiale et la seconde ont donc les mêmes précédents.
+Le contrôle refuse chaque différence OHLCV et conserve les deux séries
+dans l'artefact. C'est une relecture Bitunix (pas TradingView, pas temps réel).
+Le second appel reste indépendant; seuls les paramètres temporels sont figés.
+Ce choix augmente modestement le nombre d'appels REST publics et GitHub
+Actions, sans créer de service payant.

@@ -73,3 +73,25 @@ test('extra provenance anchors can verify a bad OPEN envelope at the narrow read
  assert.equal(comparison.checkedRaw,36);
  assert.equal(comparison.checkedDerived,24);
 });
+
+test('same full closed history re-read avoids arbitrary short-anchor blockage',async()=>{
+ const long=Array.from({length:49},(_,i)=>({
+   time:boundary-(49-i)*intervalMs,open:101,high:102,low:100,
+   close:101,volume:20+i
+ }));
+ // This candle is exactly the initial anchor for the narrow 24-bar re-read;
+ // its previous close is missing from the short snapshot but present in
+ // the original full-window capture and the full-window re-read.
+ const defect=49-27;
+ long[defect]={...long[defect],high:100.8,close:100.5};
+ const original=await sample(40,long,{anchorBars:3});
+ const narrow=await sample(24,long,{anchorBars:3});
+ const full=await sample(40,long,{anchorBars:3});
+ assert.equal(original.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ assert.equal(narrow.status,'BLOCKED');
+ assert.equal(full.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ const consistency=compareBitunixReadbacks(original,full);
+ assert.equal(consistency.status,'STABLE_TWO_READS');
+ assert.equal(consistency.checkedDerived,40);
+ assert.equal(consistency.differenceCount,0);
+});

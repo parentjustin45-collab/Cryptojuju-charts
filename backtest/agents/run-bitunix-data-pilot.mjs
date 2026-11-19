@@ -46,14 +46,14 @@ for(const symbol of PILOT_SYMBOLS){
     }
     await writeFile(resolve(destination,`${symbol}-${timeframe}.json`),
       JSON.stringify(out,null,2)+'\n');
-    // Second public REST read of the most recent CLOSED 24 bars (+12 anchors).
-    // Both captures use the SAME anchorTime, so the boundary cannot move.
+    // Second public REST read of the exact SAME full CLOSED window (+3 anchors).
+    // Both captures use the SAME anchorTime and start/end, so no new anchor-boundary defect is introduced.
     // A revision or fetch failure blocks this configuration for research.
     let readback={status:'BLOCKED',reason:'FIRST_READ_NOT_READY'};
     if(out.status==='DATA_READY_FOR_RESEARCH_ONLY'){
       try{
         const second=await fetchBitunixDataPilot({
-          symbol,timeframe,closedBars:24,anchorBars:12,
+          symbol,timeframe,closedBars,anchorBars:3,
           nowMs:anchorTime,fetchPage
         });
         readback=compareBitunixReadbacks(out,second);
@@ -95,7 +95,7 @@ summary.finishedAtUtc=new Date().toISOString();
 summary.passed=summary.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length;
 summary.blocked=summary.checks.length-summary.passed;
 summary.status=summary.blocked?'BLOCKED_OR_PARTIAL':'PASS_PUBLIC_BITUNIX_DATA_WINDOWS';
-summary.warning='Repeatability compares a second HTTP pull of 24 recent CLOSED candles per configuration. This does not prove always-on uptime, independent TradingView parity or indicator performance.';
+summary.warning='Repeatability compares a second HTTP pull of the full 480 CLOSED bars per configuration (identical start/end and anchor), not only 24 bars. No continuous uptime, independent TradingView parity or indicator-performance proof.';
 await writeFile(resolve(destination,'summary.json'),JSON.stringify(summary,null,2)+'\n');
 const md=[
   '# CryptoJuju — Données Bitunix réelles, premier pilote',
@@ -107,7 +107,7 @@ const md=[
   ...summary.checks.map(x=>`| ${x.symbol} | ${x.timeframe} | ${x.acceptedBars}/${x.requestedBars} | ${x.corrections} | ${x.status} |`),
   '',
   '> Source : Bitunix public REST LAST_PRICE. Aucune parité indépendante TradingView.',
-  '> Relecture immédiate : 24 dernières chandelles fermées comparées avec les données initiales.',
+  '> Relecture immédiate : la même fenêtre de 480 chandelles fermées comparée entièrement aux valeurs initiales.',
   '> Aucun signal réel, transaction ou backtest lancé depuis ce workflow.'
 ];
 await writeFile(resolve(destination,'summary.md'),md.join('\n')+'\n');

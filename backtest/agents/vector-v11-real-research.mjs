@@ -19,7 +19,7 @@ export function auditRealVectorV11({
 }={}){
  if(source?.status!=='DATA_READY_FOR_RESEARCH_ONLY' ||
     repeatability?.status!=='STABLE_TWO_READS' ||
-    repeatability.checkedDerived!==24 ||
+    repeatability.checkedDerived!==source.acceptedCandles?.length ||
     !source.provenance?.formingBarExcluded ||
     source.provenance.priceType!=='LAST_PRICE')
    throw Error('Vector requires stable, closed, provenanced Bitunix OHLC');
@@ -31,7 +31,7 @@ export function auditRealVectorV11({
     repeatability.market?.timeframe!==market.timeframe ||
     repeatability.historyWindow?.endTime!==window.endTime ||
     repeatability.historyWindow?.intervalMs!==window.intervalMs ||
-    repeatability.historyWindow?.startTime!==window.endTime-24*window.intervalMs ||
+    repeatability.historyWindow?.startTime!==window.startTime ||
     !source.provenance?.rawSha256 ||
     repeatability.firstRawSha256!==source.provenance.rawSha256 ||
     !repeatability.overlapRawSha256First ||

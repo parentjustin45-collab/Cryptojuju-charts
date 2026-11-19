@@ -18,9 +18,9 @@ const source={
    rawSha256:'some-sha',derivedSha256:'derived-sha',normalizationVersion:'bitunix-open-envelope-v1'}
 };
 const repeatability={
- status:'STABLE_TWO_READS',checkedDerived:24,
+ status:'STABLE_TWO_READS',checkedDerived:bars.length,
  market:{exchange:'Bitunix',symbol:'BTCUSDT',timeframe:'15m'},
- historyWindow:{startTime:w.endTime-24*step,endTime:w.endTime,intervalMs:step},
+ historyWindow:{startTime:w.endTime-bars.length*step,endTime:w.endTime,intervalMs:step},
  firstRawSha256:'some-sha',overlapRawSha256First:'matched',overlapRawSha256Second:'matched',
  differenceCount:0
 };

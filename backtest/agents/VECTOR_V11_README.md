@@ -2,7 +2,7 @@
 
 La première expérimentation de signaux réels part uniquement des historiques
 `DATA_READY_FOR_RESEARCH_ONLY` de BTC/ETH/SOL en 15m/1h/4h, avec
-`STABLE_TWO_READS` sur les 24 dernières chandelles fermées. Le code
+`STABLE_TWO_READS` sur la même fenêtre intégrale de 480 chandelles fermées. Le code
 `backtest/vector-ait-v1.mjs` respecte la convention des signaux confirmés
 à la **clôture** et testés à l'**ouverture suivante**, sans ordres réels.
 

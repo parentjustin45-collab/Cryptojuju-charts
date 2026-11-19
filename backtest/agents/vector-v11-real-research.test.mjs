@@ -17,9 +17,9 @@ const source={
    normalizationVersion:'bitunix-open-envelope-v1'}
 };
 const repeatability={
- status:'STABLE_TWO_READS',checkedDerived:24,
+ status:'STABLE_TWO_READS',checkedDerived:bars.length,
  market:{exchange:'Bitunix',symbol:'BTCUSDT',timeframe:'15m'},
- historyWindow:{startTime:window.endTime-24*step,endTime:window.endTime,intervalMs:step},
+ historyWindow:{startTime:window.endTime-bars.length*step,endTime:window.endTime,intervalMs:step},
  firstRawSha256:'a',overlapRawSha256First:'matching',overlapRawSha256Second:'matching',
  differenceCount:0
 };
