@@ -60,3 +60,26 @@ Aucun coût ni funding n'est appliqué au diagnostic; on ne déclare
 jamais un signal gagnant, un profit raté ou une version supérieure.
 La méthode sert à repérer les configurations où une expérience ciblée
 avec frais, risque et validation séparée serait pertinente.
+
+## Laboratoire de risque sur les signaux Daily rejetés (étape suivante)
+`daily-veto-risk-paper.mjs` simule des **cohortes indépendantes** :
+signaux V1.1 refusés car opposés au dernier Daily clos, et signaux
+alignés (témoin). Une seule position par cohorte à la fois; les
+signaux simultanés ou chevauchants ne sont pas exécutés deux fois.
+Entrée à l'ouverture suivante. Stop = 1,5 × ATR Wilder(14) établi avec
+les seules bougies déjà closes au signal; take-profit = 2R;
+sortie au maximum après 12 bougies; sortie forcée en fin de phase.
+Dimension avec risque nominal 1 %, exposition maximale de 100 % du
+capital fictif (pas de levier). Friction par côté base : frais 0,06 %,
+glissement 0,05 %; scénario stress : frais 0,10 %, glissement 0,20 %.
+Si stop et objectif sont touchés dans la même bougie, appliquer STOP
+en premier; si gap dépasse le stop, remplir au cours d'ouverture plus
+défavorable. Drawdown calculé sur transactions clôturées seulement,
+donc les risques intratrade sont SOUS-ESTIMÉS.
+
+Ces frais, spreads et stops sont fictifs, pas des exécutions garanties.
+Les positions préexistantes du portefeuille Vector ne sont PAS
+reproduites : **il est interdit de qualifier ces rendements de profits
+réels manqués ou de les additionner aux rendements du backtest Vector.**
+Le résultat est un outil de décision pour formuler des hypothèses,
+sans promotion automatique ni modification des signaux en production.

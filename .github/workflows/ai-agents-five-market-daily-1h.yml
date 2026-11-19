@@ -7,6 +7,7 @@ on:
       - 'backtest/agents/vector-daily-intraday-alignment*'
       - 'backtest/agents/daily-trend-persistence*'
       - 'backtest/agents/daily-signal-veto-diagnostics*'
+      - 'backtest/agents/daily-veto-risk-paper*'
       - 'backtest/agents/bitunix-data-pilot.mjs'
       - '.github/workflows/ai-agents-five-market-daily-1h.yml'
   workflow_dispatch:
@@ -22,7 +23,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify no-lookahead and strict Bitunix source tests
-        run: node --test backtest/agents/vector-daily-intraday-alignment.test.mjs backtest/agents/daily-signal-veto-diagnostics.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/daily-vector-research.test.mjs
+        run: node --test backtest/agents/vector-daily-intraday-alignment.test.mjs backtest/agents/daily-signal-veto-diagnostics.test.mjs backtest/agents/daily-veto-risk-paper.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/daily-vector-research.test.mjs
       - name: Read 5 official daily and 15m 1h 4h histories; compare 6 Vector modes
         run: node backtest/agents/run-five-market-daily-mtf.mjs "${{ runner.temp }}/cj-five-daily-mtf"
       - name: Archive actual OHLC and comparison reports even if an asset is blocked

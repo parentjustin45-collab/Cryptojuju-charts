@@ -108,6 +108,18 @@ try{
        result.dailyBars=daily.depth;
        result.lowerBars=first.acceptedCandles.length;
        result.filters=study.filters;
+       // The full JSON study retains the individual stop/target fills.
+       // Keep only summary metrics in the compact multi-market matrix.
+       const paper=study.standaloneVetoRiskPaper;
+       const strip=x=>{const {trades,...summary}=x;return summary;};
+       result.standaloneRiskPaper={
+         protocol:paper.protocol,status:paper.status,
+         scenarios:Object.fromEntries(Object.entries(paper.scenarios).map(([cost,groups])=>
+           [cost,Object.fromEntries(Object.entries(groups).map(([group,phases])=>
+             [group,{training:strip(phases.training),holdout:strip(phases.holdout)}]))]
+         )),
+         caveat:'Standalone simulated risk-limited trades, NOT Vector integrated portfolio PnL'
+       };
        // Non-trade opportunity diagnostics: direction from the NEXT bar
        // open, fixed-horizon close and max excursions after each signal.
        result.opportunity={
@@ -180,6 +192,20 @@ const rows=[
   ' | '+f(r.holdoutReturnPct)+' | '+f(r.holdoutMaxDrawdownPct)+
   ' | '+r.sampleAdequacy+' |'):
   ['| '+x.symbol+' | '+x.timeframe+' | **BLOQUÉ** | — | — | — | '+x.reason+' |']),
+ '',
+ '## Paper trades isolés sur signaux rejetés vs alignés : stop, objectif, frais et risque',
+ 'Règle figée : ATR Wilder(14), stop = 1,5 ATR, take-profit = 2R, durée max 12 bougies; exposition limitée au capital, budget risque nominal 1 % et aucun levier. Base : 0,06 % frais + 0,05 % glissement par côté. Stress : 0,10 % + 0,20 %. Hypothèses, pas coûts réellement mesurés.',
+ '| Marché | UT | Hypothèse frais | Cohorte | Trades holdout | Retour net fictif | Drawdown réalisé |',
+ '|---|---|---|---|---:|---:|---:|',
+ ...report.cases.flatMap(x=>['base','stress'].flatMap(cost=>
+   ['daily_opposed','aligned'].map(group=>{
+     const r=x.standaloneRiskPaper?.scenarios?.[cost]?.[group]?.holdout;
+     return '| '+x.symbol+' | '+x.timeframe+' | '+cost+' | '+group+
+       ' | '+(r?.tradeCount??'—')+' | '+f(r?.returnPct)+
+       ' | '+f(r?.realizedMaxDrawdownPct)+' |';
+   }))),
+ '',
+ 'Ces transactions autonomes ne simulent PAS les positions préexistantes du vrai portefeuille Vector. Ne pas additionner les rendements.',
  '',
  '## Persistance Daily vs mouvements 1H (hypothèse « 90 % »)',
  '| Marché | Continuité Daily | Jours éligibles | 1H EMA alignées (holdout) | Bougies 1H sens Daily (holdout) |',

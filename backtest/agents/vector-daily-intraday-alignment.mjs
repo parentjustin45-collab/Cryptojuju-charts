@@ -14,6 +14,7 @@ import {applyVectorConfirmation} from '../vector-antiwhipsaw-v12.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {runFixedHoldout} from './fixed-holdout.mjs';
 import {diagnoseDailyVetoedSignals} from './daily-signal-veto-diagnostics.mjs';
+import {runDailyVetoRiskPaperExperiment} from './daily-veto-risk-paper.mjs';
 
 const D=86400000;
 const digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
@@ -208,6 +209,12 @@ export function compareDailyAlignedVector({
    ['break_daily_aligned',dailyBreak.signals],
    ['break_daily_soft',dailyBreakSoft.signals]
  ];
+ // Separate stop-loss / target paper-trade cohorts (opposed and aligned)
+ // use the identical already-confirmed Daily and V1.1 signals.
+ const paper=runDailyVetoRiskPaperExperiment({
+   market:intraday.market,historyWindow:intraday.historyWindow,
+   bars,observations:dailyBase.observations
+ });
  const holdoutStartTime=intraday.historyWindow.startTime+
    Math.floor(bars.length*0.7)*intervalMs;
  const evals=runFixedHoldout({
@@ -260,6 +267,7 @@ export function compareDailyAlignedVector({
    training:evals.training,holdout:evals.holdout,
    droppedAtBoundary:evals.droppedAtBoundary,
    signalOpportunity:opportunity,
+   standaloneVetoRiskPaper:paper,
    promotedVariant:null,tradingEnabled:false,
    warnings:[
      'A bullish Daily does not guarantee bullish 4H, 1H or 15M: pullbacks and reversals are possible.',
@@ -269,7 +277,8 @@ export function compareDailyAlignedVector({
      '120s Daily post-close delay is a conservative assumption, not validated feed-latency evidence.',
      'Five-market 1h pilot and original BTC 15m/4h tests are exploratory, not prospective validation.',
      'Fixed fees/slippage, no funding/liquidity model; no production, trading or automatic selection.',
-     'Missed-opportunity diagnostics are overlapping fixed-horizon price movements, NOT recoverable trade P&L or win rates.'
+     'Missed-opportunity diagnostics are overlapping fixed-horizon price movements, NOT recoverable trade P&L or win rates.',
+     'Standalone ATR stop/target paper trades are isolated cohorts, NOT integrated Vector portfolio gains.'
    ]
  };
 }
