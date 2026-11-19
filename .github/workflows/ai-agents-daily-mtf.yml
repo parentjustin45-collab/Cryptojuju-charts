@@ -1,0 +1,32 @@
+name: DEV BTC Daily to intraday Vector filter (research only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/vector-daily-intraday-alignment*'
+      - 'backtest/agents/run-vector-daily-intraday-alignment.mjs'
+      - '.github/workflows/ai-agents-daily-mtf.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  daily-vector-mtf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline causal MTF and no-lookahead regression tests
+        run: node --test backtest/agents/vector-daily-intraday-alignment.test.mjs backtest/agents/daily-vector-research.test.mjs
+      - name: Compare completed Daily trend and BTC 15m 1h 4h Vector
+        run: node backtest/agents/run-vector-daily-intraday-alignment.mjs "${{ runner.temp }}/cj-daily-mtf"
+      - name: Archive Bitunix OHLC and model reports (NO ORDERS)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-BTC-DAILY-MTF-VECTOR-RESEARCH
+          path: ${{ runner.temp }}/cj-daily-mtf/
+          retention-days: 7
+          if-no-files-found: warn
