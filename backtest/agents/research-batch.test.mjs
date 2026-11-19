@@ -41,7 +41,7 @@ test('missing or raw-invalid Bitunix history is rejected before any backtest',()
 });
 
 test('unsupported timeframe and mismatched bar intervals fail closed',()=>{
-  assert.throws(()=>run({market:{...market,timeframe:'1d'}}),/only Bitunix/i);
+  assert.throws(()=>run({market:{...market,timeframe:'1w'}}),/only Bitunix/i);
   assert.throws(()=>run({historyWindow:{...historyWindow,intervalMs:3600000}}),/Timeframe/i);
 });
 

@@ -83,7 +83,7 @@ test('pagination follows exclusive endTime without overlapping pages',async()=>{
 });
 test('unsupported markets and invalid windows do not silently downgrade',async()=>{
  await assert.rejects(run({symbol:'XRPUSDT'}),/Pilot restricted/);
- await assert.rejects(run({timeframe:'1d'}),/Pilot restricted/);
+ await assert.rejects(run({timeframe:'1w'}),/Pilot restricted/);
  await assert.rejects(run({closedBars:2}),/Unsafe pilot/);
 });
 
