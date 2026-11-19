@@ -119,3 +119,27 @@ test('960-bar pilot blocks missing interior bars rather than interpolating',asyn
  assert.equal(out.quality.rawMissing,1);
  assert.equal(out.acceptedCandles.length,0);
 });
+
+test('Daily only accepts selected assets and excludes forming UTC day',async()=>{
+ const intervalMs=86400000;
+ const anchor=Date.UTC(2026,10,19,0,0),nowMs=anchor+60_000;
+ const size=180,anchors=3,first=anchor-(size+anchors)*intervalMs;
+ const rows=Array.from({length:size+anchors},(_,i)=>({
+  time:first+i*intervalMs,open:100,high:102,low:98,close:100,volume:50+i
+ }));
+ const out=await fetchBitunixDataPilot({
+  symbol:'HYPEUSDT',timeframe:'1d',nowMs,closedBars:size,anchorBars:anchors,
+  fetchPage:async({startTime,endTime})=>rows.filter(x=>x.time>=startTime&&x.time<endTime)
+ });
+ assert.equal(out.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ assert.equal(out.market.timeframe,'1d');
+ assert.equal(out.acceptedCandles.length,180);
+ assert.equal(out.historyWindow.intervalMs,intervalMs);
+ assert.equal(out.historyWindow.endTime,anchor);
+ assert.equal(out.acceptedCandles.at(-1).time,anchor-intervalMs);
+ assert.equal(out.provenance.formingBarExcluded,true);
+ const reject=()=>fetchBitunixDataPilot({
+  symbol:'UNKNOWNUSDT',timeframe:'1d',nowMs,closedBars:180,fetchPage:async()=>[]
+ });
+ await assert.rejects(reject(),/Pilot restricted/);
+});
