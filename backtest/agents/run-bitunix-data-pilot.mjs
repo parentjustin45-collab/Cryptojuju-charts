@@ -7,6 +7,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {makeBitunixFetchPage} from '../bitunix-adapter.mjs';
 import {PILOT_SYMBOLS,PILOT_TIMEFRAMES,fetchBitunixDataPilot} from './bitunix-data-pilot.mjs';
+import {renderBitunixDataCenterHtml} from './bitunix-data-center-view.mjs';
 
 const destination=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const closedBars=Number(process.env.CJ_DATA_PILOT_BARS??96);
@@ -76,5 +77,6 @@ const md=[
   '> Aucun signal réel, transaction ou backtest lancé depuis ce workflow.'
 ];
 await writeFile(resolve(destination,'summary.md'),md.join('\n')+'\n');
+await writeFile(resolve(destination,'data-center.html'),renderBitunixDataCenterHtml(summary));
 console.log('SUMMARY '+JSON.stringify({status:summary.status,passed:summary.passed,blocked:summary.blocked}));
 if(summary.blocked)process.exitCode=2;

@@ -35,3 +35,10 @@ Le module `bitunix-data-pilot.mjs` se connecte à l'API REST publique officielle
   à 480 fermées et prévoir un suivi sur plusieurs jours.
 - Un statut `BLOCKED` ou une requête refusée sont des **résultats diagnostiques utiles**,
   pas une permission d'inventer une chandelle ou de changer d'exchange.
+
+## Étape suivante (19 novembre) — historique 480 et tableau HTML
+Le workflow interroge désormais **480 chandelles fermées** par configuration
+(+3 chandelles historiques pour les corrections démontrées). Un rapport
+`data-center.html` est archivé avec `summary.json` et les séries originales.
+Il s'agit d'une **photographie** du contrôle REST, non d'une application
+publique ou d'une surveillance 24/7. Toute configuration bloquée reste en rouge.

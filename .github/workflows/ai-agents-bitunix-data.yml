@@ -22,7 +22,7 @@ jobs:
         run: node --test backtest/agents/bitunix-data-pilot.test.mjs
       - name: Collect 9 recent Bitunix public REST history windows (NO trades)
         env:
-          CJ_DATA_PILOT_BARS: '96'
+          CJ_DATA_PILOT_BARS: '480'
         run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
       - name: Preserve read-only raw and derived data provenance reports
         if: always()
