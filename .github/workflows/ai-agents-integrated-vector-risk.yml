@@ -1,0 +1,32 @@
+name: DEV Vector 1H integrated ATR portfolio (research only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/vector-integrated-risk*'
+      - 'backtest/agents/run-vector-integrated-risk-pilot.mjs'
+      - '.github/workflows/ai-agents-integrated-vector-risk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integrated-portfolio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test chronological orders, stops, fees, gaps and risk isolation offline
+        run: node --test backtest/agents/vector-integrated-risk.test.mjs backtest/agents/daily-veto-risk-paper.test.mjs backtest/agents/vector-daily-intraday-alignment.test.mjs
+      - name: Run BTC HYPE PEPE 1h integrated Vector ATR portfolios on verified Bitunix
+        run: node backtest/agents/run-vector-integrated-risk-pilot.mjs "${{ runner.temp }}/cj-integrated-vector-risk"
+      - name: Preserve complete simulation trades and verified OHLC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-VECTOR-1H-INTEGRATED-ATR-RECOVERY-RESEARCH
+          path: ${{ runner.temp }}/cj-integrated-vector-risk/
+          retention-days: 7
+          if-no-files-found: warn
