@@ -55,3 +55,15 @@ des dénominateurs différents, ne mesurent **pas** le taux de réussite
 d'un trade et ne peuvent pas soutenir automatiquement un « 90 % ».
 Les observations 1H sont ventilées entre les deux périodes 70/30,
 sans utiliser de chandelle Daily future.
+
+## Extension 15M / 1H / 4H sur les cinq marchés (15 comparaisons)
+Le même protocole passe maintenant les cinq contrats à trois unités
+inférieures : 15 minutes (10 jours avec 960 barres), 1 heure (40 jours)
+et 4 heures (160 jours), chacun avec une fenêtre 1D fermée de 180 ou
+365 jours validée indépendamment. L'absence d'historique en 4H sur un
+contrat récent bloque SEULEMENT ce cas dans le rapport, mais la campagne
+ne devient entièrement verte que lorsque les 15 cas sont validés.
+Les chandelles 1H servent également au diagnostic Daily/1H des tendances
+et de leur persistance, sans prétendre que 90 % des trades gagnent.
+Rapport `five-market-daily-mtf-summary.md` (JSON aussi), et données
+brutes/derivées dans l'artefact Actions temporaire.

@@ -1,9 +1,9 @@
-name: DEV five-market Daily-1H Vector research (read only)
+name: DEV five-market Daily 15m 1h 4h Vector research (read only)
 on:
   push:
     branches: [dev/ai-agents-phase1]
     paths:
-      - 'backtest/agents/run-five-market-daily-1h.mjs'
+      - 'backtest/agents/run-five-market-daily-mtf.mjs'
       - 'backtest/agents/vector-daily-intraday-alignment*'
       - 'backtest/agents/daily-trend-persistence*'
       - 'backtest/agents/bitunix-data-pilot.mjs'
@@ -14,7 +14,7 @@ permissions:
 jobs:
   five-market-daily-1h:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,13 +22,13 @@ jobs:
           node-version: '22'
       - name: Verify no-lookahead and strict Bitunix source tests
         run: node --test backtest/agents/vector-daily-intraday-alignment.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/daily-vector-research.test.mjs
-      - name: Read 5 official daily + hourly histories; compare 6 Vector modes
-        run: node backtest/agents/run-five-market-daily-1h.mjs "${{ runner.temp }}/cj-five-daily-1h"
+      - name: Read 5 official daily and 15m 1h 4h histories; compare 6 Vector modes
+        run: node backtest/agents/run-five-market-daily-mtf.mjs "${{ runner.temp }}/cj-five-daily-mtf"
       - name: Archive actual OHLC and comparison reports even if an asset is blocked
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cj-FIVE-MARKET-DAILY-1H-VECTOR-RESEARCH
+          name: cj-FIVE-MARKET-DAILY-15M-1H-4H-VECTOR-RESEARCH
           path: ${{ runner.temp }}/cj-five-daily-1h/
           retention-days: 7
           if-no-files-found: warn

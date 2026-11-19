@@ -43,10 +43,10 @@ export async function fetchBitunixDataPilot({
   fetchPage=makeBitunixFetchPage(),retries=2
 }={}) {
   const intraday=(PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe))
-    ||(timeframe==='1h'&&DAILY_INTRADAY_RESEARCH_SYMBOLS.includes(symbol));
+    ||(PILOT_TIMEFRAMES.includes(timeframe)&&DAILY_INTRADAY_RESEARCH_SYMBOLS.includes(symbol));
   const daily=timeframe==='1d'&&DAILY_RESEARCH_SYMBOLS.includes(symbol);
   if(!intraday&&!daily)
-    throw Error('Pilot restricted to 9 original intraday cases, five 1h cohort cases and five Daily cases');
+    throw Error('Pilot restricted to 9 original intraday cases, five 15m/1h/4h cohort cases and five Daily cases');
   const intervalMs=VERIFIED_INTERVALS[timeframe];
   if(!Number.isSafeInteger(nowMs)||nowMs<1_000_000_000_000)
     throw Error('UTC nowMs must be realistic Unix milliseconds');

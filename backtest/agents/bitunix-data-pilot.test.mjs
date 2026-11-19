@@ -143,3 +143,25 @@ test('Daily only accepts selected assets and excludes forming UTC day',async()=>
  });
  await assert.rejects(reject(),/Pilot restricted/);
 });
+
+test('five-market 15M/4H research accepts HYPE with fully closed Bitunix windows',async()=>{
+ for(const [timeframe,step] of [['15m',900000],['4h',14400000]]){
+   const end=Date.UTC(2026,10,19),nowMs=end+50000,count=160,anchors=3;
+   const first=end-(count+anchors)*step;
+   const rows=Array.from({length:count+anchors},(_,i)=>({
+     time:first+i*step,open:100,high:102,low:99,close:101,volume:50+i
+   }));
+   const result=await fetchBitunixDataPilot({
+     symbol:'HYPEUSDT',timeframe,nowMs,closedBars:count,anchorBars:anchors,
+     fetchPage:async({startTime,endTime})=>rows.filter(x=>x.time>=startTime&&x.time<endTime)
+   });
+   assert.equal(result.status,'DATA_READY_FOR_RESEARCH_ONLY');
+   assert.equal(result.market.timeframe,timeframe);
+   assert.equal(result.acceptedCandles.length,count);
+   assert.equal(result.historyWindow.endTime,end);
+   assert.equal(result.acceptedCandles.at(-1).time,end-step);
+ }
+ await assert.rejects(fetchBitunixDataPilot({
+   symbol:'NOPEUSDT',timeframe:'4h',fetchPage:async()=>[]
+ }),/Pilot restricted/);
+});
