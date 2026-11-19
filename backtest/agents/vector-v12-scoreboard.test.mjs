@@ -55,3 +55,19 @@ test('a nine-case Markdown artifact explicitly marks insufficient evidence',()=>
  assert.match(md,/follow_close_1/);
  assert.match(md,/Source Bitunix LAST_PRICE/);
 });
+
+test('scoreboard retains whipsaw and delayed-entry diagnostics as research only',()=>{
+ const expanded=structuredClone(report);
+ expanded.modes[1].timingDiagnostics={
+   meanConfirmationDelayBars:1,
+   quickOppositeReversalPairs:3
+ };
+ const s=summarizeVectorV12Comparison(expanded);
+ assert.equal(s.variants[1].timingDiagnostics.meanConfirmationDelayBars,1);
+ assert.equal(s.promotionAuthorized,false);
+ const all=['BTCUSDT','ETHUSDT','SOLUSDT'].flatMap(symbol=>
+   ['15m','1h','4h'].map(timeframe=>({...s,symbol,timeframe})));
+ const md=renderVectorV12ScoreboardMarkdown(all);
+ assert.match(md,/Retournements opposés rapides/);
+ assert.match(md,/whipsaw/);
+});

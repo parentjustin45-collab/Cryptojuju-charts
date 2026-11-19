@@ -43,7 +43,7 @@ export async function fetchBitunixDataPilot({
   const intervalMs=VERIFIED_INTERVALS[timeframe];
   if(!Number.isSafeInteger(nowMs)||nowMs<1_000_000_000_000)
     throw Error('UTC nowMs must be realistic Unix milliseconds');
-  if(!Number.isInteger(closedBars)||closedBars<4||closedBars>480||
+  if(!Number.isInteger(closedBars)||closedBars<4||closedBars>960||
     !Number.isInteger(anchorBars)||anchorBars<1||anchorBars>12||
     !Number.isInteger(pageBars)||pageBars<1||pageBars>200||
     !Number.isInteger(retries)||retries<0||retries>3||

@@ -15,6 +15,55 @@ import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 
 const COSTS=Object.freeze({initialCapital:1000,feeRate:0.0006,slippageRate:0.0005,allocation:1});
 const FIELDS=Object.freeze(['time','signal','direction','sourceIndex','delayBars']);
+/* Descriptive diagnostics on already-confirmed events. A nearby opposite
+ * flip is a whipsaw proxy, NOT a proven false signal or future prediction.
+ * Entry drift uses the two observed next-opens, never changes signals. */
+export function describeVectorConfirmationCosts(events,bars,{quickFlipBars=3}={}){
+ if(!Array.isArray(events)||!Array.isArray(bars)||events.length!==bars.length||
+    !Number.isSafeInteger(quickFlipBars)||quickFlipBars<1||quickFlipBars>24)
+   throw Error('Invalid Vector timing diagnostics');
+ const signals=[],delays=[],drifts=[];
+ for(let i=0;i<events.length;i++){
+   const e=events[i];
+   if(!e?.signal)continue;
+   if(!['long','short'].includes(e.signal)||!Number.isInteger(e.sourceIndex)||
+      e.sourceIndex<0||e.sourceIndex>i||
+      e.delayBars!==i-e.sourceIndex||e.time!==bars[i].time)
+     throw Error('Unaligned confirmed Vector event');
+   signals.push({index:i,side:e.signal});
+   delays.push(e.delayBars);
+   if(i<bars.length-1){
+     const first=Number(bars[e.sourceIndex+1]?.open);
+     const current=Number(bars[i+1]?.open);
+     if(!Number.isFinite(first)||first<=0||!Number.isFinite(current)||current<=0)
+       throw Error('Missing next-open price for Vector delay diagnostic');
+     const signed=e.signal==='long'?1:-1;
+     drifts.push(signed*(current/first-1)*100);
+   }
+ }
+ let opposite=0,quick=0;
+ for(let i=1;i<signals.length;i++){
+   const prior=signals[i-1],curr=signals[i];
+   if(prior.side!==curr.side){
+     opposite++;
+     if(curr.index-prior.index<=quickFlipBars)quick++;
+   }
+ }
+ const avg=a=>a.length?a.reduce((s,n)=>s+n,0)/a.length:null;
+ return {
+   signalCount:signals.length,
+   meanConfirmationDelayBars:avg(delays),
+   maxConfirmationDelayBars:delays.length?Math.max(...delays):null,
+   observedNextOpenDriftPct:avg(drifts),
+   observedNextOpenDriftCount:drifts.length,
+   oppositeReversalPairs:opposite,
+   quickOppositeReversalPairs:quick,
+   quickOppositeReversalPct:opposite?100*quick/opposite:null,
+   quickFlipBars,
+   meaning:'A quick opposite reversal is only a descriptive whipsaw proxy; drift compares hypothetical next-open prices, not real execution.'
+ };
+}
+
 
 export function compareVectorV12Candidates({
  source,repeatability,contract,costs=COSTS
@@ -57,9 +106,11 @@ export function compareVectorV12Candidates({
      });
      if(i<bars.length-1)signals.push({time:event.time,side:event.signal});
    }
+   const timing=describeVectorConfirmationCosts(events,bars);
    modes.push({mode:cfg.id,signalCount:delayed.length,
      signalsNotExecutable:delayed.length-signals.length,
      confirmationDiagnostics:transformed.diagnostics,
+     timingDiagnostics:timing,
      preview:delayed.slice(0,8)});
    experiments.push({
      id:cfg.id,signalTimeConvention:'confirmation-bar-open',

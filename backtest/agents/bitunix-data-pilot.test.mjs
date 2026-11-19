@@ -86,3 +86,36 @@ test('unsupported markets and invalid windows do not silently downgrade',async()
  await assert.rejects(run({timeframe:'1d'}),/Pilot restricted/);
  await assert.rejects(run({closedBars:2}),/Unsafe pilot/);
 });
+
+test('longer 960-bar pilot paginates exactly and preserves all boundaries',async()=>{
+ const size=960,anchor=3,base=boundary-(size+anchor)*step;
+ const large=Array.from({length:size+anchor},(_,i)=>({
+   time:base+i*step,open:100,high:101,low:99,close:100,volume:10+i
+ }));
+ const windows=[];
+ const out=await run({rows:large,closedBars:size,anchorBars:anchor,pageBars:150,
+   fetchPage:async({startTime,endTime,limit})=>{
+     windows.push({startTime,endTime,limit});
+     return large.filter(x=>x.time>=startTime&&x.time<endTime);
+   }});
+ assert.equal(out.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ assert.equal(out.acceptedCandles.length,960);
+ assert.equal(out.rawRows.length,963);
+ assert.equal(windows.length,7);
+ assert.equal(windows[0].startTime,base);
+ assert.equal(windows.at(-1).endTime,boundary);
+ for(let i=1;i<windows.length;i++)
+   assert.equal(windows[i-1].endTime,windows[i].startTime);
+ await assert.rejects(run({closedBars:961}),/Unsafe pilot/);
+});
+test('960-bar pilot blocks missing interior bars rather than interpolating',async()=>{
+ const size=960,anchor=3,base=boundary-(size+anchor)*step;
+ const large=Array.from({length:size+anchor},(_,i)=>({
+   time:base+i*step,open:100,high:101,low:99,close:100,volume:1
+ }));
+ large.splice(251,1);
+ const out=await run({rows:large,closedBars:size,anchorBars:anchor});
+ assert.equal(out.status,'BLOCKED');
+ assert.equal(out.quality.rawMissing,1);
+ assert.equal(out.acceptedCandles.length,0);
+});

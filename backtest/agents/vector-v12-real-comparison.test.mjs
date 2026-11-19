@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
+import {compareVectorV12Candidates,describeVectorConfirmationCosts} from './vector-v12-real-comparison.mjs';
 
 const step=900000,start=Date.UTC(2026,10,1),length=180;
 const bars=Array.from({length},(_,i)=>({
@@ -64,4 +64,35 @@ test('invalid real OHLC stops candidate generation instead of inventing repaired
  const changed=bars.map(x=>({...x}));
  changed[110].high=changed[110].open-10;
  assert.throws(()=>run({source:{...source,acceptedCandles:changed}}),/Backtest blocked/);
+});
+
+test('timing and quick opposite reversals are descriptive, not declared false',()=>{
+ const v=[
+  {time:0,signal:'long',sourceIndex:0,delayBars:0},
+  {time:900000,signal:'short',sourceIndex:1,delayBars:0},
+  {time:1800000,signal:null},
+  {time:2700000,signal:'long',sourceIndex:2,delayBars:1},
+  {time:3600000,signal:null}
+ ];
+ const bs=[100,103,102,105,104].map((open,i)=>({
+   time:i*900000,open
+ }));
+ const d=describeVectorConfirmationCosts(v,bs);
+ assert.equal(d.signalCount,3);
+ assert.equal(d.quickOppositeReversalPairs,2);
+ assert.equal(d.oppositeReversalPairs,2);
+ assert.equal(d.meanConfirmationDelayBars,1/3);
+ assert.equal(d.maxConfirmationDelayBars,1);
+ assert.equal(d.observedNextOpenDriftCount,3);
+ assert.match(d.meaning,/only a descriptive/);
+ assert.throws(()=>describeVectorConfirmationCosts(v.slice(1),bs),/Invalid/);
+});
+test('candidate reports expose per-mode confirmation delay and whipsaw proxies',()=>{
+ const result=run();
+ assert.ok(result.modes.every(x=>x.timingDiagnostics?.signalCount===x.signalCount));
+ assert.ok(result.modes.every(x=>x.timingDiagnostics?.quickFlipBars===3));
+ assert.equal(result.modes[0].timingDiagnostics.meanConfirmationDelayBars,0);
+ assert.ok(result.modes.filter(x=>x.mode!=='baseline_v11')
+   .every(x=>x.timingDiagnostics.maxConfirmationDelayBars===null||
+     x.timingDiagnostics.maxConfirmationDelayBars<=2));
 });

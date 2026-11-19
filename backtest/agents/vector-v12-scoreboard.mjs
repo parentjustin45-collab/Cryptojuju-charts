@@ -44,6 +44,7 @@ export function summarizeVectorV12Comparison(report,{minimumHoldoutTrades=20}={}
       holdoutReturnDifferencePp:mean(holdout.returnPct-baseline.returnPct),
       holdoutDrawdownDifferencePp:mean(holdout.maxDrawdownPct-baseline.maxDrawdownPct),
       sampleStatus:adequate?'DESCRIPTIVE_ONLY':'INSUFFICIENT_HOLDOUT_TRADES',
+      timingDiagnostics:report.modes.find(x=>x.mode===mode)?.timingDiagnostics??null,
       promotionAuthorized:false
     };
   });
@@ -76,14 +77,14 @@ export function renderVectorV12ScoreboardMarkdown(items) {
     'Ce tableau ne classe ni ne promeut automatiquement une version et **ne requiert aucun test TradingView**.',
     'Le holdout historique a déjà été inspecté : aucun gagnant statistiquement indépendant ne peut en être déduit.',
     '',
-    '| Marché | UT | Variante | Trades entraînement | Trades holdout | Rendement net holdout simulé | Δ rendement vs V1.1 (points) | Drawdown holdout simulé | Δ drawdown (points) | Qualité échantillon |',
-    '|---|---|---|---:|---:|---:|---:|---:|---:|---|'
+    '| Marché | UT | Variante | Trades entraînement | Trades holdout | Rendement net holdout simulé | Δ rendement vs V1.1 (points) | Drawdown holdout simulé | Δ drawdown (points) | Délai moyen (barres) | Retournements opposés rapides (≤3 barres) | Qualité échantillon |',
+    '|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|'
   ];
   const format=n=>numeric(n)?n.toFixed(2)+' %':'—';
   for(const item of items) {
     if(item.protocol==='BLOCKED') {
       lines.push('| '+safe(item.symbol)+' | '+safe(item.timeframe)+
-        ' | **BLOQUÉ** | — | — | — | — | — | — | '+safe(item.reason??'non vérifié')+' |');
+        ' | **BLOQUÉ** | — | — | — | — | — | — | — | — | '+safe(item.reason??'non vérifié')+' |');
       continue;
     }
     if(item.variants?.length!==MODES.length||
@@ -94,10 +95,15 @@ export function renderVectorV12ScoreboardMarkdown(items) {
       row.training.tradeCount,row.holdout.tradeCount,
       format(row.holdout.returnPct),format(row.holdoutReturnDifferencePp),
       format(row.holdout.maxDrawdownPct),format(row.holdoutDrawdownDifferencePp),
+      row.timingDiagnostics?.meanConfirmationDelayBars==null?'—':
+        row.timingDiagnostics.meanConfirmationDelayBars.toFixed(2),
+      row.timingDiagnostics?.quickOppositeReversalPairs==null?'—':
+        String(row.timingDiagnostics.quickOppositeReversalPairs),
       safe(row.sampleStatus)+' |'
     ].join(' | '));
   }
   lines.push('','> Échantillons inférieurs à 20 transactions holdout : comparaison insuffisante pour conclure.',
+    '> Retournements opposés ≤3 barres : indicateur descriptif de whipsaw, pas preuve de faux signaux.',
     '> Les différences de rendement ou de drawdown sont descriptives, pas des preuves d’amélioration.',
     '> Source Bitunix LAST_PRICE; aucune transaction réelle ni déploiement en production.');
   return lines.join('\n')+'\n';
