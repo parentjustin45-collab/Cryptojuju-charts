@@ -60,3 +60,10 @@ résultat de l'orchestrateur aux six fonctions importées individuellement.
 Il s'agit toujours de **six modules déterministes** et non de six processus IA autonomes.
 La prochaine mission du centre de contrôle est de générer un état structuré et lisible des
 derniers cycles et de la provenance des rapports, sans confondre fixture synthétique et marché réel.
+
+## Centre de contrôle statique (19 novembre)
+Un tableau HTML mobile est généré dans l'artifact GitHub `cj-six-role-SYNTHETIC-smoke`
+avec `control-center.html` et `control-center.json`. Le contenu reflète
+uniquement le lot synthétique du workflow, **pas** un dashboard Web en direct.
+Le programme refuse l'étiquette de marché réel sans contrat de provenance distinct.
+Aucun serveur, URL publique de déploiement, système d'authentification ou abonnement Render créé.

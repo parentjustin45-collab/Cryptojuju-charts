@@ -8,6 +8,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import assert from 'node:assert/strict';
+import {createControlCenterSnapshot,renderControlCenterHtml} from './control-center.mjs';
 
 const intervalMs=900000;
 const opens=[100,103,104,101,99,102,105,104,100,101,98];
@@ -79,6 +80,15 @@ const manifest={
   warning:'This validates only orchestration, report generation and failure behavior with fabricated fixtures. It is not an actual Bitunix historical backtest or proof of profitability.'
 };
 await writeFile(join(reportPath,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
+const dashboard=createControlCenterSnapshot(report,{
+  sourceKind:'SYNTHETIC_CI_ONLY_NOT_BITUNIX',
+  gitSha:process.env.GITHUB_SHA??null,
+  createdAt:manifest.generatedUtc
+});
+await writeFile(join(reportPath,'control-center.json'),JSON.stringify(dashboard,null,2)+'\n');
+await writeFile(join(reportPath,'control-center.html'),renderControlCenterHtml(dashboard));
+assert.equal(dashboard.autonomousAgentsActive,false);
+assert.equal(dashboard.realMarketEvidence,false);
 await writeFile(join(reportPath,'README.txt'),
   'SYNTHETIC CI FIXTURE ONLY — no real Bitunix OHLC or indicator signals.\n'+
   'Results are not financial performance evidence.\n');
