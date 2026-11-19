@@ -66,6 +66,9 @@ test('stops trump targets when both reached in a single CLOSED OHLC candle',()=>
 });
 test('gap through stop fills worse at the next candle OPEN; stress fees worsen results',()=>{
  const altered=structuredClone(bars);
+ // Ensure neither friction scenario hits its stop on the entry bar (71).
+ // Only then can bar 72 isolate and test the deliberately adverse gap.
+ altered[71]={...altered[71],low:99.95};
  altered[72]={...altered[72],open:90,high:90.1,low:89.9,close:90};
  const x=run({bars:altered,commandsByVariant:variants([v(70,'long')])});
  const base=x.scenarios.base.v11_original.training.trades[0];
