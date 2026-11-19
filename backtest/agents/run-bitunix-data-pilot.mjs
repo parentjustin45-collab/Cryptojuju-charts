@@ -46,17 +46,27 @@ for(const symbol of PILOT_SYMBOLS){
     }
     await writeFile(resolve(destination,`${symbol}-${timeframe}.json`),
       JSON.stringify(out,null,2)+'\n');
-    // Second public REST read of the most recent CLOSED 24 bars (+3 anchors).
+    // Second public REST read of the most recent CLOSED 24 bars (+12 anchors).
     // Both captures use the SAME anchorTime, so the boundary cannot move.
     // A revision or fetch failure blocks this configuration for research.
     let readback={status:'BLOCKED',reason:'FIRST_READ_NOT_READY'};
     if(out.status==='DATA_READY_FOR_RESEARCH_ONLY'){
       try{
         const second=await fetchBitunixDataPilot({
-          symbol,timeframe,closedBars:24,anchorBars:3,
+          symbol,timeframe,closedBars:24,anchorBars:12,
           nowMs:anchorTime,fetchPage
         });
         readback=compareBitunixReadbacks(out,second);
+        if(readback.status!=='STABLE_TWO_READS'){
+          // Preserve the second original and derived rows for provenance
+          // diagnostics; never silently increase tolerance or force success.
+          await writeFile(resolve(destination,`${symbol}-${timeframe}-second-read-when-blocked.json`),
+            JSON.stringify(second,null,2)+'\n');
+          readback.secondReadStatus=second.status;
+          readback.secondReadReason=second.reason??null;
+          readback.secondReadQuality=second.quality??null;
+          readback.secondReadIssues=second.normalizationIssues?.slice(0,6)??[];
+        }
       }catch(e){
         readback={status:'BLOCKED',reason:'SECOND_READ_EXCEPTION',
           error:String(e?.message??e)};

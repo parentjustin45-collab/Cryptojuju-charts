@@ -55,3 +55,14 @@ est **BLOQUÉE** dans le résumé du lot. Les écarts, hachages et les timestamp
 sont disponibles dans `*-repeatability.json`. Ce contrôle est une répétition
 immédiate, pas une preuve que la bourse ne modifiera jamais son historique,
 ni une surveillance permanente.
+
+## Diagnostic du premier double contrôle
+La première double lecture du 19 novembre a bloqué la deuxième lecture
+d'ETHUSDT 1h sur la fenêtre courte de 24 bars. Cause exacte non certifiée,
+mais une anomalie située sur le premier bar d'ancrage peut manquer du
+`previous close` nécessaire à la correction. Par prudence le lot était
+bloqué (8/9), non validé de force. Pour réessayer **sans supprimer la
+vérification**, la deuxième lecture comporte désormais 12 barres d'ancrage.
+Les échecs conservent aussi la série et le motif de la seconde lecture dans
+`*-second-read-when-blocked.json` pour diagnostic. Un test de régression
+reproduit le cas où 3 ancres échouent mais 12 fournissent la preuve d'OPEN.

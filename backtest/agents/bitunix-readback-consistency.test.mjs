@@ -54,3 +54,22 @@ test('missing second response, wrong market and malformed data all block',async(
  const wrong={...second,acceptedCandles:second.acceptedCandles.slice(1)};
  assert.equal(compareBitunixReadbacks(first,wrong).status,'BLOCKED');
 });
+
+test('extra provenance anchors can verify a bad OPEN envelope at the narrow read boundary',async()=>{
+ const long=Array.from({length:43},(_,i)=>({
+   time:boundary-(43-i)*intervalMs,open:101,high:102,low:100,
+   close:101,volume:20+i
+ }));
+ const defect=43-27;
+ long[defect]={...long[defect],high:100.8,close:100.5};
+ const first=await sample(40,long);
+ const tooNarrow=await sample(24,long,{anchorBars:3});
+ const withProof=await sample(24,long,{anchorBars:12});
+ assert.equal(first.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ assert.equal(tooNarrow.status,'BLOCKED');
+ assert.equal(withProof.status,'DATA_READY_FOR_RESEARCH_ONLY');
+ const comparison=compareBitunixReadbacks(first,withProof);
+ assert.equal(comparison.status,'STABLE_TWO_READS');
+ assert.equal(comparison.checkedRaw,36);
+ assert.equal(comparison.checkedDerived,24);
+});
