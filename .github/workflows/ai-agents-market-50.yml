@@ -1,0 +1,32 @@
+name: DEV CryptoJuju 50-market Bitunix admission (read only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/market-universe-50*'
+      - 'backtest/agents/run-market-universe-50.mjs'
+      - '.github/workflows/ai-agents-market-50.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  market-metadata-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate research cohort selection offline
+        run: node --test backtest/agents/market-universe-50.test.mjs
+      - name: Check all 50 candidate contracts in public Bitunix registry
+        run: node backtest/agents/run-market-universe-50.mjs "${{ runner.temp }}/cj-market-50"
+      - name: Archive transparent metadata-only candidate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-MARKET-50-BITUNIX-METADATA-ONLY
+          path: ${{ runner.temp }}/cj-market-50/
+          retention-days: 7
+          if-no-files-found: warn
