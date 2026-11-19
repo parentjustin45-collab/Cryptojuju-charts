@@ -5,6 +5,7 @@ on:
     paths:
       - 'backtest/agents/run-five-market-daily-1h.mjs'
       - 'backtest/agents/vector-daily-intraday-alignment*'
+      - 'backtest/agents/daily-trend-persistence*'
       - 'backtest/agents/bitunix-data-pilot.mjs'
       - '.github/workflows/ai-agents-five-market-daily-1h.yml'
   workflow_dispatch:

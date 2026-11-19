@@ -11,6 +11,7 @@ import {DAILY_INTRADAY_RESEARCH_SYMBOLS,fetchBitunixDataPilot}
 import {auditDailyVectorMarket} from './daily-vector-research.mjs';
 import {compareBitunixReadbacks} from './bitunix-readback-consistency.mjs';
 import {compareDailyAlignedVector} from './vector-daily-intraday-alignment.mjs';
+import {measureCausalDailyTrendPersistence} from './daily-trend-persistence.mjs';
 import {readCryptoJujuWatchlist,fetchOpenContractMetadata}
  from './market-universe-50.mjs';
 const out=resolve(process.argv[2]??'daily-five-market-reports');
@@ -76,6 +77,17 @@ try {
        daily:daily.source,dailyReadback:daily.readback,contract
      });
      await save(symbol+'-daily-1h-comparison.json',research);
+     const persistence=measureCausalDailyTrendPersistence({
+       dailySource:daily.source,hourlySource:first,comparison:research
+     });
+     await save(symbol+'-daily-1h-persistence.json',persistence);
+     event.persistence={
+       dailyTrendRetentionPct:persistence.dailyDirectionRetainedNextDayPct,
+       dailyTrendTransitions:persistence.dailyTrendDayTransitions,
+       hourlyTrain:persistence.phases.training,
+       hourlyHoldout:persistence.phases.holdout,
+       researchOnly:true
+     };
      event.status=research.status;event.dailyBars=daily.depth;
      event.hourlyBars=first.acceptedCandles.length;
      event.pricePrecision=quotePrecision;
@@ -94,6 +106,9 @@ try {
      dailyBars:event.dailyBars,acceptedStrict:event.filterDiagnostics?.v11_daily_aligned?.accepted??null,
      acceptedSoft:event.filterDiagnostics?.v11_daily_soft?.accepted??null,
      seen:event.filterDiagnostics?.v11_daily_aligned?.seen??null,
+     dailyTrendRetentionPct:event.persistence?.dailyTrendRetentionPct??null,
+     hourlyDirectionalAgreementPct:event.persistence?.hourlyHoldout?.directionalHourlyAlignmentPct??null,
+     hourlyPriceDirectionAgreementPct:event.persistence?.hourlyHoldout?.hourlyPriceDirectionAgreementPct??null,
      trades:event.modes.map(x=>({mode:x.mode,holdoutTrades:x.holdoutTrades,holdoutReturnPct:x.holdoutReturnPct}))
    }));
  }
@@ -117,6 +132,16 @@ const lines=[
   (x.filterDiagnostics?.v11_daily_aligned?.seen??'—')+' | '+
   (x.filterDiagnostics?.v11_daily_aligned?.accepted??'—')+' | '+
   (x.filterDiagnostics?.v11_daily_soft?.accepted??'—')+' |'),
+ '',
+ '## Persistance Daily et alignement réel en 1H (ne sont PAS des taux de réussite des trades)',
+ '| Marché | Daily garde la direction le jour suivant | 1H EMA alignées avec Daily (holdout) | Bougies 1H dans le sens Daily (holdout) |',
+ '|---|---:|---:|---:|',
+ ...summary.events.map(x=>'| '+x.symbol+' | '+
+   fmt(x.persistence?.dailyTrendRetentionPct)+' | '+
+   fmt(x.persistence?.hourlyHoldout?.directionalHourlyAlignmentPct)+' | '+
+   fmt(x.persistence?.hourlyHoldout?.hourlyPriceDirectionAgreementPct)+' |'),
+ '',
+ 'Un marché haussier Daily ne signifie pas que 90 % des chandelles 1H montent; ces taux ont des dénominateurs différents.',
  '',
  '## Simulation holdout déjà inspectée (descriptive seulement)',
  '| Marché | Variante | Transactions | Rendement net simulé | Drawdown simulé | Suffisance |',

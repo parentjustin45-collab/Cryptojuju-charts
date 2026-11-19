@@ -43,3 +43,15 @@ Rapports `five-market-daily-1h-summary.md`, JSON et toutes les
 preuves-source dans l'artefact GitHub Actions de 7 jours.
 Tests strictement sur `dev/ai-agents-phase1`.
 Aucun ordre, déploiement, abonnement Render ni paramètre promu.
+
+## Mesurer la persistance réelle du Daily
+Le diagnostic `daily-trend-persistence.mjs` ajoute :
+(1) le pourcentage de journées haussières/baissières qui conservent
+leur direction catégorielle le lendemain (passage vers MIXED = fin de
+la continuité), (2) la proportion de structures 1H EMA directionnelles
+en accord avec le dernier Daily clos et (3) la proportion de variations
+clôture-à-clôture 1H alignées avec le Daily. Les trois définitions ont
+des dénominateurs différents, ne mesurent **pas** le taux de réussite
+d'un trade et ne peuvent pas soutenir automatiquement un « 90 % ».
+Les observations 1H sont ventilées entre les deux périodes 70/30,
+sans utiliser de chandelle Daily future.

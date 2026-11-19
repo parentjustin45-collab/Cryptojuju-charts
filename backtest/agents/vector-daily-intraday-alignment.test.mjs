@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {measureCausalDailyTrendPersistence} from './daily-trend-persistence.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {compareBitunixReadbacks} from './bitunix-readback-consistency.mjs';
@@ -156,4 +157,35 @@ test('revised derived candle contents cannot pass through stale provenance field
  const altered=structuredClone(lower);
  altered.acceptedCandles[50].close+=.01;
  assert.throws(()=>run({intraday:altered}),/content mismatch/);
+});
+
+test('actual 1h EMA and candle-direction agreement use separate honest denominators',()=>{
+ const compare=run();
+ const result=measureCausalDailyTrendPersistence({
+   dailySource:daily,hourlySource:lower,comparison:compare
+ });
+ assert.equal(result.status,'DESCRIPTIVE_NO_TRADING_PREDICTION');
+ assert.equal(result.noFutureDailyUsed,true);
+ assert.equal(result.inspectedHourlyBars,960);
+ assert.equal(result.inspectedDailyBars,365);
+ assert.equal(result.phases.training.hourlyClosedBars+
+   result.phases.holdout.hourlyClosedBars,959);
+ assert.equal(result.phases.training.hourlyDirectionAligned+
+   result.phases.training.hourlyDirectionOpposed+
+   result.phases.training.hourlyMixedOrUnknown,
+   result.phases.training.hoursWithDirectionalDaily);
+ assert.ok(result.dailyDirectionRetainedNextDayPct>=0);
+ assert.ok(result.dailyDirectionRetainedNextDayPct<=100);
+ assert.equal(result.warning[0].includes('90%'),true);
+});
+test('refuse unrelated or tampered provenance before trend-persistence audit',()=>{
+ const compare=run(),bad=structuredClone(lower);
+ bad.acceptedCandles[5].close+=.4;
+ assert.throws(()=>measureCausalDailyTrendPersistence({
+   dailySource:daily,hourlySource:bad,comparison:compare
+ }),/No matching trusted/);
+ assert.throws(()=>measureCausalDailyTrendPersistence({
+   dailySource:daily,hourlySource:lower,
+   comparison:{...compare,status:'BLOCKED'}
+ }),/No matching trusted/);
 });
