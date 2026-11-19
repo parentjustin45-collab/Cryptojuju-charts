@@ -11,7 +11,7 @@ const make=(v={})=>({protocol:'CRYPTOJUJU_REAL_BITUNIX_DATA_INGEST_V1',
 test('real data report displays only verified Bitunix REST snapshot scope',()=>{
  const html=renderBitunixDataCenterHtml(make());
  assert.match(html,/Bitunix · Centre de données/);
- assert.match(html,/4\\s320/);
+ assert.ok(html.includes((4320).toLocaleString('fr-CA')));
  assert.match(html,/9 \/ 9/);
  assert.match(html,/Aucune comparaison indépendante exhaustive/);
  assert.match(html,/pas un flux en continu/);
