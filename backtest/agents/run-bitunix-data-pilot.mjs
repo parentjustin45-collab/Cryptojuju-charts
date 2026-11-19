@@ -95,7 +95,7 @@ summary.finishedAtUtc=new Date().toISOString();
 summary.passed=summary.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length;
 summary.blocked=summary.checks.length-summary.passed;
 summary.status=summary.blocked?'BLOCKED_OR_PARTIAL':'PASS_PUBLIC_BITUNIX_DATA_WINDOWS';
-summary.warning='Repeatability compares a second HTTP pull of the full ${closedBars} CLOSED bars per configuration (identical start/end and anchor), not only 24 bars. No continuous uptime, independent TradingView parity or indicator-performance proof.';
+summary.warning=`Repeatability compares a second HTTP pull of the full ${closedBars} CLOSED bars per configuration (identical start/end and anchor), not only 24 bars. No continuous uptime, independent TradingView parity or indicator-performance proof.`;
 await writeFile(resolve(destination,'summary.json'),JSON.stringify(summary,null,2)+'\n');
 const md=[
   '# CryptoJuju — Données Bitunix réelles, premier pilote',
@@ -107,7 +107,7 @@ const md=[
   ...summary.checks.map(x=>`| ${x.symbol} | ${x.timeframe} | ${x.acceptedBars}/${x.requestedBars} | ${x.corrections} | ${x.status} |`),
   '',
   '> Source : Bitunix public REST LAST_PRICE. Aucune parité indépendante TradingView.',
-  '> Relecture immédiate : la même fenêtre de ${closedBars} chandelles fermées comparée entièrement aux valeurs initiales.',
+  `> Relecture immédiate : la même fenêtre de ${closedBars} chandelles fermées comparée entièrement aux valeurs initiales.`,
   '> Aucun signal réel, transaction ou backtest lancé depuis ce workflow.'
 ];
 await writeFile(resolve(destination,'summary.md'),md.join('\n')+'\n');
