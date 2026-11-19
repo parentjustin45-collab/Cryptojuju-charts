@@ -103,3 +103,27 @@ test('hard blocks malformed source data, future Daily lookahead, duplicate signa
   stress:{feeRate:.001,slippageRate:.002}
  }}}),/Invalid fixed/);
 });
+
+test('out-of-order confirmed Vector signals are rejected before risk/PnL calculations',()=>{
+ const reversed=[signal(81),signal(24)];
+ assert.throws(()=>base({observations:reversed}),/strictly chronological/);
+ const ordered=[signal(24),signal(81)];
+ const r=base({observations:ordered});
+ assert.equal(r.scenarios.base.daily_opposed.training.tradeCount,1);
+ assert.equal(r.scenarios.base.daily_opposed.holdout.tradeCount,1);
+});
+test('impossible Daily reasons cannot manufacture completed-day entries',()=>{
+ assert.throws(()=>base({observations:[
+  {...signal(25),dailyClosedAtMs:null}
+ ]}),/reason contradicts/);
+ assert.throws(()=>base({observations:[
+  {...signal(25),reason:'daily_not_yet_available',dailyClosedAtMs:T-86400000}
+ ]}),/reason contradicts/);
+ assert.throws(()=>base({observations:[
+  {...signal(25,'long','mixed_allowed'),neutralPolicy:'block'}
+ ]}),/reason contradicts/);
+ const unknown={...signal(25),reason:'daily_not_yet_available',dailyClosedAtMs:null};
+ const r=base({observations:[unknown]});
+ assert.equal(r.scenarios.base.daily_opposed.training.tradeCount,0);
+ assert.equal(r.scenarios.base.aligned.training.tradeCount,0);
+});

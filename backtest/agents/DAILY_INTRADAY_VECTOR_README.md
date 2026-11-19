@@ -83,3 +83,13 @@ reproduites : **il est interdit de qualifier ces rendements de profits
 réels manqués ou de les additionner aux rendements du backtest Vector.**
 Le résultat est un outil de décision pour formuler des hypothèses,
 sans promotion automatique ni modification des signaux en production.
+
+
+### Contrôle de causalité supplémentaire
+Le simulateur de risque refuse maintenant les observations Vector présentées
+hors ordre chronologique, ainsi qu'un signal prétendument aligné ou opposé
+au Daily sans horodatage valide de la dernière journée fermée. Un signal
+MIXED admis nécessite la politique souple. Les états Daily indisponibles
+ne peuvent être déguisés en état connu. Ces contrôles interdisent des
+simulations qui auraient pu attribuer incorrectement les positions et les
+résultats à une chronologie réarrangée.

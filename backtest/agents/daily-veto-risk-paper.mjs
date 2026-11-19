@@ -57,6 +57,7 @@ function makeAtr(bars,period){
 function verifyObservations(observations,bars,intervalMs){
  if(!Array.isArray(observations))throw Error('Missing confirmed Daily observations');
  const seen=new Set();
+ let previousConfirmationMs=null;
  for(const x of observations){
    if(!Number.isSafeInteger(x?.confirmedBarOpenMs)||
       !Number.isSafeInteger(x?.signalConfirmedAtMs)||
@@ -69,6 +70,15 @@ function verifyObservations(observations,bars,intervalMs){
       !['block','allow_mixed'].includes(x.neutralPolicy)||
       seen.has(x.confirmedBarOpenMs))
      throw Error('Invalid or duplicate confirmed signal observation');
+   if(previousConfirmationMs!==null&&
+      x.confirmedBarOpenMs<=previousConfirmationMs)
+     throw Error('Confirmed Vector signals must be strictly chronological');
+   if((x.reason==='mixed_allowed'&&x.neutralPolicy!=='allow_mixed')||
+      (x.reason==='daily_not_yet_available'&&x.dailyClosedAtMs!==null)||
+      (x.reason!=='daily_not_yet_available'&&
+       !Number.isSafeInteger(x.dailyClosedAtMs)))
+     throw Error('Daily signal reason contradicts available closed-day context');
+   previousConfirmationMs=x.confirmedBarOpenMs;
    seen.add(x.confirmedBarOpenMs);
    const i=(x.confirmedBarOpenMs-bars[0].time)/intervalMs;
    if(!Number.isInteger(i)||i<0||i>=bars.length-1||
