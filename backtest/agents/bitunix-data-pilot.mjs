@@ -16,6 +16,7 @@ export const PILOT_TIMEFRAMES=Object.freeze(['15m','1h','4h']);
 export const DAILY_RESEARCH_SYMBOLS=Object.freeze([
   'BTCUSDT','HYPEUSDT','1000PEPEUSDT','XAUUSDT','NVDAUSDT'
 ]);
+export const DAILY_INTRADAY_RESEARCH_SYMBOLS=DAILY_RESEARCH_SYMBOLS;
 const SOURCE_URL='https://fapi.bitunix.com/api/v1/futures/market/kline';
 const sha256=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -41,10 +42,11 @@ export async function fetchBitunixDataPilot({
   nowMs=Date.now(),anchorBars=3,pageBars=150,
   fetchPage=makeBitunixFetchPage(),retries=2
 }={}) {
-  const intraday=PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe);
+  const intraday=(PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe))
+    ||(timeframe==='1h'&&DAILY_INTRADAY_RESEARCH_SYMBOLS.includes(symbol));
   const daily=timeframe==='1d'&&DAILY_RESEARCH_SYMBOLS.includes(symbol);
   if(!intraday&&!daily)
-    throw Error('Pilot restricted to existing 9 intraday cases and 5 isolated Daily cases');
+    throw Error('Pilot restricted to 9 original intraday cases, five 1h cohort cases and five Daily cases');
   const intervalMs=VERIFIED_INTERVALS[timeframe];
   if(!Number.isSafeInteger(nowMs)||nowMs<1_000_000_000_000)
     throw Error('UTC nowMs must be realistic Unix milliseconds');

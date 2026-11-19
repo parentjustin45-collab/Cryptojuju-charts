@@ -17,8 +17,11 @@ import {runFixedHoldout} from './fixed-holdout.mjs';
 const D=86400000;
 const digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const DAILY_ALIGNMENT_LOCK=Object.freeze({
-  symbol:'BTCUSDT',timeframes:['15m','1h','4h'],
-  dailyDepth:365,intradayDepth:960,dailyCloseSafetyDelayMs:120000,
+  symbol:'BTCUSDT',
+  symbols:['BTCUSDT','HYPEUSDT','1000PEPEUSDT','XAUUSDT','NVDAUSDT'],
+  timeframes:['15m','1h','4h'],
+  dailyDepth:365,allowedDailyDepths:[365,180],
+  intradayDepth:960,dailyCloseSafetyDelayMs:120000,
   dailyRegimes:['bull_stack','bear_stack','mixed','unknown'],
   modes:['baseline_v11','v11_daily_aligned','break_extreme_2','break_daily_aligned']
 });
@@ -67,8 +70,11 @@ export function lastKnownDaily(dailyIndex,decisionTime,{safetyDelayMs=120000}={}
  return answer;
 }
 export function filterVectorAgainstCompletedDaily({
- lowerBars,events,dailyIndex,intervalMs,safetyDelayMs=120000
+ lowerBars,events,dailyIndex,intervalMs,safetyDelayMs=120000,
+ neutralPolicy='block'
 }={}){
+ if(!['block','allow_mixed'].includes(neutralPolicy))
+   throw Error('Invalid Daily neutral policy');
  if(!Number.isSafeInteger(intervalMs)||intervalMs<=0||
     !Array.isArray(events)||events.length!==lowerBars?.length)
   throw Error('Vector signal and lower bar alignment required');
@@ -77,7 +83,7 @@ export function filterVectorAgainstCompletedDaily({
  let target=null;
  const stats={seen:0,accepted:0,rejectedOpposed:0,rejectedNeutral:0,
    rejectedUnavailable:0,flattenOnRejectedReversal:0,
-   noNextOpen:0,acceptedLong:0,acceptedShort:0};
+   noNextOpen:0,acceptedLong:0,acceptedShort:0,acceptedMixed:0};
  for(let i=0;i<events.length;i++){
    const e=events[i];
    if(!e?.signal)continue;
@@ -89,10 +95,15 @@ export function filterVectorAgainstCompletedDaily({
    const executionTime=lowerBars[i+1].time;
    if(confirmationClose!==executionTime)throw Error('Unverified next-open alignment');
    const daily=lastKnownDaily(dailyIndex,confirmationClose,{safetyDelayMs});
-   const permitted=daily?.side===e.signal;
-   const reason=permitted?'aligned':daily?.side===null?
-     'daily_mixed_or_warmup':daily?'daily_opposed':'daily_not_yet_available';
-   const obs={confirmedBarOpenMs:e.time,
+   const aligned=daily?.side===e.signal;
+   // A genuinely mixed, previously CLOSED day may be permissive.
+   // Unknown/warmup or unavailable days are never used to permit entries.
+   const mixedAllowed=neutralPolicy==='allow_mixed'&&daily?.regime==='mixed';
+   const permitted=aligned||mixedAllowed;
+   const reason=aligned?'aligned':mixedAllowed?'mixed_allowed':
+     !daily?'daily_not_yet_available':
+     daily.side!==null?'daily_opposed':'daily_mixed_or_warmup';
+   const obs={neutralPolicy,confirmedBarOpenMs:e.time,
       signalConfirmedAtMs:confirmationClose,
       entryAllowedAtMs:executionTime,
       dailyClosedAtMs:daily?.closedAt??null,
@@ -100,6 +111,7 @@ export function filterVectorAgainstCompletedDaily({
       vectorSide:e.signal,accepted:permitted,reason};
    if(permitted){
      stats.accepted++;
+     if(mixedAllowed)stats.acceptedMixed++;
      if(e.signal==='long')stats.acceptedLong++;else stats.acceptedShort++;
      allowed.push({time:e.time,side:e.signal});
      target=e.signal;
@@ -127,12 +139,12 @@ export function compareDailyAlignedVector({
  costs=defaultCosts,safetyDelayMs=DAILY_ALIGNMENT_LOCK.dailyCloseSafetyDelayMs
 }={}){
  if(!DAILY_ALIGNMENT_LOCK.timeframes.includes(intraday?.market?.timeframe)||
-    intraday.market?.symbol!==DAILY_ALIGNMENT_LOCK.symbol||
+    !DAILY_ALIGNMENT_LOCK.symbols.includes(intraday.market?.symbol)||
     daily?.market?.symbol!==intraday.market.symbol||
     intraday?.historyWindow?.endTime>daily?.historyWindow?.endTime+D||
     Math.floor(intraday.historyWindow.endTime/D)*D!==daily.historyWindow?.endTime||
     intraday.acceptedCandles?.length!==DAILY_ALIGNMENT_LOCK.intradayDepth||
-    daily.acceptedCandles?.length!==DAILY_ALIGNMENT_LOCK.dailyDepth||
+    !DAILY_ALIGNMENT_LOCK.allowedDailyDepths.includes(daily.acceptedCandles?.length)||
     !Number.isSafeInteger(safetyDelayMs)||safetyDelayMs<0||
     safetyDelayMs>3600000)
   throw Error('Unsupported/mismatched Daily or intraday research windows');
@@ -161,13 +173,23 @@ export function compareDailyAlignedVector({
  const dailyBreak=filterVectorAgainstCompletedDaily({
    lowerBars:bars,events:eventsBreak,dailyIndex,intervalMs,safetyDelayMs
  });
+ const dailyBaseSoft=filterVectorAgainstCompletedDaily({
+   lowerBars:bars,events:eventsBaseline,dailyIndex,intervalMs,safetyDelayMs,
+   neutralPolicy:'allow_mixed'
+ });
+ const dailyBreakSoft=filterVectorAgainstCompletedDaily({
+   lowerBars:bars,events:eventsBreak,dailyIndex,intervalMs,safetyDelayMs,
+   neutralPolicy:'allow_mixed'
+ });
  const simple=e=>e.flatMap((v,i)=>v.signal&&i<bars.length-1?
    [{time:v.time,side:v.signal}]:[]);
  const labels=[
    ['baseline_v11',simple(eventsBaseline)],
    ['v11_daily_aligned',dailyBase.signals],
+   ['v11_daily_soft',dailyBaseSoft.signals],
    ['break_extreme_2',simple(eventsBreak)],
-   ['break_daily_aligned',dailyBreak.signals]
+   ['break_daily_aligned',dailyBreak.signals],
+   ['break_daily_soft',dailyBreakSoft.signals]
  ];
  const holdoutStartTime=intraday.historyWindow.startTime+
    Math.floor(bars.length*0.7)*intervalMs;
@@ -182,7 +204,8 @@ export function compareDailyAlignedVector({
  if(!same(evals.training.baseline_v11,validatedLower.researchSimulation.training)||
     !same(evals.holdout.baseline_v11,validatedLower.researchSimulation.holdout))
    throw Error('Daily study did not reproduce original Vector V1.1 results');
- const allObs=[...dailyBase.observations,...dailyBreak.observations];
+ const allObs=[...dailyBase.observations,...dailyBreak.observations,
+   ...dailyBaseSoft.observations,...dailyBreakSoft.observations];
  if(allObs.some(x=>x.dailyClosedAtMs!==null &&
     x.dailyClosedAtMs+safetyDelayMs>x.signalConfirmedAtMs))
    throw Error('LOOKAHEAD: Daily candle used before its safe closing time');
@@ -206,11 +229,15 @@ export function compareDailyAlignedVector({
      baselineReproduced:true},
    filters:{
      v11_daily_aligned:dailyBase.stats,
-     break_daily_aligned:dailyBreak.stats
+     v11_daily_soft:dailyBaseSoft.stats,
+     break_daily_aligned:dailyBreak.stats,
+     break_daily_soft:dailyBreakSoft.stats
    },
    observationsPreview:{
      baseline:dailyBase.observations.slice(0,15),
-     break:dailyBreak.observations.slice(0,15)
+     break:dailyBreak.observations.slice(0,15),
+     baselineSoft:dailyBaseSoft.observations.slice(0,15),
+     breakSoft:dailyBreakSoft.observations.slice(0,15)
    },
    splitAtUtc:new Date(holdoutStartTime).toISOString(),
    training:evals.training,holdout:evals.holdout,
@@ -219,10 +246,10 @@ export function compareDailyAlignedVector({
    warnings:[
      'A bullish Daily does not guarantee bullish 4H, 1H or 15M: pullbacks and reversals are possible.',
      'Daily bullish/bearish requires aligned EMA21/34/50 and EMA50 slope at completed UTC Daily CLOSE.',
-     'Daily mixed/unknown means no new entry, not a predicted direction.',
+     'Strict rejects neutral/unknown. Soft accepts only MIXED, never UNKNOWN/warmup/unavailable.',
      'Rejected opposite entries trigger FLAT on next open; results are not a pure signal deletion experiment.',
      '120s Daily post-close delay is a conservative assumption, not validated feed-latency evidence.',
-     'Only BTC is tested in this pilot; inspected historical splits do not establish an independent win rate.',
+     'Five-market 1h pilot and original BTC 15m/4h tests are exploratory, not prospective validation.',
      'Fixed fees/slippage, no funding/liquidity model; no production, trading or automatic selection.'
    ]
  };
