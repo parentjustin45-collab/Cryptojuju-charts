@@ -29,3 +29,13 @@ Sorties : `*-vector-market-regimes.json`,
 `vector-market-regimes-summary.json` et
 `vector-market-regimes-summary.md` dans l'artefact GitHub Actions.
 Lecture seule Bitunix, aucun trading, changement public ou coût Render.
+
+## Automatisation de la campagne de recherche
+La collecte GitHub Actions de 960 chandelles par configuration
+(9 combinaisons BTC/ETH/SOL × 15m/1h/4h) produit désormais aussi
+`vector-market-regimes-summary.md` et `vector-market-regimes-summary.json`.
+Les fichiers `*-vector-market-regimes.json` conservent les quatre blocs
+chronologiques de 240 chandelles, leurs proportions de régimes et les
+statistiques de chaque variante. Si une série Bitunix ou une comparaison
+Vector est bloquée, le rapport reste `BLOCKED` et le workflow échoue ;
+aucune version n'est promue automatiquement.

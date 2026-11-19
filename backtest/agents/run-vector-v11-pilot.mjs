@@ -11,6 +11,7 @@ import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
 import {summarizeVectorV12Comparison,renderVectorV12ScoreboardMarkdown} from './vector-v12-scoreboard.mjs';
 import {diagnoseVectorV12Timing,renderVectorTimingDiagnosticsMarkdown} from './vector-v12-timing-diagnostics.mjs';
+import {diagnoseVectorMarketRegimes,formatVectorRegimesMarkdown} from './vector-market-regimes.mjs';
 
 const folder=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const summary={
@@ -24,6 +25,7 @@ const summary={
 };
 const scorecards=[];
 const timingReports=[];
+const regimeReports=[];
 let contracts;
 try {
  const metadata=await readBitunixContractPrecision();
@@ -91,6 +93,30 @@ for(const symbol of PILOT_SYMBOLS){
      timing={status:'BLOCKED',symbol,timeframe,reason:String(e?.message??e)};
    }
    timingReports.push(timing);
+   // Causal CLOSED-candle regimes: research-only descriptive classification.
+   let regime;
+   try{
+     if(candidate.status!=='CANDIDATES_EVALUATED_RESEARCH_ONLY')
+       throw Error('V1.2 comparison not approved for diagnostics');
+     const source=JSON.parse(await readFile(resolve(folder,`${id}.json`),'utf8'));
+     regime=diagnoseVectorMarketRegimes({
+       source,comparison:candidate,
+       contract:contracts.find(x=>x.symbol===symbol)
+     });
+   }catch(e){
+     regime={status:'BLOCKED',symbol,timeframe,
+       reason:String(e?.message??e)};
+   }
+   regimeReports.push(regime);
+   await writeFile(resolve(folder,`${id}-vector-market-regimes.json`),
+     JSON.stringify(regime,null,2)+'\n');
+   console.log('VECTOR_REGIMES '+JSON.stringify({
+     symbol,timeframe,status:regime.status,
+     blocks:regime.blocks?.length??0,
+     composition:regime.blocks?.map(b=>b.marketComposition)??[],
+     reason:regime.reason??null
+   }));
+
    await writeFile(resolve(folder,`${id}-vector-v12-timing.json`),
      JSON.stringify(timing,null,2)+'\n');
    console.log('VECTOR_TIMING '+JSON.stringify({symbol,timeframe,
@@ -138,6 +164,15 @@ await writeFile(resolve(folder,'vector-v12-timing-summary.json'),
     reports:timingReports,autoPromotion:false,source:'Bitunix LAST_PRICE'},null,2)+'\n');
 await writeFile(resolve(folder,'vector-v12-timing-summary.md'),
   renderVectorTimingDiagnosticsMarkdown(timingReports));
+await writeFile(resolve(folder,'vector-market-regimes-summary.json'),
+  JSON.stringify({
+    protocol:'CJ_VECTOR_MARKET_REGIMES_BATCH_V1',
+    researchOnly:true,autoPromotion:false,
+    source:'Bitunix public LAST_PRICE',reports:regimeReports
+  },null,2)+'\n');
+await writeFile(resolve(folder,'vector-market-regimes-summary.md'),
+  formatVectorRegimesMarkdown(regimeReports));
+summary.marketRegimesReady=regimeReports.filter(x=>x.status==='DESCRIPTIVE_ONLY_NO_WINNER').length;
 summary.timingDiagnosticsReady=timingReports.filter(x=>x.status==='RESEARCH_DIAGNOSTIC_ONLY').length;
 summary.nativeScorecardsReady=scorecards.filter(x=>x.protocol==='CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1').length;
 summary.passed=summary.cases.filter(x=>x.status==='RESEARCH_ONLY_UNVERIFIED_TV_PARITY').length;
@@ -151,9 +186,12 @@ if(summary.nativeScorecardsReady!==summary.cases.length)
   summary.status='BLOCKED_VECTOR_SCORECARD';
 if(summary.timingDiagnosticsReady!==summary.cases.length)
   summary.status='BLOCKED_VECTOR_TIMING_DIAGNOSTICS';
+if(summary.marketRegimesReady!==summary.cases.length)
+  summary.status='BLOCKED_VECTOR_MARKET_REGIMES';
 summary.warning='Actual Bitunix closed OHLC with a JS Vector V1.1 port. No independent TradingView parity, profitability certification, future prediction or autonomous trading.';
 await writeFile(resolve(folder,'vector-v11-summary.json'),JSON.stringify(summary,null,2)+'\n');
 console.log('VECTOR_SUMMARY '+JSON.stringify({status:summary.status,passed:summary.passed,blocked:summary.blocked,metadataError:summary.metadataError??null}));
 if(summary.blocked||summary.candidateComparisonsBlocked||
    summary.nativeScorecardsReady!==summary.cases.length||
-   summary.timingDiagnosticsReady!==summary.cases.length)process.exitCode=2;
+   summary.timingDiagnosticsReady!==summary.cases.length||
+   summary.marketRegimesReady!==summary.cases.length)process.exitCode=2;

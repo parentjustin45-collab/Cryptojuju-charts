@@ -11,6 +11,7 @@ on:
       - 'backtest/agents/vector-v12-real-comparison*'
       - 'backtest/agents/vector-v12-scoreboard*'
       - 'backtest/agents/vector-v12-timing-diagnostics*'
+      - 'backtest/agents/vector-market-regimes*'
       - 'backtest/agents/vector-depth-research*'
       - 'backtest/agents/run-vector-depth-pilot.mjs'
       - 'backtest/agents/run-vector-v11-pilot.mjs'
