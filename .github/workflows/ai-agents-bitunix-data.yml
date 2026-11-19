@@ -4,6 +4,7 @@ on:
     branches: [dev/ai-agents-phase1]
     paths:
       - 'backtest/agents/bitunix-data-pilot*'
+      - 'backtest/agents/bitunix-readback-consistency*'
       - 'backtest/agents/run-bitunix-data-pilot.mjs'
       - '.github/workflows/ai-agents-bitunix-data.yml'
   workflow_dispatch:
@@ -19,7 +20,7 @@ jobs:
         with:
           node-version: '22'
       - name: Run offline data-ingestion regression tests
-        run: node --test backtest/agents/bitunix-data-pilot.test.mjs
+        run: node --test backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/bitunix-readback-consistency.test.mjs
       - name: Collect 9 recent Bitunix public REST history windows (NO trades)
         env:
           CJ_DATA_PILOT_BARS: '480'

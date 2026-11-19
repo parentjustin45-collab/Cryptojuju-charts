@@ -42,3 +42,16 @@ Le workflow interroge désormais **480 chandelles fermées** par configuration
 `data-center.html` est archivé avec `summary.json` et les séries originales.
 Il s'agit d'une **photographie** du contrôle REST, non d'une application
 publique ou d'une surveillance 24/7. Toute configuration bloquée reste en rouge.
+
+## Étape du 19 novembre — double lecture anti-dérive
+Chaque fenêtre BTC/ETH/SOL × 15m/1h/4h est relue par REST sur ses **24 dernières
+chandelles fermées** (plus 3 ancres), avec la même borne UTC fixe que la
+première collecte de 480. Le module compare les valeurs OHLCV originales,
+puis la série de recherche dérivée, chandelle par chandelle.
+
+Si la seconde lecture manque, échoue, change le volume/prix, ne porte plus
+sur la même période ou modifie une correction traçable : cette configuration
+est **BLOQUÉE** dans le résumé du lot. Les écarts, hachages et les timestamps
+sont disponibles dans `*-repeatability.json`. Ce contrôle est une répétition
+immédiate, pas une preuve que la bourse ne modifiera jamais son historique,
+ni une surveillance permanente.

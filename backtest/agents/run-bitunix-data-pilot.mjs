@@ -8,6 +8,7 @@ import {resolve} from 'node:path';
 import {makeBitunixFetchPage} from '../bitunix-adapter.mjs';
 import {PILOT_SYMBOLS,PILOT_TIMEFRAMES,fetchBitunixDataPilot} from './bitunix-data-pilot.mjs';
 import {renderBitunixDataCenterHtml} from './bitunix-data-center-view.mjs';
+import {compareBitunixReadbacks} from './bitunix-readback-consistency.mjs';
 
 const destination=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const closedBars=Number(process.env.CJ_DATA_PILOT_BARS??96);
@@ -45,7 +46,26 @@ for(const symbol of PILOT_SYMBOLS){
     }
     await writeFile(resolve(destination,`${symbol}-${timeframe}.json`),
       JSON.stringify(out,null,2)+'\n');
-    const s={symbol,timeframe,status:out.status,
+    // Second public REST read of the most recent CLOSED 24 bars (+3 anchors).
+    // Both captures use the SAME anchorTime, so the boundary cannot move.
+    // A revision or fetch failure blocks this configuration for research.
+    let readback={status:'BLOCKED',reason:'FIRST_READ_NOT_READY'};
+    if(out.status==='DATA_READY_FOR_RESEARCH_ONLY'){
+      try{
+        const second=await fetchBitunixDataPilot({
+          symbol,timeframe,closedBars:24,anchorBars:3,
+          nowMs:anchorTime,fetchPage
+        });
+        readback=compareBitunixReadbacks(out,second);
+      }catch(e){
+        readback={status:'BLOCKED',reason:'SECOND_READ_EXCEPTION',
+          error:String(e?.message??e)};
+      }
+    }
+    await writeFile(resolve(destination,`${symbol}-${timeframe}-repeatability.json`),
+      JSON.stringify(readback,null,2)+'\n');
+    const stable=readback.status==='STABLE_TWO_READS';
+    const s={symbol,timeframe,status:stable?'DATA_READY_FOR_RESEARCH_ONLY':'BLOCKED',
       requestedBars:closedBars,
       acceptedBars:out.acceptedCandles.length,
       rawCount:out.provenance?.rawCount??0,
@@ -53,7 +73,10 @@ for(const symbol of PILOT_SYMBOLS){
       unresolved:out.quality?.unresolved??0,
       quality:out.quality??null,
       sha256:out.provenance?.rawSha256??null,
-      reason:out.reason??null};
+      consistencyStatus:readback.status,
+      repeatCheckedBars:readback.checkedDerived??0,
+      differenceCount:readback.differenceCount??0,
+      reason:stable?null:(out.reason??readback.reason)};
     summary.checks.push(s);
     console.log('BITUNIX_DATA '+JSON.stringify(s));
   }
@@ -62,7 +85,7 @@ summary.finishedAtUtc=new Date().toISOString();
 summary.passed=summary.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length;
 summary.blocked=summary.checks.length-summary.passed;
 summary.status=summary.blocked?'BLOCKED_OR_PARTIAL':'PASS_PUBLIC_BITUNIX_DATA_WINDOWS';
-summary.warning='Source is Bitunix only; no separate TradingView price parity and no indicator or backtest validation.';
+summary.warning='Repeatability compares a second HTTP pull of 24 recent CLOSED candles per configuration. This does not prove always-on uptime, independent TradingView parity or indicator performance.';
 await writeFile(resolve(destination,'summary.json'),JSON.stringify(summary,null,2)+'\n');
 const md=[
   '# CryptoJuju — Données Bitunix réelles, premier pilote',
@@ -74,6 +97,7 @@ const md=[
   ...summary.checks.map(x=>`| ${x.symbol} | ${x.timeframe} | ${x.acceptedBars}/${x.requestedBars} | ${x.corrections} | ${x.status} |`),
   '',
   '> Source : Bitunix public REST LAST_PRICE. Aucune parité indépendante TradingView.',
+  '> Relecture immédiate : 24 dernières chandelles fermées comparées avec les données initiales.',
   '> Aucun signal réel, transaction ou backtest lancé depuis ce workflow.'
 ];
 await writeFile(resolve(destination,'summary.md'),md.join('\n')+'\n');
