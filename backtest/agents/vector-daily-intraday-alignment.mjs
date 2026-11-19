@@ -7,6 +7,7 @@
  * indefinitely. When a rejected opposite Vector signal arrives, the
  * research engine sends FLAT at the NEXT lower-timeframe open.
  */
+import {createHash} from 'node:crypto';
 import {vectorAIT} from '../vector-ait-v1.mjs';
 import {vectorRegimeFeatures} from '../vector-v13-regime.mjs';
 import {applyVectorConfirmation} from '../vector-antiwhipsaw-v12.mjs';
@@ -14,6 +15,7 @@ import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {runFixedHoldout} from './fixed-holdout.mjs';
 
 const D=86400000;
+const digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const DAILY_ALIGNMENT_LOCK=Object.freeze({
   symbol:'BTCUSDT',timeframes:['15m','1h','4h'],
   dailyDepth:365,intradayDepth:960,dailyCloseSafetyDelayMs:120000,
@@ -127,13 +129,21 @@ export function compareDailyAlignedVector({
  if(!DAILY_ALIGNMENT_LOCK.timeframes.includes(intraday?.market?.timeframe)||
     intraday.market?.symbol!==DAILY_ALIGNMENT_LOCK.symbol||
     daily?.market?.symbol!==intraday.market.symbol||
-    intraday?.historyWindow?.endTime>D+daily?.historyWindow?.endTime||
+    intraday?.historyWindow?.endTime>daily?.historyWindow?.endTime+D||
     Math.floor(intraday.historyWindow.endTime/D)*D!==daily.historyWindow?.endTime||
     intraday.acceptedCandles?.length!==DAILY_ALIGNMENT_LOCK.intradayDepth||
     daily.acceptedCandles?.length!==DAILY_ALIGNMENT_LOCK.dailyDepth||
     !Number.isSafeInteger(safetyDelayMs)||safetyDelayMs<0||
     safetyDelayMs>3600000)
   throw Error('Unsupported/mismatched Daily or intraday research windows');
+ // The readback's hashes must match the actual byte-level content supplied
+ // to this run, not only the provenance SHA fields in a report envelope.
+ for(const series of [intraday,daily]){
+   if(!Array.isArray(series?.rawRows)||!Array.isArray(series?.acceptedCandles)||
+      digest(series.rawRows)!==series.provenance?.rawSha256||
+      digest(series.acceptedCandles)!==series.provenance?.derivedSha256)
+     throw Error('Bitunix OHLC content mismatch against attached provenance SHA256');
+ }
  const validatedLower=auditRealVectorV11({
     source:intraday,repeatability:intradayReadback,contract,costs
  });
