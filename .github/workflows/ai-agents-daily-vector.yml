@@ -1,0 +1,32 @@
+name: DEV CryptoJuju Daily 1D Vector research (read only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/daily-vector-research*'
+      - 'backtest/agents/run-daily-vector-research.mjs'
+      - '.github/workflows/ai-agents-daily-vector.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  daily-vector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test strict 1D closed-bar gates and historical replay offline
+        run: node --test backtest/agents/daily-vector-research.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/research-batch.test.mjs
+      - name: Research five Bitunix 1D contracts without trading
+        run: node backtest/agents/run-daily-vector-research.mjs "${{ runner.temp }}/cj-bitunix-daily-1d"
+      - name: Preserve raw Daily source, readback, and Vector research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-BITUNIX-DAILY-1D-VECTOR-RESEARCH
+          path: ${{ runner.temp }}/cj-bitunix-daily-1d/
+          retention-days: 7
+          if-no-files-found: warn
