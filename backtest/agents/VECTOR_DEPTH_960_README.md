@@ -19,3 +19,13 @@ Fichiers : `vector-depth-BTC15m-*.json`, `vector-depth-BTC15m-report.md`,
 dans l'artefact temporaire GitHub Actions existant. Source Bitunix, laboratoire
 CryptoJuju uniquement, aucun test TradingView, transaction, Render payant,
 déploiement public ou tâche récurrente supplémentaire.
+
+## Réduction des contrôles redondants
+Le workflow principal collecte désormais **960 chandelles fermées sur les
+neuf combinaisons** Bitunix BTC/ETH/SOL × 15m/1h/4h et fait la double
+lecture complète. Le pilote de profondeur BTC15m reste un outil manuel
+(`node backtest/agents/run-vector-depth-pilot.mjs rapport-bitunix`),
+mais n'est **plus relancé dans le même workflow** : cela aurait dupliqué
+les appels REST BTC15m sans nouvelle donnée utile. Les diagnostics et
+tests Vector restent actifs dans la campagne commune; aucune promotion
+de variante ni transaction n'est autorisée.

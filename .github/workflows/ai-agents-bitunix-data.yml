@@ -35,8 +35,6 @@ jobs:
         run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
       - name: Replay Vector V1.1 on accepted real Bitunix candles (RESEARCH ONLY)
         run: node backtest/agents/run-vector-v11-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
-      - name: BTC 15m 960-bar extended Vector V1.1 / V1.2 research (NO TRADES)
-        run: node backtest/agents/run-vector-depth-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
       - name: Preserve read-only raw and derived data provenance reports
         if: always()
         uses: actions/upload-artifact@v4
