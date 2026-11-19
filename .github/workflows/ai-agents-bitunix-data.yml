@@ -1,0 +1,34 @@
+name: DEV six-role real Bitunix data intake (read only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/bitunix-data-pilot*'
+      - 'backtest/agents/run-bitunix-data-pilot.mjs'
+      - '.github/workflows/ai-agents-bitunix-data.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bitunix-data-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline data-ingestion regression tests
+        run: node --test backtest/agents/bitunix-data-pilot.test.mjs
+      - name: Collect 9 recent Bitunix public REST history windows (NO trades)
+        env:
+          CJ_DATA_PILOT_BARS: '96'
+        run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
+      - name: Preserve read-only raw and derived data provenance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-BITUNIX-REAL-DATA-INTEGRITY-pilot
+          path: ${{ runner.temp }}/cj-bitunix-public-data/
+          retention-days: 7
+          if-no-files-found: warn
