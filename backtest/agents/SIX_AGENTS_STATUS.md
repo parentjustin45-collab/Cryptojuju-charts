@@ -50,3 +50,13 @@ Deux tests de régression vérifient le blocage de ces cas. Le changement concer
 l'orchestrateur de recherche isolé, **pas** la qualité-gate commune ni le site public.
 Les données du test CI restent **synthétiques** ; aucune parité Pine ou ingestion
 Bitunix réelle n'est démontrée par ces tests.
+
+## Étape du 19 novembre — séparation technique des six rôles
+Le monolithe a été conservé comme **orchestrateur minimal** et les responsabilités ont été placées
+dans `backtest/agents/roles/01-*.mjs` jusqu'à `06-*.mjs`, avec un contrat `shared.mjs`.
+Les mêmes tests de backtest, diagnostics et sécurité restent applicables. Un test compare le
+résultat de l'orchestrateur aux six fonctions importées individuellement.
+
+Il s'agit toujours de **six modules déterministes** et non de six processus IA autonomes.
+La prochaine mission du centre de contrôle est de générer un état structuré et lisible des
+derniers cycles et de la provenance des rapports, sans confondre fixture synthétique et marché réel.
