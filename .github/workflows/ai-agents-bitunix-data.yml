@@ -9,6 +9,7 @@ on:
       - 'backtest/agents/bitunix-contract-precision*'
       - 'backtest/agents/vector-v11-real-research*'
       - 'backtest/agents/vector-v12-real-comparison*'
+      - 'backtest/agents/vector-v12-scoreboard*'
       - 'backtest/agents/run-vector-v11-pilot.mjs'
       - '.github/workflows/ai-agents-bitunix-data.yml'
   workflow_dispatch:

@@ -9,6 +9,7 @@ import {PILOT_SYMBOLS,PILOT_TIMEFRAMES} from './bitunix-data-pilot.mjs';
 import {readBitunixContractPrecision} from './bitunix-contract-precision.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
+import {summarizeVectorV12Comparison,renderVectorV12ScoreboardMarkdown} from './vector-v12-scoreboard.mjs';
 
 const folder=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const summary={
@@ -20,6 +21,7 @@ const summary={
  continuousService:false,
  cases:[]
 };
+const scorecards=[];
 let contracts;
 try {
  const metadata=await readBitunixContractPrecision();
@@ -66,6 +68,27 @@ for(const symbol of PILOT_SYMBOLS){
    }
    await writeFile(resolve(folder,`${id}-vector-v12-comparison.json`),
      JSON.stringify(candidate,null,2)+'\n');
+   // Descriptive-only CryptoJuju scoreboard. Never elect a winner.
+   let scorecard;
+   try{
+     scorecard=summarizeVectorV12Comparison(candidate);
+   }catch(err){
+     scorecard={protocol:'BLOCKED',symbol,timeframe,
+       reason:String(err?.message??err)};
+   }
+   scorecards.push(scorecard);
+   if(scorecard.protocol==='CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1'){
+     console.log('VECTOR_SCORECARD '+JSON.stringify({
+       symbol,timeframe,
+       holdout:scorecard.variants.map(x=>({
+         mode:x.mode,trades:x.holdout.tradeCount,
+         returnPct:x.holdout.returnPct,drawdownPct:x.holdout.maxDrawdownPct,
+         deltaReturnPp:x.holdoutReturnDifferencePp,
+         deltaDrawdownPp:x.holdoutDrawdownDifferencePp,
+         sampleStatus:x.sampleStatus
+       }))
+     }));
+   }
    console.log('VECTOR_V12 '+JSON.stringify({symbol,timeframe,
      status:candidate.status,modes:candidate.modes?.map(x=>x.mode)??[],
      prefixChecks:candidate.noLookaheadPrefixChecks??0,
@@ -82,6 +105,11 @@ for(const symbol of PILOT_SYMBOLS){
    console.log('VECTOR_V11 '+JSON.stringify(entry));
  }
 }
+await writeFile(resolve(folder,'vector-v12-scoreboard.json'),
+  JSON.stringify({status:'DESCRIPTIVE_RESEARCH_NO_PROMOTION',scorecards},null,2)+'\n');
+await writeFile(resolve(folder,'vector-v12-scoreboard.md'),
+  renderVectorV12ScoreboardMarkdown(scorecards));
+summary.nativeScorecardsReady=scorecards.filter(x=>x.protocol==='CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1').length;
 summary.passed=summary.cases.filter(x=>x.status==='RESEARCH_ONLY_UNVERIFIED_TV_PARITY').length;
 summary.blocked=summary.cases.length-summary.passed;
 summary.candidateComparisonsPassed=summary.cases.filter(x=>x.v12Status==='CANDIDATES_EVALUATED_RESEARCH_ONLY').length;
@@ -89,7 +117,9 @@ summary.candidateComparisonsBlocked=summary.cases.length-summary.candidateCompar
 summary.status=summary.blocked?'BLOCKED_OR_PARTIAL':'RESEARCH_SIGNAL_REPLAY_COMPLETE';
 if(summary.candidateComparisonsBlocked)
   summary.status='BLOCKED_VECTOR_V12_CANDIDATES';
+if(summary.nativeScorecardsReady!==summary.cases.length)
+  summary.status='BLOCKED_VECTOR_SCORECARD';
 summary.warning='Actual Bitunix closed OHLC with a JS Vector V1.1 port. No independent TradingView parity, profitability certification, future prediction or autonomous trading.';
 await writeFile(resolve(folder,'vector-v11-summary.json'),JSON.stringify(summary,null,2)+'\n');
 console.log('VECTOR_SUMMARY '+JSON.stringify({status:summary.status,passed:summary.passed,blocked:summary.blocked,metadataError:summary.metadataError??null}));
-if(summary.blocked||summary.candidateComparisonsBlocked)process.exitCode=2;
+if(summary.blocked||summary.candidateComparisonsBlocked||summary.nativeScorecardsReady!==summary.cases.length)process.exitCode=2;

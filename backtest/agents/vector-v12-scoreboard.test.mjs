@@ -53,5 +53,5 @@ test('a nine-case Markdown artifact explicitly marks insufficient evidence',()=>
  assert.match(md,/aucun test TradingView/);
  assert.match(md,/INSUFFICIENT_HOLDOUT_TRADES/);
  assert.match(md,/follow_close_1/);
- assert.match(md,/DESCRIPTIVE/);
+ assert.match(md,/Source Bitunix LAST_PRICE/);
 });
