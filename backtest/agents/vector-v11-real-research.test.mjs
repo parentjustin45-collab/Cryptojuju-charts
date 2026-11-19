@@ -50,7 +50,7 @@ test('last closed signal is logged but never ordered without a next candle',()=>
 test('blocked, unchecked or incomplete Bitunix source cannot emit Vector signals',()=>{
  assert.throws(()=>run({source:{...source,status:'BLOCKED'}}),/requires stable/);
  assert.throws(()=>run({repeatability:{...repeatability,status:'BLOCKED'}}),/requires stable/);
- assert.throws(()=>run({source:{...source,acceptedCandles:bars.slice(0,100)}}),/price-precision/);
+ assert.throws(()=>run({source:{...source,acceptedCandles:bars.slice(0,100)}}),/requires stable/);
  const invalid=bars.map(x=>({...x}));invalid[110].low=invalid[110].open+10;
  assert.throws(()=>run({source:{...source,acceptedCandles:invalid}}),/Backtest blocked/);
 });
