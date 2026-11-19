@@ -16,7 +16,13 @@ const source={
  provenance:{formingBarExcluded:true,priceType:'LAST_PRICE',rawSha256:'a',derivedSha256:'b',
    normalizationVersion:'bitunix-open-envelope-v1'}
 };
-const repeatability={status:'STABLE_TWO_READS',checkedDerived:24};
+const repeatability={
+ status:'STABLE_TWO_READS',checkedDerived:24,
+ market:{exchange:'Bitunix',symbol:'BTCUSDT',timeframe:'15m'},
+ historyWindow:{startTime:window.endTime-24*step,endTime:window.endTime,intervalMs:step},
+ firstRawSha256:'a',overlapRawSha256First:'matching',overlapRawSha256Second:'matching',
+ differenceCount:0
+};
 const contract={symbol:'BTCUSDT',quotePrecision:1,priceStep:0.1,
  source:'BITUNIX_PUBLIC_TRADING_PAIRS',
  stepStatus:'RESEARCH_PRICE_PRECISION_NOT_TV_MINTICK'};
@@ -36,7 +42,8 @@ test('last closed signal is logged but never ordered without a next candle',()=>
  const last=bars.map(x=>({...x}));
  last[last.length-1]={...last.at(-1),open:100,close:109,high:110,low:99,volume:10000};
  const a=run({source:{...source,acceptedCandles:last}});
- assert.ok(a.finalBarSignalsNotExecutable>=0);
+ assert.equal(a.finalBarSignalsNotExecutable,1);
+ assert.equal(a.signalEvents.at(-1).executionPossible,false);
  assert.ok(a.signalEvents.every(s=>s.executionPossible||s.actionAllowedAtNextOpenMs===window.endTime));
  assert.equal(a.executableSignalCount,a.signalEvents.filter(s=>s.executionPossible).length);
 });
@@ -51,4 +58,15 @@ test('Bitunix price precision must be explicit and cannot claim Pine mintick par
  assert.throws(()=>run({contract:undefined}),/price-precision/);
  assert.throws(()=>run({contract:{...contract,priceStep:0.001}}),/price-precision/);
  assert.throws(()=>run({contract:{...contract,source:'GUESS'}}),/price-precision/);
+});
+
+test('readback evidence from another symbol, price series or time window is refused',()=>{
+ assert.throws(()=>run({repeatability:{...repeatability,
+   market:{...repeatability.market,symbol:'ETHUSDT'}}}),/does not belong/);
+ assert.throws(()=>run({repeatability:{...repeatability,
+   firstRawSha256:'not-the-source-sha'}}),/does not belong/);
+ assert.throws(()=>run({repeatability:{...repeatability,
+   historyWindow:{...repeatability.historyWindow,endTime:repeatability.historyWindow.endTime+step}}}),/does not belong/);
+ assert.throws(()=>run({repeatability:{...repeatability,
+   overlapRawSha256Second:'different'}}),/does not belong/);
 });

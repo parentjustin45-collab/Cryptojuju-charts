@@ -24,6 +24,20 @@ export function auditRealVectorV11({
     source.provenance.priceType!=='LAST_PRICE')
    throw Error('Vector requires stable, closed, provenanced Bitunix OHLC');
  const market=source.market,window=source.historyWindow,bars=source.acceptedCandles;
+ // A "stable" report must actually belong to THESE closed Bitunix candles.
+ // It cannot be borrowed from another symbol, window or source archive.
+ if(!market||!window||repeatability.market?.exchange!=='Bitunix' ||
+    repeatability.market?.symbol!==market.symbol ||
+    repeatability.market?.timeframe!==market.timeframe ||
+    repeatability.historyWindow?.endTime!==window.endTime ||
+    repeatability.historyWindow?.intervalMs!==window.intervalMs ||
+    repeatability.historyWindow?.startTime!==window.endTime-24*window.intervalMs ||
+    !source.provenance?.rawSha256 ||
+    repeatability.firstRawSha256!==source.provenance.rawSha256 ||
+    !repeatability.overlapRawSha256First ||
+    repeatability.overlapRawSha256First!==repeatability.overlapRawSha256Second ||
+    repeatability.differenceCount!==0)
+   throw Error('Vector readback evidence does not belong to this Bitunix source window');
  if(!market||!window||!Array.isArray(bars)||bars.length<160 ||
     !contract||contract.symbol!==market.symbol ||
     contract.source!=='BITUNIX_PUBLIC_TRADING_PAIRS' ||
