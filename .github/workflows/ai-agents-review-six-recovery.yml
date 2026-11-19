@@ -1,0 +1,41 @@
+name: DEV inspect EXACT six archived Vector recovery signals
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/analyze-six-recovered-signals.mjs'
+      - '.github/workflows/ai-agents-review-six-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay-six-signals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact source and existing integrated portfolio causal tests
+        run: |
+          node --check backtest/agents/analyze-six-recovered-signals.mjs
+          node --test backtest/agents/vector-integrated-risk.test.mjs
+      - name: Download original Nov 19 source and simulations, not a moving market window
+        uses: actions/download-artifact@v4
+        with:
+          name: cj-VECTOR-1H-INTEGRATED-ATR-RECOVERY-RESEARCH
+          run-id: 44626524231
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cj-six-original
+      - name: Independently replay all six confirmed recovered signals and solo counterfactuals
+        run: node backtest/agents/analyze-six-recovered-signals.mjs "${{ runner.temp }}/cj-six-original" "${{ runner.temp }}/cj-six-diagnosis"
+      - name: Archive precise six-event report and counterfactual details
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-SIX-RECOVERED-SIGNALS-EXACT-SOURCE-REPLAY
+          path: ${{ runner.temp }}/cj-six-diagnosis/
+          retention-days: 7
+          if-no-files-found: warn
