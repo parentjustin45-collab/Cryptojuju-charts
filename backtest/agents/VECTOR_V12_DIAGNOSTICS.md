@@ -11,3 +11,11 @@ recoller une position entre les deux fenêtres. Les variantes n'ont aucune
 permission de s'auto-promouvoir. Tous les rapports restent sur
 `dev/ai-agents-phase1`, sans modifier `main`, avec données Bitunix
 validées, sans appel à TradingView ni transaction.
+
+## Rapport de diagnostic automatique
+Chaque campagne GitHub Bitunix/Vector enregistre
+`vector-v12-timing-summary.md` et `vector-v12-timing-summary.json`,
+avec les diagnostics par marché/UT et par phase (entraînement / validation).
+Les contrôles bloqués sont affichés comme tels et empêchent le workflow
+de déclarer la campagne entièrement réussie. Les variantes expérimentales
+restent isolées de la V1.1 et aucune ne peut être promue automatiquement.

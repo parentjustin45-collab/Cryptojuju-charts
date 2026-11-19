@@ -10,6 +10,7 @@ import {readBitunixContractPrecision} from './bitunix-contract-precision.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
 import {summarizeVectorV12Comparison,renderVectorV12ScoreboardMarkdown} from './vector-v12-scoreboard.mjs';
+import {diagnoseVectorV12Timing,renderVectorTimingDiagnosticsMarkdown} from './vector-v12-timing-diagnostics.mjs';
 
 const folder=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const summary={
@@ -22,6 +23,7 @@ const summary={
  cases:[]
 };
 const scorecards=[];
+const timingReports=[];
 let contracts;
 try {
  const metadata=await readBitunixContractPrecision();
@@ -77,6 +79,28 @@ for(const symbol of PILOT_SYMBOLS){
        reason:String(err?.message??err)};
    }
    scorecards.push(scorecard);
+   let timing;
+   try{
+     if(candidate.status!=='CANDIDATES_EVALUATED_RESEARCH_ONLY')
+       throw Error('V1.2 candidate not validated');
+     const source=JSON.parse(await readFile(resolve(folder,`${id}.json`),'utf8'));
+     timing=diagnoseVectorV12Timing({
+       source,comparison:candidate,contract:contracts.find(x=>x.symbol===symbol)
+     });
+   }catch(e){
+     timing={status:'BLOCKED',symbol,timeframe,reason:String(e?.message??e)};
+   }
+   timingReports.push(timing);
+   await writeFile(resolve(folder,`${id}-vector-v12-timing.json`),
+     JSON.stringify(timing,null,2)+'\n');
+   console.log('VECTOR_TIMING '+JSON.stringify({symbol,timeframe,
+     status:timing.status,
+     holdout:Object.fromEntries(Object.entries(timing.modes??{}).map(([mode,x])=>
+       [mode,{quickFlips:x.phases.holdout.rapidFlipPairs,
+         oppositePairs:x.phases.holdout.oppositeFlipPairs,
+         meanDelayBars:x.phases.holdout.meanConfirmationDelayBars,
+         matchedBaselineOrigins:x.phases.holdout.matchedBaselineOrigins}]))}));
+
    if(scorecard.protocol==='CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1'){
      console.log('VECTOR_SCORECARD '+JSON.stringify({
        symbol,timeframe,
@@ -109,6 +133,12 @@ await writeFile(resolve(folder,'vector-v12-scoreboard.json'),
   JSON.stringify({status:'DESCRIPTIVE_RESEARCH_NO_PROMOTION',scorecards},null,2)+'\n');
 await writeFile(resolve(folder,'vector-v12-scoreboard.md'),
   renderVectorV12ScoreboardMarkdown(scorecards));
+await writeFile(resolve(folder,'vector-v12-timing-summary.json'),
+  JSON.stringify({protocol:'CJ_NATIVE_VECTOR_V12_TIMING_BATCH_V1',
+    reports:timingReports,autoPromotion:false,source:'Bitunix LAST_PRICE'},null,2)+'\n');
+await writeFile(resolve(folder,'vector-v12-timing-summary.md'),
+  renderVectorTimingDiagnosticsMarkdown(timingReports));
+summary.timingDiagnosticsReady=timingReports.filter(x=>x.status==='RESEARCH_DIAGNOSTIC_ONLY').length;
 summary.nativeScorecardsReady=scorecards.filter(x=>x.protocol==='CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1').length;
 summary.passed=summary.cases.filter(x=>x.status==='RESEARCH_ONLY_UNVERIFIED_TV_PARITY').length;
 summary.blocked=summary.cases.length-summary.passed;
@@ -119,7 +149,11 @@ if(summary.candidateComparisonsBlocked)
   summary.status='BLOCKED_VECTOR_V12_CANDIDATES';
 if(summary.nativeScorecardsReady!==summary.cases.length)
   summary.status='BLOCKED_VECTOR_SCORECARD';
+if(summary.timingDiagnosticsReady!==summary.cases.length)
+  summary.status='BLOCKED_VECTOR_TIMING_DIAGNOSTICS';
 summary.warning='Actual Bitunix closed OHLC with a JS Vector V1.1 port. No independent TradingView parity, profitability certification, future prediction or autonomous trading.';
 await writeFile(resolve(folder,'vector-v11-summary.json'),JSON.stringify(summary,null,2)+'\n');
 console.log('VECTOR_SUMMARY '+JSON.stringify({status:summary.status,passed:summary.passed,blocked:summary.blocked,metadataError:summary.metadataError??null}));
-if(summary.blocked||summary.candidateComparisonsBlocked||summary.nativeScorecardsReady!==summary.cases.length)process.exitCode=2;
+if(summary.blocked||summary.candidateComparisonsBlocked||
+   summary.nativeScorecardsReady!==summary.cases.length||
+   summary.timingDiagnosticsReady!==summary.cases.length)process.exitCode=2;

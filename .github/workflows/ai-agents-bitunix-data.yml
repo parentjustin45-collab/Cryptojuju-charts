@@ -10,6 +10,7 @@ on:
       - 'backtest/agents/vector-v11-real-research*'
       - 'backtest/agents/vector-v12-real-comparison*'
       - 'backtest/agents/vector-v12-scoreboard*'
+      - 'backtest/agents/vector-v12-timing-diagnostics*'
       - 'backtest/agents/vector-depth-research*'
       - 'backtest/agents/run-vector-depth-pilot.mjs'
       - 'backtest/agents/run-vector-v11-pilot.mjs'
@@ -30,7 +31,7 @@ jobs:
         run: node --test backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/bitunix-readback-consistency.test.mjs
       - name: Collect 9 recent Bitunix public REST history windows (NO trades)
         env:
-          CJ_DATA_PILOT_BARS: '480'
+          CJ_DATA_PILOT_BARS: '960'
         run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
       - name: Replay Vector V1.1 on accepted real Bitunix candles (RESEARCH ONLY)
         run: node backtest/agents/run-vector-v11-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"

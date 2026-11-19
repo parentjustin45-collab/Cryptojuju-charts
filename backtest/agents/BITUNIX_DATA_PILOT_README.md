@@ -87,3 +87,12 @@ dans l'artefact. C'est une relecture Bitunix (pas TradingView, pas temps réel).
 Le second appel reste indépendant; seuls les paramètres temporels sont figés.
 Ce choix augmente modestement le nombre d'appels REST publics et GitHub
 Actions, sans créer de service payant.
+
+## Extension exploratoire du 19 novembre — 960 chandelles
+Le maximum historique du pilote est passé à **960 chandelles fermées** par
+symbole et unité de temps, avec la **même fenêtre entièrement relue deux fois**.
+Le workflow `CJ_DATA_PILOT_BARS=960` contrôle donc jusqu'à 8 640 chandelles
+distinctes (9 marchés/UT) plus les ancres; les résultats réels doivent être
+confirmés par GitHub Actions et peuvent être BLOQUÉS si l'API n'expose pas
+autant d'historique. L'extension sert uniquement la recherche sur Bitunix,
+sans nouvelle infrastructure ni accès à un compte de trading.
