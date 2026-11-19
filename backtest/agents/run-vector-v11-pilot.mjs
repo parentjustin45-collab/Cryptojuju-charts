@@ -8,6 +8,7 @@ import {resolve} from 'node:path';
 import {PILOT_SYMBOLS,PILOT_TIMEFRAMES} from './bitunix-data-pilot.mjs';
 import {readBitunixContractPrecision} from './bitunix-contract-precision.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
+import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
 
 const folder=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const summary={
@@ -45,20 +46,50 @@ for(const symbol of PILOT_SYMBOLS){
        warning:'No Vector research signals are authorized on this blocked configuration.'};
    }
    await writeFile(resolve(folder,`${id}-vector-v11.json`),JSON.stringify(result,null,2)+'\n');
+   // Native CryptoJuju V1.2 research candidates, same validated historical
+   // window and simulation costs as V1.1. No TradingView comparison required.
+   let candidate;
+   try{
+     if(result.status!=='RESEARCH_ONLY_UNVERIFIED_TV_PARITY')
+       throw Error('Baseline Vector V1.1 not accepted');
+     const source=JSON.parse(await readFile(resolve(folder,`${id}.json`),'utf8'));
+     const repeatability=JSON.parse(await readFile(resolve(folder,`${id}-repeatability.json`),'utf8'));
+     candidate=compareVectorV12Candidates({
+       source,repeatability,contract:contracts.find(x=>x.symbol===symbol)
+     });
+   }catch(e){
+     candidate={
+       protocol:'CJ_VECTOR_V12_BITUNIX_ISOLATED_COMPARISON_V1',
+       status:'BLOCKED',reason:String(e?.message??e),
+       promotedVariant:null, noRealTrades:true
+     };
+   }
+   await writeFile(resolve(folder,`${id}-vector-v12-comparison.json`),
+     JSON.stringify(candidate,null,2)+'\n');
+   console.log('VECTOR_V12 '+JSON.stringify({symbol,timeframe,
+     status:candidate.status,modes:candidate.modes?.map(x=>x.mode)??[],
+     prefixChecks:candidate.noLookaheadPrefixChecks??0,
+     reason:candidate.reason??null}));
    const entry={symbol,timeframe,status:result.status,
      signals:result.signalCount??0,
      trainingTrades:result.researchSimulation?.training.tradeCount??null,
      holdoutTrades:result.researchSimulation?.holdout.tradeCount??null,
      noLookaheadPrefixChecks:result.noLookaheadSampledPrefixes??0,
-     reason:result.reason??null};
+     v12Status:candidate.status,
+     v12Modes:candidate.modes?.length??0,
+     reason:result.reason??candidate.reason??null};
    summary.cases.push(entry);
    console.log('VECTOR_V11 '+JSON.stringify(entry));
  }
 }
 summary.passed=summary.cases.filter(x=>x.status==='RESEARCH_ONLY_UNVERIFIED_TV_PARITY').length;
 summary.blocked=summary.cases.length-summary.passed;
+summary.candidateComparisonsPassed=summary.cases.filter(x=>x.v12Status==='CANDIDATES_EVALUATED_RESEARCH_ONLY').length;
+summary.candidateComparisonsBlocked=summary.cases.length-summary.candidateComparisonsPassed;
 summary.status=summary.blocked?'BLOCKED_OR_PARTIAL':'RESEARCH_SIGNAL_REPLAY_COMPLETE';
+if(summary.candidateComparisonsBlocked)
+  summary.status='BLOCKED_VECTOR_V12_CANDIDATES';
 summary.warning='Actual Bitunix closed OHLC with a JS Vector V1.1 port. No independent TradingView parity, profitability certification, future prediction or autonomous trading.';
 await writeFile(resolve(folder,'vector-v11-summary.json'),JSON.stringify(summary,null,2)+'\n');
 console.log('VECTOR_SUMMARY '+JSON.stringify({status:summary.status,passed:summary.passed,blocked:summary.blocked,metadataError:summary.metadataError??null}));
-if(summary.blocked)process.exitCode=2;
+if(summary.blocked||summary.candidateComparisonsBlocked)process.exitCode=2;

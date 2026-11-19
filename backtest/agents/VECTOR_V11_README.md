@@ -29,3 +29,12 @@ mais n'exécutent pas un graphique TradingView indépendant.
 Rapports : `*-vector-v11.json`, `vector-v11-summary.json` et
 `vector-v11-contract-precision.json`, dans l'artefact GitHub de données.
 **Pas de trading automatique. Aucun déploiement sur main.**
+
+## Vector V1.2 natif (non TradingView)
+Sur les mêmes chandelles Bitunix déjà validées, la campagne écrit
+`*-vector-v12-comparison.json` contenant les trois modes : baseline V1.1,
+confirmation au prochain close et cassure confirmée en deux chandelles.
+Le moteur teste les signaux causaux, la reproduction de la baseline et les
+simulations entraînement/holdout avec coûts identiques. Le rapport **n'élit pas
+un gagnant** et reste expérimental; aucune comparaison avec TradingView
+n'est exigée pour l'amélioration native.
