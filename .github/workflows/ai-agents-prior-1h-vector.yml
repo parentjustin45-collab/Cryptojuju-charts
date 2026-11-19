@@ -1,0 +1,32 @@
+name: DEV Vector Daily vs older 1H windows (research only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/vector-daily-historical-windows*'
+      - 'backtest/agents/run-vector-prior-windows.mjs'
+      - '.github/workflows/ai-agents-prior-1h-vector.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  vector-prior-windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm nonoverlap and closed-Daily-only tests
+        run: node --test backtest/agents/vector-daily-historical-windows.test.mjs backtest/agents/vector-daily-intraday-alignment.test.mjs
+      - name: Run six independent real Bitunix older 1H windows
+        run: node backtest/agents/run-vector-prior-windows.mjs "${{ runner.temp }}/cj-vector-older-1h"
+      - name: Preserve all raw OHLC, repeated snapshots and backtest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-VECTOR-DAILY-OLDER-1H-NONOVERLAP-RESEARCH
+          path: ${{ runner.temp }}/cj-vector-older-1h/
+          retention-days: 7
+          if-no-files-found: warn
