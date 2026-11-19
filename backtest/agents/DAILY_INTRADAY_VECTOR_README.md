@@ -42,3 +42,21 @@ Les fenêtres examinées ont déjà servi au développement et les
 résultats ne garantissent pas de profit. Aucune variante promue.
 Aucune utilisation de TradingView, trading automatique, `main`,
 site public, Render ou API privée.
+
+## Diagnostic des occasions rejetées par le Daily (nouvelle étape)
+Le composant `daily-signal-veto-diagnostics.mjs` calcule, APRÈS la décision
+Vector et Daily, l'évolution de chaque signal sur 3, 6 et 12 bougies
+fermées : mouvement directionnel entre l'ouverture de la prochaine
+bougie et la clôture à l'horizon, excursion favorable (MFE), excursion
+adverse (MAE), nombre de signaux acceptés/refusés et résultats censurés
+près de la fin d'échantillon. Les rejets opposés sont séparés des rejets
+neutral/mixed/unknown. Le test exige l'horodatage du signal et de la
+prochaine ouverture, et interdit le contexte Daily futur.
+
+**Attention :** ces mouvements ne sont pas des transactions exécutables :
+les signaux se chevauchent parfois, l'ancienne position peut être fermée
+(FLAT), et les sorties à horizon fixe ne sont pas la stratégie réelle.
+Aucun coût ni funding n'est appliqué au diagnostic; on ne déclare
+jamais un signal gagnant, un profit raté ou une version supérieure.
+La méthode sert à repérer les configurations où une expérience ciblée
+avec frais, risque et validation séparée serait pertinente.

@@ -13,6 +13,7 @@ import {vectorRegimeFeatures} from '../vector-v13-regime.mjs';
 import {applyVectorConfirmation} from '../vector-antiwhipsaw-v12.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {runFixedHoldout} from './fixed-holdout.mjs';
+import {diagnoseDailyVetoedSignals} from './daily-signal-veto-diagnostics.mjs';
 
 const D=86400000;
 const digest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
@@ -181,6 +182,22 @@ export function compareDailyAlignedVector({
    lowerBars:bars,events:eventsBreak,dailyIndex,intervalMs,safetyDelayMs,
    neutralPolicy:'allow_mixed'
  });
+ // Forward data is used ONLY for retrospective fixed-horizon outcomes,
+ // after the Daily gate and signal decisions are finalized.
+ const opportunity={
+   v11_daily_aligned:diagnoseDailyVetoedSignals({
+     bars,observations:dailyBase.observations,intervalMs,dailySafetyDelayMs:safetyDelayMs
+   }),
+   v11_daily_soft:diagnoseDailyVetoedSignals({
+     bars,observations:dailyBaseSoft.observations,intervalMs,dailySafetyDelayMs:safetyDelayMs
+   }),
+   break_daily_aligned:diagnoseDailyVetoedSignals({
+     bars,observations:dailyBreak.observations,intervalMs,dailySafetyDelayMs:safetyDelayMs
+   }),
+   break_daily_soft:diagnoseDailyVetoedSignals({
+     bars,observations:dailyBreakSoft.observations,intervalMs,dailySafetyDelayMs:safetyDelayMs
+   })
+ };
  const simple=e=>e.flatMap((v,i)=>v.signal&&i<bars.length-1?
    [{time:v.time,side:v.signal}]:[]);
  const labels=[
@@ -242,6 +259,7 @@ export function compareDailyAlignedVector({
    splitAtUtc:new Date(holdoutStartTime).toISOString(),
    training:evals.training,holdout:evals.holdout,
    droppedAtBoundary:evals.droppedAtBoundary,
+   signalOpportunity:opportunity,
    promotedVariant:null,tradingEnabled:false,
    warnings:[
      'A bullish Daily does not guarantee bullish 4H, 1H or 15M: pullbacks and reversals are possible.',
@@ -250,7 +268,8 @@ export function compareDailyAlignedVector({
      'Rejected opposite entries trigger FLAT on next open; results are not a pure signal deletion experiment.',
      '120s Daily post-close delay is a conservative assumption, not validated feed-latency evidence.',
      'Five-market 1h pilot and original BTC 15m/4h tests are exploratory, not prospective validation.',
-     'Fixed fees/slippage, no funding/liquidity model; no production, trading or automatic selection.'
+     'Fixed fees/slippage, no funding/liquidity model; no production, trading or automatic selection.',
+     'Missed-opportunity diagnostics are overlapping fixed-horizon price movements, NOT recoverable trade P&L or win rates.'
    ]
  };
 }

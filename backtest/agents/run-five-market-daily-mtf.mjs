@@ -108,6 +108,12 @@ try{
        result.dailyBars=daily.depth;
        result.lowerBars=first.acceptedCandles.length;
        result.filters=study.filters;
+       // Non-trade opportunity diagnostics: direction from the NEXT bar
+       // open, fixed-horizon close and max excursions after each signal.
+       result.opportunity={
+         v11_daily_aligned:study.signalOpportunity.v11_daily_aligned,
+         v11_daily_soft:study.signalOpportunity.v11_daily_soft
+       };
        result.results=Object.entries(study.holdout).map(([mode,r])=>({
          mode,holdoutTrades:r.tradeCount,trainTrades:study.training[mode].tradeCount,
          holdoutReturnPct:r.returnPct,holdoutMaxDrawdownPct:r.maxDrawdownPct,
@@ -152,6 +158,19 @@ const rows=[
   ' | '+(x.filters?.v11_daily_aligned?.seen??'—')+
   ' | '+(x.filters?.v11_daily_aligned?.accepted??'—')+
   ' | '+(x.filters?.v11_daily_soft?.accepted??'—')+' |'),
+ '',
+ '## Signaux rejetés par le Daily : évolution à 6 bougies (DESCRIPTIF)',
+ 'Le mouvement directionnel vers la clôture six bougies plus tard ne représente pas un profit, car les signaux peuvent se chevaucher et être refusés alors qu’une position est déjà ouverte.',
+ '| Marché | UT | Politique | Rejets opposés observés | Rejets utilisables | Mouvement moyen directionnel 6 bougies | Excursion favorable moyenne | Échantillon |',
+ '|---|---|---|---:|---:|---:|---:|---|',
+ ...report.cases.flatMap(x=>['v11_daily_aligned','v11_daily_soft'].map(mode=>{
+   const q=x.opportunity?.[mode]?.groupsByHorizon?.[6]?.rejected_opposed;
+   return '| '+x.symbol+' | '+x.timeframe+' | '+mode+' | '+
+     (q?.observedSignals??'—')+' | '+(q?.eligibleOutcomeBars??'—')+
+     ' | '+f(q?.meanDirectionalCloseChangePct)+
+     ' | '+f(q?.meanMaxFavorableExcursionPct)+
+     ' | '+(q?.sampleGate??'BLOQUÉ')+' |';
+ })),
  '',
  '## Rendement historique simulé (holdout inspecté; ne prouve pas une stratégie supérieure)',
  '| Marché | TF | Mode | Trades | Rendement net | Drawdown | Échantillon |',
