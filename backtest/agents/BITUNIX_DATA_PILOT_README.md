@@ -66,3 +66,13 @@ vérification**, la deuxième lecture comporte désormais 12 barres d'ancrage.
 Les échecs conservent aussi la série et le motif de la seconde lecture dans
 `*-second-read-when-blocked.json` pour diagnostic. Un test de régression
 reproduit le cas où 3 ancres échouent mais 12 fournissent la preuve d'OPEN.
+
+## Branche Vector V1.1, pilotage initial
+Après les 9 fenêtres Bitunix validées et la deuxième lecture,
+`run-vector-v11-pilot.mjs` consulte la métadonnée publique
+`trading_pairs.quotePrecision` et effectue le replay Vector uniquement
+en recherche. Les rapports sont conservés dans l'artefact
+`cj-BITUNIX-REAL-DATA-AND-VECTOR-V11-RESEARCH`.
+Les tests critiques de causalité (signaux après clôture, exécution
+suivante) passent par `vector-v11-real-research.test.mjs`.
+Aucune parité TradingView n'est considérée certifiée.

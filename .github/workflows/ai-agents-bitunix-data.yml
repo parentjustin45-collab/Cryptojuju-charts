@@ -6,6 +6,9 @@ on:
       - 'backtest/agents/bitunix-data-pilot*'
       - 'backtest/agents/bitunix-readback-consistency*'
       - 'backtest/agents/run-bitunix-data-pilot.mjs'
+      - 'backtest/agents/bitunix-contract-precision*'
+      - 'backtest/agents/vector-v11-real-research*'
+      - 'backtest/agents/run-vector-v11-pilot.mjs'
       - '.github/workflows/ai-agents-bitunix-data.yml'
   workflow_dispatch:
 permissions:
@@ -25,11 +28,13 @@ jobs:
         env:
           CJ_DATA_PILOT_BARS: '480'
         run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
+      - name: Replay Vector V1.1 on accepted real Bitunix candles (RESEARCH ONLY)
+        run: node backtest/agents/run-vector-v11-pilot.mjs "${{ runner.temp }}/cj-bitunix-public-data"
       - name: Preserve read-only raw and derived data provenance reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cj-BITUNIX-REAL-DATA-INTEGRITY-pilot
+          name: cj-BITUNIX-REAL-DATA-AND-VECTOR-V11-RESEARCH
           path: ${{ runner.temp }}/cj-bitunix-public-data/
           retention-days: 7
           if-no-files-found: warn
