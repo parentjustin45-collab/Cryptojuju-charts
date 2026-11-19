@@ -10,7 +10,7 @@ test('two full 40-day periods are consecutive but disjoint and strictly earlier 
  assert.equal(p[0].startTime,p[1].endTime);
  assert.equal(p[0].utcEndExclusive,'2026-10-10T00:00:00.000Z');
  assert.equal(p[1].utcEndExclusive,'2026-08-31T00:00:00.000Z');
- assert.ok(p.every(x=>x.asOfMs<x.latestStudyEndExclusiveUtc));
+ assert.ok(p.every(x=>x.asOfMs<Date.parse(x.latestStudyEndExclusiveUtc)));
 });
 test('disallows unaligned/future/nonsensical history plans',()=>{
  assert.throws(()=>planPriorHourlyWindows({anchorUtc:'2026-11-19T04:00:00.000Z'}),/closed UTC/);
