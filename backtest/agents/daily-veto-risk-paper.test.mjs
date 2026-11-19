@@ -120,7 +120,7 @@ test('impossible Daily reasons cannot manufacture completed-day entries',()=>{
   {...signal(25),reason:'daily_not_yet_available',dailyClosedAtMs:T-86400000}
  ]}),/reason contradicts/);
  assert.throws(()=>base({observations:[
-  {...signal(25,'long','mixed_allowed'),neutralPolicy:'block'}
+  {...signal(25,'long','mixed_allowed'),accepted:true,neutralPolicy:'block'}
  ]}),/reason contradicts/);
  const unknown={...signal(25),reason:'daily_not_yet_available',dailyClosedAtMs:null};
  const r=base({observations:[unknown]});
