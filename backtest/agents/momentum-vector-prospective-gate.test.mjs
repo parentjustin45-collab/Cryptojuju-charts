@@ -35,7 +35,10 @@ test('warmup trades, exact-cutoff entry, and incomplete positions are not credit
   {confirmationTime:C-H,entryTime:C,exitTime:C+2*H},
   {confirmationTime:C,entryTime:C+H,exitTime:C+2*H}
  ];
- const r=run({trades});
+ const r=run({trades,signals:[
+  {time:C-2*H,side:'long'},{time:C-H,side:'short'},
+  {time:C,side:'long'}
+ ]});
  assert.equal(r.eligibleClosedTradeCount,1);
  assert.equal(r.excludedWarmupOrBoundaryTrades,2);
  assert.equal(r.eligibleTrades[0].exitClosedAtMs,C+3*H);
@@ -75,4 +78,15 @@ test('unregistered variants and impossible timestamps are blocked',()=>{
  assert.equal(run({asOfMs:C}).reason,'PROSPECTIVE_PERIOD_NOT_STARTED');
  assert.equal(run({signals:[{time:C,side:'long'},{time:C,side:'short'}]}).reason,
   'INVALID_OR_DUPLICATE_SIGNAL');
+});
+
+test('an invented trade without a corresponding directional confirmation is blocked',()=>{
+ const trade={confirmationTime:C,entryTime:C+H,exitTime:C+2*H,side:'long'};
+ assert.equal(run({trades:[trade]}).reason,'TRADE_WITHOUT_MATCHING_CONFIRMED_SIGNAL');
+ assert.equal(run({signals:[{time:C,side:'flat'}],trades:[trade]}).reason,
+  'TRADE_WITHOUT_MATCHING_CONFIRMED_SIGNAL');
+ assert.equal(run({signals:[{time:C,side:'short'}],trades:[trade]}).reason,
+  'TRADE_WITHOUT_MATCHING_CONFIRMED_SIGNAL');
+ const valid=run({signals:[{time:C,side:'long'}],trades:[trade]});
+ assert.equal(valid.eligibleClosedTradeCount,1);
 });

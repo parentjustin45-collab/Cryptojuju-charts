@@ -88,6 +88,13 @@ export function auditMomentumVectorProspective({
      seenTrades.has([confirmationTime,entryTime,exitTime].join(':')))
    return fail('INVALID_TRADE_TIMELINE_OR_UNVERIFIED_CANDLE');
   seenTrades.add([confirmationTime,entryTime,exitTime].join(':'));
+  // A closed trade must originate from an actually supplied, confirmed
+  // directional event. Otherwise an arbitrary PnL record could be counted
+  // without the strategy ever producing that entry (fabricated attribution).
+  const origin=signals.find(e=>e.time===confirmationTime);
+  if(!origin||!['long','short'].includes(origin.side)||
+     (t.side!==undefined&&t.side!==origin.side))
+   return fail('TRADE_WITHOUT_MATCHING_CONFIRMED_SIGNAL');
   const confirmedAtCloseMs=confirmationTime+H;
   const entryClosedAtMs=entryTime+H,exitClosedAtMs=exitTime+H;
   if(confirmedAtCloseMs>C&&entryTime>C&&exitTime>C){
