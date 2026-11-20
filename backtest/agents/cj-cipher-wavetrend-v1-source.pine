@@ -1,0 +1,72 @@
+//@version=6
+// CJ Cipher - WaveTrend Cross V1.0
+// Based on the original WaveTrend by LazyBear
+// Adapted for Pine Script v6
+// No divergences - crossings only
+
+indicator("CJ Cipher - WaveTrend V1.0", shorttitle="CJ Cipher WT", overlay=false, precision=2)
+
+// === SETTINGS ===
+groupWT = "WaveTrend Settings"
+n1 = input.int(10, "Channel Length", minval=1, group=groupWT)
+n2 = input.int(21, "Average Length", minval=1, group=groupWT)
+smooth = input.int(4, "Signal Smoothing", minval=1, group=groupWT)
+
+groupLevels = "Overbought / Oversold"
+ob1 = input.int(60, "Overbought Level 1", group=groupLevels)
+ob2 = input.int(53, "Overbought Level 2", group=groupLevels)
+os1 = input.int(-60, "Oversold Level 1", group=groupLevels)
+os2 = input.int(-53, "Oversold Level 2", group=groupLevels)
+
+groupSignals = "Signals"
+confirmClose = input.bool(true, "Confirm On Candle Close", group=groupSignals)
+showDots = input.bool(true, "Show Cross Dots", group=groupSignals)
+showDelta = input.bool(true, "Show Wave Difference", group=groupSignals)
+
+// === WAVETREND CALCULATION ===
+ap = hlc3
+esa = ta.ema(ap, n1)
+d = ta.ema(math.abs(ap - esa), n1)
+ci = d != 0 ? (ap - esa) / (0.015 * d) : 0.0
+tci = ta.ema(ci, n2)
+
+wt1 = tci
+wt2 = ta.sma(wt1, smooth)
+
+// === CROSSING SIGNALS ===
+crossUp = ta.crossover(wt1, wt2)
+crossDown = ta.crossunder(wt1, wt2)
+
+confirmed = not confirmClose or barstate.isconfirmed
+
+bullSignal = crossUp and confirmed
+bearSignal = crossDown and confirmed
+
+crossPoint = showDots and (bullSignal or bearSignal) ? wt2 : na
+
+// === REFERENCE LEVELS ===
+hline(0, "Zero", color=color.gray)
+hline(ob1, "Overbought 1", color=color.red)
+hline(ob2, "Overbought 2", color=color.new(color.red, 50))
+hline(os1, "Oversold 1", color=color.green)
+hline(os2, "Oversold 2", color=color.new(color.green, 50))
+
+// === WAVES ===
+plot(wt1, title="WT1", color=color.new(#2196F3, 10), style=plot.style_area)
+plot(wt2, title="WT2", color=color.new(color.blue, 10), style=plot.style_area)
+
+// Wave difference
+plot(showDelta ? wt1 - wt2 : na, title="Wave Difference", color=color.new(color.yellow, 35), style=plot.style_area)
+
+// === CROSS DOTS ===
+// Black outline
+plot(crossPoint, title="Dot Outline", color=color.black, style=plot.style_circles, linewidth=6)
+
+// Green bullish / Red bearish
+dotColor = bullSignal ? color.lime : color.red
+plot(crossPoint, title="Cross Signal", color=dotColor, style=plot.style_circles, linewidth=4)
+
+// === ALERTS ===
+alertcondition(bullSignal, title="CJ Cipher Bullish Cross", message="CJ Cipher: Bullish WaveTrend crossover on {{ticker}} {{interval}}")
+
+alertcondition(bearSignal, title="CJ Cipher Bearish Cross", message="CJ Cipher: Bearish WaveTrend crossover on {{ticker}} {{interval}}")

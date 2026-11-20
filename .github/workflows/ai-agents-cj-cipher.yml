@@ -1,0 +1,32 @@
+name: DEV CJ Cipher WaveTrend V1 1H real Bitunix research (read only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/cj-cipher-*'
+      - 'backtest/agents/run-cj-cipher-pilot.mjs'
+      - '.github/workflows/ai-agents-cj-cipher.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cipher-first-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original Pine formula, no repaint on closed bars and paired directional tests
+        run: node --test backtest/agents/cj-cipher-wavetrend-v1.test.mjs backtest/agents/cj-cipher-comparison.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/vector-v11-real-research.test.mjs
+      - name: Historical BTC HYPE PEPE 1H closed-bar pilot with exact double read
+        run: node backtest/agents/run-cj-cipher-pilot.mjs "${{ runner.temp }}/cj-cipher-wt-v1"
+      - name: Preserve original Bitunix OHLC and standalone / paired signals even if blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-CIPHER-WT-V1-INITIAL-RESEARCH
+          path: ${{ runner.temp }}/cj-cipher-wt-v1/
+          retention-days: 7
+          if-no-files-found: warn
