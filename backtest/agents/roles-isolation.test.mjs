@@ -22,17 +22,21 @@ const input={
     signals:[{time:intervalMs,side:'long'},{time:3*intervalMs,side:'flat'},
              {time:7*intervalMs,side:'short'},{time:9*intervalMs,side:'flat'}]}]
 };
-test('six explicit role modules preserve results of the original orchestrator',()=>{
+test('six core role modules remain isolated and role seven fails closed without market evidence',()=>{
   const d=auditData(input);
   const b=executeBacktests(input,d);
   const a=diagnose(d,b);
   const f=prepareCorrections(a);
   const v=validateWorkshop(d,b,a,f);
   const result=coordinate(input,[d,b,a,f,v]);
-  assert.deepEqual(result,runSixAgentWorkshop(input));
+  const full=runSixAgentWorkshop(input);
   assert.equal(SIX_AGENT_ROLES.length,6);
   assert.deepEqual(result.agents.map(a=>a.id),SIX_AGENT_ROLES.map(a=>a.id));
   assert.equal(result.status,'RESEARCH_READY');
+  assert.equal(full.status,'BLOCKED');
+  assert.deepEqual(full.agents.slice(0,6),result.agents);
+  assert.equal(full.agents[6].id,'market-context');
+  assert.equal(full.agents[6].status,'BLOCKED');
 });
 test('blocked OHLC propagates across six isolated modules, never to a trade',()=>{
   const d=auditData({...input,candles:[...candles,{...candles[0],time:500}]});

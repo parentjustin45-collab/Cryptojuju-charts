@@ -1,4 +1,4 @@
-# CryptoJuju — Agents de recherche, phase 1 (18 novembre 2026)
+# CryptoJuju — Atelier de recherche, phase 1 (20 novembre 2026)
 
 ## Objectif
 Préparer le système d'agents de backtest, sans payer un serveur, sans changer le site public et **sans exécuter d'ordres**.
@@ -7,12 +7,38 @@ Cette première phase est **déterministe**, pas encore un agent IA autonome. El
 `backtest/quality-gate.mjs` et `backtest/engine.mjs`. Les agents IA pourront ensuite orchestrer ces fonctions,
 mais **ne doivent jamais fabriquer des chandelles, valider eux-mêmes leurs propres résultats ou inventer des signaux**.
 
+Le rapport comprend maintenant **sept rôles déterministes**, le septième étant l'analyste de contexte multi-marchés.
+Le mot « agent » décrit ici un module avec une responsabilité séparée; aucun n'est encore un LLM autonome qui
+parcourt le Web ou travaille en continu. Cette étape ne déploie rien et n'ouvre aucun accès à Render.
+
 ## Responsabilités prévues
 1. **Agent intégrité Bitunix** : vérifier fenêtre, unité de temps, continuité, doublons et OHLC ; bloquer si incohérent.
-2. **Agent signaux** : recevoir les sorties versionnées de Vector, SPEED, Momentum, Frank Test et, plus tard, CJ Cipher.
-   Les divergences doivent être datées de leur **confirmation effective**, pas du pivot historique.
-3. **Agent backtest** : exécuter les signaux sur la **chandelle suivante** via le moteur existant, avec frais et slippage explicités.
-4. **Agent rapport** : comparer des expériences indépendantes, conserver les périodes perdues, éviter l'optimisation sur les beaux exemples.
+2. **Agent backtests** : exécuter les signaux fournis sur la **chandelle suivante**, avec frais et slippage.
+3. **Agent diagnostics** : repérer les anomalies OHLC, les métriques suspectes et les contrôles manquants.
+4. **Agent corrections** : préparer des pistes de correction, sans modifier les fichiers.
+5. **Agent validation** : vérifier les lots de données, les tests de non-régression et les limites du rapport.
+6. **Agent coordination** : assembler l'état des rôles et produire le résumé.
+7. **Agent contexte multi-marchés** : résumer largeur haussière/baissière, rendements, volatilité horaire,
+   corrélations et position dans la plage des dernières 24 h à partir d'au moins deux séries Bitunix 1 h acceptées.
+
+### Données d'entrée du rôle contexte
+`marketContext` contient `asOfTime`, `lookbackBars` (2–168, 24 par défaut) et `series`. Chaque série porte le
+marché, une fenêtre exclusive UTC, ses chandelles normalisées fermées, ainsi qu'une provenance déclarant la
+pagination complète, une répétition identique, l'exclusion de la chandelle ouverte et la parité OHLC avec la source.
+Le rôle vérifie l'alignement exact des séries, les relations OHLC, le timestamp de clôture et un SHA-256 calculé
+sur les colonnes normalisées `[time, open, high, low, close, volume]` dans cet ordre.
+
+Le statut d'acceptation et les contrôles de provenance restent des assertions de l'étape amont : ce module hors
+ligne ne contacte pas Bitunix et ne les authentifie pas indépendamment. Une configuration sans ces éléments,
+avec des empreintes non concordantes ou avec des séries désalignées est **BLOQUÉE**. Les tests CI emploient des
+fixtures clairement marquées synthétiques; leur réussite ne prouve ni la qualité de données réelles ni un avantage
+de marché.
+
+Le rôle calcule des mesures descriptives, pas le « vrai » plus bas ou sommet. Une position près du bas/haut de la
+plage glissante n'est qu'une observation rétrospective. Il ne génère aucun signal, ne modifie aucun indicateur,
+n'apprend pas seul et ne lit pas encore les nouvelles, actions ou sites externes. L'extension à des marchés
+boursiers attendra un flux de données distinct dont la source, la licence, les timestamps de disponibilité et la
+qualité OHLC seront contrôlés.
 
 ## Code disponible maintenant
 `runResearchBatch` dans `research-batch.mjs` est l'interface initiale hors ligne. Il accepte uniquement
@@ -43,7 +69,7 @@ Cette séparation permet la comparaison de phases indépendantes, mais **ne prou
 indicateur ne repeint pas, ni que la période holdout était réellement inconnue à l'opérateur.
 
 ### Tests hors ligne
-`node --test backtest/agents/*.test.mjs`
+`node --test backtest/agents/*.test.mjs backtest/agents/roles/*.test.mjs` et `node backtest/agents/ci-smoke.mjs`
 
 ## Prochaines étapes (non réalisées)
 - Adapter les sorties réelles de chaque indicateur à la convention temporelle (sans repaint).

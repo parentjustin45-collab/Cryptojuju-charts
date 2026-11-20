@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createControlCenterSnapshot,renderControlCenterHtml} from './control-center.mjs';
 
-const ids=['bitunix-data','backtests','diagnostics','corrections','validation','coordination'];
+const ids=['bitunix-data','backtests','diagnostics','corrections','validation','coordination','market-context'];
 const fakeReport={
   status:'RESEARCH_READY',
   agents:ids.map(id=>({id,status:id==='corrections'?'PROPOSALS_ONLY':'PASS',
@@ -14,7 +14,7 @@ test('control center always identifies synthetic provenance and rejects fake rea
  assert.equal(snap.autonomousAgentsActive,false);
  assert.equal(snap.continuousRuntime,false);
  assert.equal(snap.realMarketEvidence,false);
- assert.equal(snap.roles.length,6);
+ assert.equal(snap.roles.length,7);
  assert.equal(snap.diagnosticCount,1);
  assert.match(renderControlCenterHtml(snap),/MODE DÉMONSTRATION/);
  assert.throws(()=>createControlCenterSnapshot(fakeReport,{sourceKind:'REAL_BITUNIX'}),/not permitted/);
@@ -34,7 +34,7 @@ test('untrusted status strings cannot inject HTML or scripts into an archived re
  assert.match(html,/&lt;script&gt;/);
 });
 test('missing, misordered or unknown role contracts are refused',()=>{
- assert.throws(()=>createControlCenterSnapshot({...fakeReport,agents:fakeReport.agents.slice(0,5)}),/Six ordered/);
+ assert.throws(()=>createControlCenterSnapshot({...fakeReport,agents:fakeReport.agents.slice(0,5)}),/Seven ordered/);
  assert.throws(()=>createControlCenterSnapshot({...fakeReport,agents:[...fakeReport.agents].reverse()}),/Unexpected role/);
  assert.throws(()=>renderControlCenterHtml({schema:'fake',sourceKind:'UNVERIFIED_INPUT',roles:fakeReport.agents}),/schema/);
 });

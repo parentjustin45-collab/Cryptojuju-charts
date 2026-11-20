@@ -1,5 +1,11 @@
 # Les six agents CryptoJuju — statut de développement
 
+> Mise à jour du 20 novembre 2026 : les sections ci-dessous décrivent le socle historique à six rôles.
+> Le rôle 7 « contexte multi-marchés » est maintenant intégré dans le rapport courant de
+> `six-agent-workshop.mjs`; il exige au moins deux séries Bitunix 1 h avec provenance déclarée,
+> continuité et empreinte SHA-256 concordante. Les exécutions synthétiques restent des tests de structure,
+> pas de l'analyse de marché réelle. Voir le contrat détaillé dans `README.md`.
+
 Les **six responsabilités** sont représentées dans `six-agent-workshop.mjs` et testées dans GitHub Actions.
 Il ne s'agit **pas** encore de six agents de langage indépendants ni d'une exécution nocturne permanente.
 

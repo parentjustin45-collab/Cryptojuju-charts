@@ -4,7 +4,7 @@
  * The source-kind is always explicitly synthetic/unverified in this phase.
  */
 const ROLE_IDS=Object.freeze([
-  'bitunix-data','backtests','diagnostics','corrections','validation','coordination'
+  'bitunix-data','backtests','diagnostics','corrections','validation','coordination','market-context'
 ]);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -15,7 +15,8 @@ const labels=Object.freeze({
   'diagnostics':'03 · Diagnostics',
   'corrections':'04 · Corrections',
   'validation':'05 · Validation',
-  'coordination':'06 · Coordination'
+  'coordination':'06 · Coordination',
+  'market-context':'07 · Contexte multi-marchés'
 });
 const statusClass=status=>status==='BLOCKED'?'bad':
   status==='PROPOSALS_ONLY'?'pending':
@@ -26,11 +27,12 @@ const descriptions=Object.freeze({
   'diagnostics':'Contrôles et signaux suspects',
   'corrections':'Propositions sans écriture de code',
   'validation':'Tests et règles de sécurité',
-  'coordination':'Rapport et prochaines vérifications'
+  'coordination':'Rapport et prochaines vérifications',
+  'market-context':'Régime, largeur et position dans les plages 1 h'
 });
 export function createControlCenterSnapshot(report,{sourceKind='SYNTHETIC_CI_ONLY_NOT_BITUNIX',gitSha=null,createdAt=null}={}){
   if(!report||!Array.isArray(report.agents)||report.agents.length!==ROLE_IDS.length)
-    throw Error('Six ordered role reports required');
+    throw Error('Seven ordered role reports required');
   for(let i=0;i<ROLE_IDS.length;i++)
     if(report.agents[i]?.id!==ROLE_IDS[i]||typeof report.agents[i].status!=='string')
       throw Error('Unexpected role order or missing status');
@@ -42,7 +44,7 @@ export function createControlCenterSnapshot(report,{sourceKind='SYNTHETIC_CI_ONL
     throw Error('Invalid creation timestamp');
   const warnings=['AUCUNE DONNÉE RÉELLE CERTIFIÉE DANS CE TABLEAU',
     'Ce centre de contrôle est une photographie du dernier lot fourni, pas un moniteur en direct.',
-    'Six modules déterministes seulement : pas encore six agents IA autonomes.',
+    'Sept rôles déterministes seulement : pas encore sept agents IA autonomes.',
     'Aucune opération de trading ni déploiement autorisée.'];
   const findings=(report.agents.find(x=>x.id==='diagnostics')?.details?.findings??[]);
   return {
@@ -99,10 +101,10 @@ ul{padding-left:22px;line-height:1.7}footer{font-size:.82rem;color:#a9bfb2}
 <p class="muted">Rapport statique · Généré : ${esc(snapshot.generatedAt??'non renseigné')} · Commit : ${esc(snapshot.gitSha??'non renseigné')}</p></header>
 <section class="panel"><h2>État de cet essai technique</h2><div class="grid">
 <div class="metric">Atelier<b>${esc(snapshot.overallStatus)}</b></div>
-<div class="metric">Rôles exécutés<b>${snapshot.roles.length} / 6</b></div>
+<div class="metric">Rôles exécutés<b>${snapshot.roles.length} / 7</b></div>
 <div class="metric">Blocages<b>${snapshot.blockingRoleCount}</b></div>
 </div></section>
-<section class="panel"><h2>Six modules séparés</h2>${list}</section>
+<section class="panel"><h2>Sept rôles séparés</h2>${list}</section>
 <section class="panel"><h2>Avertissements</h2><ul>${warnings}</ul></section>
 <footer>Aucune connexion temps réel · Aucun ordre de trading · Aucun agent IA autonome en continu · Ne pas interpréter les résultats comme des performances historiques.</footer>
 </body></html>\n`;
