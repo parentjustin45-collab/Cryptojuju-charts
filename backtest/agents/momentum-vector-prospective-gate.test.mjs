@@ -80,6 +80,18 @@ test('unregistered variants and impossible timestamps are blocked',()=>{
   'INVALID_OR_DUPLICATE_SIGNAL');
 });
 
+test('entry must occur at the immediate next candle OPEN, never a delayed arbitrary bar',()=>{
+ const signal={time:C,side:'long'};
+ const proper={confirmationTime:C,entryTime:C+H,exitTime:C+3*H,side:'long'};
+ assert.equal(run({signals:[signal],trades:[proper]}).eligibleClosedTradeCount,1);
+ const late={...proper,entryTime:C+2*H};
+ assert.equal(run({signals:[signal],trades:[late]}).reason,
+  'INVALID_TRADE_TIMELINE_OR_UNVERIFIED_CANDLE');
+ const sameBar={...proper,entryTime:C};
+ assert.equal(run({signals:[signal],trades:[sameBar]}).reason,
+  'INVALID_TRADE_TIMELINE_OR_UNVERIFIED_CANDLE');
+});
+
 test('an invented trade without a corresponding directional confirmation is blocked',()=>{
  const trade={confirmationTime:C,entryTime:C+H,exitTime:C+2*H,side:'long'};
  assert.equal(run({trades:[trade]}).reason,'TRADE_WITHOUT_MATCHING_CONFIRMED_SIGNAL');

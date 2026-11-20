@@ -84,7 +84,7 @@ export function auditMomentumVectorProspective({
   const {confirmationTime,entryTime,exitTime}=t??{};
   if(![confirmationTime,entryTime,exitTime].every(Number.isSafeInteger)||
      !index.has(confirmationTime)||!index.has(entryTime)||!index.has(exitTime)||
-     confirmationTime+H>entryTime||entryTime>exitTime||
+     entryTime!==confirmationTime+H||entryTime>exitTime||
      seenTrades.has([confirmationTime,entryTime,exitTime].join(':')))
    return fail('INVALID_TRADE_TIMELINE_OR_UNVERIFIED_CANDLE');
   seenTrades.add([confirmationTime,entryTime,exitTime].join(':'));
