@@ -1,0 +1,59 @@
+{
+  "protocol": "CJ_CIPHER_V11_ONE_CLOSED_BAR_CONFIRMATION_ATR_V1",
+  "registeredAtUtc": "2026-11-20T02:45:33.998270+00:00",
+  "symbols": [
+    "BTCUSDT",
+    "HYPEUSDT",
+    "1000PEPEUSDT"
+  ],
+  "timeframe": "1h",
+  "closedBars": 960,
+  "trainingBars": 672,
+  "strategyIds": [
+    "cj_cipher_v10_atr",
+    "cj_cipher_v11_confirm1_atr"
+  ],
+  "hypothesis": "One extra closed bar of strict WT1/WT2 directional persistence before entry; original opposite cross exits immediately to FLAT next open. No retry after rejection; no threshold or EMA changes.",
+  "confirmationBars": 1,
+  "resetPendingAtPhaseBoundary": true,
+  "referenceJsSha256": "d2b6a10d4cb69337984313a7994fc2586ad1bcf59704e08c463744d7dbce7156",
+  "archive": {
+    "runId": 44656240484,
+    "artifactId": 14592114957,
+    "sha256": "b114495322d323e19669014de366455eee3620e8de28e67894c3e1f4dc03b1c6",
+    "path": "backtest/agents/fixtures/cj-cipher-source-44656240484.zip"
+  },
+  "risk": {
+    "atrPeriod": 14,
+    "stopAtrMultiple": 1.5,
+    "targetRMultiple": 2,
+    "maxHoldBars": 12,
+    "riskFraction": 0.01,
+    "maxNotionalFraction": 1,
+    "initialCapital": 1000,
+    "splitFraction": 0.7,
+    "costCases": {
+      "base": {
+        "feeRate": 0.0006,
+        "slippageRate": 0.0005
+      },
+      "stress": {
+        "feeRate": 0.001,
+        "slippageRate": 0.002
+      }
+    }
+  },
+  "prospective": {
+    "startUtc": "2026-11-20T04:00:00Z",
+    "endExclusiveUtc": "2026-12-02T04:00:00Z",
+    "evaluationBars": 288,
+    "minimumTradesPerArmPerMarket": 20,
+    "minimumBaselineWinnersRetainedFraction": 0.8,
+    "minimumMarketsWithStrictlyBetterBaseReturn": 2,
+    "requireNonWorseReturnAndDrawdownEveryMarketBothCostCases": true,
+    "requireLowerRapidOppositeExitCountAndRateInBaseAggregate": true,
+    "decision": "ELIGIBLE_FOR_BROADER_RESEARCH_ONLY; never automatic promotion",
+    "collection": "Manual fixed-window public-data collection only after endExclusiveUtc plus 2 minutes. Not scheduled by this registration."
+  },
+  "referencePineSha256": "f02eced39c2fd1cd130e251dc312f938bbeb8baff936197c607efdbb3f319c3e"
+}
