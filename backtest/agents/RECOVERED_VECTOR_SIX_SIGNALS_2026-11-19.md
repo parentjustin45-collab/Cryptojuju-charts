@@ -1,9 +1,9 @@
 # CryptoJuju — audit des six signaux Vector réintroduits (19 novembre 2026)
 
 **Statut : recherche historique descriptive, aucun gagnant promu.**
-Données issues **exclusivement** de l'artefact réel de [GitHub Actions 44626524231](https://github.com/parentjustin45-collab/Cryptojuju-charts/actions/runs/44626524231), artefact \`cj-VECTOR-1H-INTEGRATED-ATR-RECOVERY-RESEARCH\` (ID 14579796216, archive valable jusqu'au 26 novembre 2026). Commit testé : \`bdd70b70dc06f8338d0eb048c874dab6a89622aa\`.
+Données issues **exclusivement** de l'artefact réel de [GitHub Actions 44626524231](https://github.com/parentjustin45-collab/Cryptojuju-charts/actions/runs/44626524231), artefact `cj-VECTOR-1H-INTEGRATED-ATR-RECOVERY-RESEARCH` (ID 14579796216, archive valable jusqu'au 26 novembre 2026). Commit testé : `bdd70b70dc06f8338d0eb048c874dab6a89622aa`.
 
-Marchés : HYPEUSDT et 1000PEPEUSDT; BTCUSDT n'a **aucun** signal récupéré (11 oppositions Daily rejetées par la confirmation EMA en 1H). Chaque marché utilise 960 chandelles 1H closes et 365 Daily closes, avec source publique Bitunix LAST_PRICE lue deux fois et comparée. Les six cas ont été retrouvés en comparant les listes de commandes \`v11_daily_strict\` et \`v13_ema_confirmed_recovery\`, puis reliés aux transactions exactes dans \`*-integrated-portfolio-trades.json\`.
+Marchés : HYPEUSDT et 1000PEPEUSDT; BTCUSDT n'a **aucun** signal récupéré (11 oppositions Daily rejetées par la confirmation EMA en 1H). Chaque marché utilise 960 chandelles 1H closes et 365 Daily closes, avec source publique Bitunix LAST_PRICE lue deux fois et comparée. Les six cas ont été retrouvés en comparant les listes de commandes `v11_daily_strict` et `v13_ema_confirmed_recovery`, puis reliés aux transactions exactes dans `*-integrated-portfolio-trades.json`.
 
 ## Les six cas audités — heure locale du Québec
 
@@ -43,15 +43,26 @@ Le train/holdout est séparé au **7 novembre 2026, 22:00 UTC** (soit le 7 novem
 
 ### Provenance explicite des données historisées
 
-- HYPE 1H SHA256 des lignes brutes : \`d707770c223d20d68be17d5633eacff3183d91a59408cbb4042ed143cb214ca1\`
-- HYPE 1D SHA256 : \`f8fad2a66c8346fee30962dd081796c1fe8603439acefb616329a390d80719e4\`
-- 1000PEPE 1H SHA256 : \`bf5753d4f05428842dfb7d5f4bba41030199804618151937e4e15d3e0a0cc411\`
-- 1000PEPE 1D SHA256 : \`8b79c95844cfe13f3fe850b3ab9301d7ae6c040f554e4f66e7da31c5e4fa2b89\`
+- HYPE 1H SHA256 des lignes brutes : `d707770c223d20d68be17d5633eacff3183d91a59408cbb4042ed143cb214ca1`
+- HYPE 1D SHA256 : `f8fad2a66c8346fee30962dd081796c1fe8603439acefb616329a390d80719e4`
+- 1000PEPE 1H SHA256 : `bf5753d4f05428842dfb7d5f4bba41030199804618151937e4e15d3e0a0cc411`
+- 1000PEPE 1D SHA256 : `8b79c95844cfe13f3fe850b3ab9301d7ae6c040f554e4f66e7da31c5e4fa2b89`
 
 Ces empreintes permettent de rattacher les six événements à la capture Bitunix contrôlée; **aucune comparaison indépendante TradingView**, aucun funding ni exécution réelle n'ont été démontrés.
 
+## Contrôle de répétabilité GitHub Actions (même source archivée)
+
+Un second programme de replay, dans le dépôt, a parcouru exactement la
+même archive Bitunix GitHub et a comparé les commandes, les barres de
+confirmation, les EMA, le dernier Daily clos et les portefeuilles simulés.
+Le workflow [DEV inspect EXACT six archived Vector recovery signals](https://github.com/parentjustin45-collab/Cryptojuju-charts/actions/runs/44629325163)
+a réussi **8 tests sur 8**, avec **6 signaux retrouvés sur 6** et des
+écarts de rendement de portefeuille identiques aux tableaux ci-dessus.
+C'est une vérification informatique de **répétabilité sur la même source**,
+et non une validation de marché indépendante.
+
 ## Décision de recherche pour le prochain cycle des agents
 
-**Ne pas** changer de réglages pour « sauver » ces six cas (surajustement). Garder \`v11_daily_strict\` comme comparateur, et conserver V1.1 original. Lancer une **nouvelle hypothèse prédéfinie**, testée séparément sans regarder le résultat pendant le réglage, telle que Momentum Fusion (ou Frank Test, pas les deux ensemble) comme confirmation de reprise, avec une chronologie sans repaint et les mêmes coûts base/stress. Étendre à d'autres périodes/marchés, imposer une taille minimale d'échantillon et valider prospectivement avant toute promotion. Contrôler séparément le retard de la nouvelle bougie 1H en direct.
+**Ne pas** changer de réglages pour « sauver » ces six cas (surajustement). Garder `v11_daily_strict` comme comparateur, et conserver V1.1 original. Lancer une **nouvelle hypothèse prédéfinie**, testée séparément sans regarder le résultat pendant le réglage, telle que Momentum Fusion (ou Frank Test, pas les deux ensemble) comme confirmation de reprise, avec une chronologie sans repaint et les mêmes coûts base/stress. Étendre à d'autres périodes/marchés, imposer une taille minimale d'échantillon et valider prospectivement avant toute promotion. Contrôler séparément le retard de la nouvelle bougie 1H en direct.
 
-Toute cette étude est **research only**, en branche \`dev/ai-agents-phase1\` : aucun ordre Bitunix, aucun déploiement, aucun changement de \`main\`, \`dev/v1.26.0\` ou du site public.
+Toute cette étude est **research only**, en branche `dev/ai-agents-phase1` : aucun ordre Bitunix, aucun déploiement, aucun changement de `main`, `dev/v1.26.0` ou du site public.
