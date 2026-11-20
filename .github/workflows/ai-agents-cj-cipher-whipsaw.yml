@@ -1,0 +1,40 @@
+name: DEV diagnose EXACT CJ Cipher V1 crosses (archived only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/cj-cipher-whipsaw-*'
+      - 'backtest/agents/run-cj-cipher-whipsaw-audit.mjs'
+      - '.github/workflows/ai-agents-cj-cipher-whipsaw.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  cipher-failure-mode-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate research diagnostic and original WT signal contract
+        run: node --test backtest/agents/cj-cipher-whipsaw-diagnostic.test.mjs backtest/agents/cj-cipher-wavetrend-v1.test.mjs
+      - name: Download SAME completed source run, not moving Bitunix history
+        uses: actions/download-artifact@v4
+        with:
+          name: cj-CIPHER-WT-V1-INITIAL-RESEARCH
+          run-id: 44656240484
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cj-cipher-fixed-source
+      - name: Rebuild exact crosses and original portfolio; classify failure modes
+        run: node backtest/agents/run-cj-cipher-whipsaw-audit.mjs "${{ runner.temp }}/cj-cipher-fixed-source" "${{ runner.temp }}/cj-cipher-whipsaw-audit"
+      - name: Archive exact-source diagnostic and per-trade labels
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-CIPHER-V1-CROSS-WHIPSAW-EXACT-REPLAY
+          path: ${{ runner.temp }}/cj-cipher-whipsaw-audit/
+          retention-days: 7
+          if-no-files-found: warn
