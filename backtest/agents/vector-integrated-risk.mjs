@@ -22,9 +22,13 @@ export const INTEGRATED_RECOVERY_LOCK=Object.freeze({
 export const INTEGRATED_MOMENTUM_IDS=Object.freeze([
   'vector_v11','momentum_fusion_v1','vector_v11_momentum_confirmed'
 ]);
+export const INTEGRATED_CIPHER_CONFIRM1_IDS=Object.freeze([
+  'cj_cipher_v10_atr','cj_cipher_v11_confirm1_atr'
+]);
 const verifiedIds=ids=>Array.isArray(ids)&&(
  JSON.stringify(ids)===JSON.stringify(INTEGRATED_RECOVERY_LOCK.strategyIds)||
- JSON.stringify(ids)===JSON.stringify(INTEGRATED_MOMENTUM_IDS)
+ JSON.stringify(ids)===JSON.stringify(INTEGRATED_MOMENTUM_IDS)||
+ JSON.stringify(ids)===JSON.stringify(INTEGRATED_CIPHER_CONFIRM1_IDS)
 );
 const r=x=>Math.round(x*1e6)/1e6;
 function requireSignals(signals,bars){
@@ -260,7 +264,8 @@ export function runIntegratedVectorRiskStudy({
   protocol:strategyIds===INTEGRATED_RECOVERY_LOCK.strategyIds||
    JSON.stringify(strategyIds)===JSON.stringify(INTEGRATED_RECOVERY_LOCK.strategyIds)?
    'CJ_INTEGRATED_RISK_VECTOR_DAILY_RECOVERY_V1':
-   'CJ_INTEGRATED_RISK_MOMENTUM_VECTOR_V1',
+   JSON.stringify(strategyIds)===JSON.stringify(INTEGRATED_CIPHER_CONFIRM1_IDS)?
+   'CJ_INTEGRATED_RISK_CIPHER_CONFIRM1_V1':'CJ_INTEGRATED_RISK_MOMENTUM_VECTOR_V1',
   strategies:[...strategyIds],
   status:'SIMULATED_ONE_POSITION_PORTFOLIO_ONLY',
   market,historyWindow,

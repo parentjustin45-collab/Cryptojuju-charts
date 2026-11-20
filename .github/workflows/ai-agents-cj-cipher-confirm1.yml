@@ -1,0 +1,45 @@
+name: DEV CJ Cipher V1.1 one-bar confirmation (fixed archive ATR)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/cj-cipher-confirm1*'
+      - 'backtest/agents/run-cj-cipher-confirm1.mjs'
+      - 'backtest/agents/vector-integrated-risk.mjs'
+      - '.github/workflows/ai-agents-cj-cipher-confirm1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired-atr-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check causal timing and exact common ATR execution
+        run: node --test backtest/agents/cj-cipher-confirm1.test.mjs backtest/agents/cj-cipher-wavetrend-v1.test.mjs backtest/agents/vector-integrated-risk.test.mjs
+      - name: Verify preserved archive before extraction
+        env:
+          SOURCE: ${{ runner.temp }}/cj-cipher-locked-source
+        run: |
+          python3 - <<'PY'
+          import os,json,hashlib,zipfile
+          lock=json.load(open('backtest/agents/cj-cipher-v11-lock.json'))
+          path=lock['archive']['path']
+          assert hashlib.sha256(open(path,'rb').read()).hexdigest()==lock['archive']['sha256']
+          with zipfile.ZipFile(path) as archive:
+              archive.extractall(os.environ['SOURCE'])
+          PY
+      - name: Compare two frozen arms on exact same archived candles
+        run: node backtest/agents/run-cj-cipher-confirm1.mjs "${{ runner.temp }}/cj-cipher-locked-source" "${{ runner.temp }}/cj-cipher-confirm1"
+      - name: Retain paired trades, rejected signals and missed departures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-CIPHER-CONFIRM1-FIXED-ARCHIVE-ATR
+          path: ${{ runner.temp }}/cj-cipher-confirm1/
+          retention-days: 90
+          if-no-files-found: error
