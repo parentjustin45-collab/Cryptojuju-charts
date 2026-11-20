@@ -1,0 +1,33 @@
+name: DEV Momentum Fusion vs Vector 1H paired portfolio (research only)
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/momentum-vector-integrated*'
+      - 'backtest/agents/run-momentum-vector-pilot.mjs'
+      - 'backtest/agents/vector-integrated-risk.mjs'
+      - '.github/workflows/ai-agents-momentum-vector-paired.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  momentum-vector-paired:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify causal Momentum, unchanged Vector, exact 3 variants, ATR fills, risk and no-lookahead
+        run: node --test backtest/momentum-fusion-v1.test.mjs backtest/agents/momentum-vector-integrated.test.mjs backtest/agents/vector-integrated-risk.test.mjs backtest/agents/bitunix-data-pilot.test.mjs
+      - name: Run official Bitunix double-read 1H market pilot with shared ATR strategy fills
+        run: node backtest/agents/run-momentum-vector-pilot.mjs "${{ runner.temp }}/cj-momentum-vector-paired"
+      - name: Archive OHLC, exact signals and individual simulated trades even if blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-MOMENTUM-VECTOR-1H-INTEGRATED-RESEARCH
+          path: ${{ runner.temp }}/cj-momentum-vector-paired/
+          retention-days: 7
+          if-no-files-found: warn

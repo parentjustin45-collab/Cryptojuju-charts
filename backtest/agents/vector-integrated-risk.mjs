@@ -17,6 +17,15 @@ export const INTEGRATED_RECOVERY_LOCK=Object.freeze({
   policy:'ATR14_1.5_STOP_2R_TARGET_12_BAR_TIMEOUT_NO_LEVERAGE',
   phaseSplitFraction:0.7
 });
+// A second FIXED protocol reuses the identical one-position ATR simulator.
+// Explicitly allowlisted to prevent arbitrary strategies or retroactive modes.
+export const INTEGRATED_MOMENTUM_IDS=Object.freeze([
+  'vector_v11','momentum_fusion_v1','vector_v11_momentum_confirmed'
+]);
+const verifiedIds=ids=>Array.isArray(ids)&&(
+ JSON.stringify(ids)===JSON.stringify(INTEGRATED_RECOVERY_LOCK.strategyIds)||
+ JSON.stringify(ids)===JSON.stringify(INTEGRATED_MOMENTUM_IDS)
+);
 const r=x=>Math.round(x*1e6)/1e6;
 function requireSignals(signals,bars){
  if(!Array.isArray(signals))throw Error('Missing Vector commands');
@@ -215,7 +224,8 @@ function phasePortfolio({bars,atr,command,from,to,policy,friction}){
   riskModelOnly:true,trades};
 }
 export function runIntegratedVectorRiskStudy({
- bars,market,historyWindow,commandsByVariant,policy=VETO_TRADE_POLICY
+ bars,market,historyWindow,commandsByVariant,policy=VETO_TRADE_POLICY,
+ strategyIds=INTEGRATED_RECOVERY_LOCK.strategyIds
 }={}){
  validatePolicy(policy);
  if(market?.exchange!=='Bitunix'||market?.priceType!=='LAST_PRICE'||
@@ -224,12 +234,12 @@ export function runIntegratedVectorRiskStudy({
   throw Error('Only verified 960-closed-bar BTC/HYPE/PEPE 1h pilot allowed');
  const clean=requireCleanHistory(classifyHistory(bars,historyWindow));
  if(clean.length!==960||historyWindow.intervalMs!==3600000||
-    !commandsByVariant||
-    Object.keys(commandsByVariant).length!==INTEGRATED_RECOVERY_LOCK.strategyIds.length||
-    !INTEGRATED_RECOVERY_LOCK.strategyIds.every(id=>Object.hasOwn(commandsByVariant,id)))
-  throw Error('Unverified history or missing four integrated strategy variants');
+    !verifiedIds(strategyIds)||!commandsByVariant||
+    Object.keys(commandsByVariant).length!==strategyIds.length||
+    !strategyIds.every(id=>Object.hasOwn(commandsByVariant,id)))
+  throw Error('Unverified history or invalid fixed integrated strategy variants');
  const atr=wilderAtr(clean,policy.atrPeriod);
- const commands=Object.fromEntries(INTEGRATED_RECOVERY_LOCK.strategyIds.map(id=>
+ const commands=Object.fromEntries(strategyIds.map(id=>
   [id,requireSignals(commandsByVariant[id],clean)]));
  const split=Math.floor(clean.length*policy.splitFraction);
  if(split<policy.atrPeriod+policy.maxHoldBars+2||
@@ -238,7 +248,7 @@ export function runIntegratedVectorRiskStudy({
  const scenarios={};
  for(const [costName,friction] of Object.entries(policy.costCases)){
   scenarios[costName]={};
-  for(const id of INTEGRATED_RECOVERY_LOCK.strategyIds){
+  for(const id of strategyIds){
    const command=commands[id];
    scenarios[costName][id]={
     training:phasePortfolio({bars:clean,atr,command,from:0,to:split,policy,friction}),
@@ -247,7 +257,11 @@ export function runIntegratedVectorRiskStudy({
   }
  }
  return {
-  protocol:'CJ_INTEGRATED_RISK_VECTOR_DAILY_RECOVERY_V1',
+  protocol:strategyIds===INTEGRATED_RECOVERY_LOCK.strategyIds||
+   JSON.stringify(strategyIds)===JSON.stringify(INTEGRATED_RECOVERY_LOCK.strategyIds)?
+   'CJ_INTEGRATED_RISK_VECTOR_DAILY_RECOVERY_V1':
+   'CJ_INTEGRATED_RISK_MOMENTUM_VECTOR_V1',
+  strategies:[...strategyIds],
   status:'SIMULATED_ONE_POSITION_PORTFOLIO_ONLY',
   market,historyWindow,
   splitAtUtc:new Date(clean[split].time).toISOString(),
@@ -264,7 +278,7 @@ export function runIntegratedVectorRiskStudy({
    'Returns are model-dependent and hypothetical: no spread, funding, minimum lot, market impact, mark-price stop or actual fill verification.',
    'The historical holdout is already inspected by CryptoJuju. A positive simulation cannot validate future profitability.',
    'Drawdown is marked on candle CLOSE and includes assumed liquidation fees; intrabar adverse risk and gap losses can be larger.',
-   'Daily recovered entries use EMA trend from a CLOSED hourly candle only, not future prices.',
+   'Every variant uses confirmed-bar signals only. Daily recovery uses closed 1H EMA; Momentum experiment uses its own closed-bar oscillator/EMA readings.',
    'No real orders, no automatic strategy promotion, no TradingView parity or public-site changes.'
   ]
  };
