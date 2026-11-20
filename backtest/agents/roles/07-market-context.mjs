@@ -1,6 +1,6 @@
 /*
- * Role 7: descriptive multi-market context from pre-accepted closed candles.
- * No network reads, prediction, indicator tuning or trade signals.
+ * Role 7: descriptive market context from accepted candles and source-stamped
+ * observations. No network reads, prediction, indicator tuning or trade signals.
  */
 import {createHash} from 'node:crypto';
 import {record} from './shared.mjs';
@@ -9,11 +9,26 @@ const HOUR_MS=3_600_000;
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const mean=values=>values.reduce((sum,value)=>sum+value,0)/values.length;
 const safeSymbol=value=>typeof value==='string'&&/^[A-Z0-9_]{3,40}$/.test(value);
+const OBSERVATION_TYPES=new Set([
+  'official_announcement','earnings','regulation','macro_data','network_event',
+  'security_incident','listing','research','other'
+]);
+const SOURCE_TYPES=new Set(['official_exchange','official_issuer','regulator','government','media','research']);
+const utcMs=value=>Number.isSafeInteger(value)&&Number.isFinite(new Date(value).getTime());
 
 /** Hash the normalized candle rows in a fixed column order. */
 export function fingerprintMarketCandles(candles){
   const canonical=candles.map(c=>[c.time,c.open,c.high,c.low,c.close,c.volume]
     .map(Number));
+  return `sha256:${createHash('sha256').update(JSON.stringify(canonical)).digest('hex')}`;
+}
+
+/** Hash normalized evidence metadata; this does not authenticate the publisher or page. */
+export function fingerprintMarketObservation(observation){
+  const url=new URL(observation.source.url);
+  const canonical=[observation.id,observation.category,observation.headline,observation.summary,
+    observation.source.name,observation.source.kind,url.href,observation.publishedAt,
+    observation.knownAt,[...observation.assetSymbols].sort()];
   return `sha256:${createHash('sha256').update(JSON.stringify(canonical)).digest('hex')}`;
 }
 
@@ -62,6 +77,51 @@ function validateSeries(series,context,syntheticOnly){
   return null;
 }
 
+function validateObservations(observations,asOfTime){
+  if(observations===undefined)return {error:null,items:[]};
+  if(!Array.isArray(observations)||observations.length>250)
+    return {error:'Provide no more than 250 source-stamped observations',items:[]};
+  const ids=new Set();
+  const items=[];
+  for(let i=0;i<observations.length;i++){
+    const item=observations[i];
+    if(!item||typeof item.id!=='string'||!/^[A-Za-z0-9._:-]{1,100}$/.test(item.id)||ids.has(item.id))
+      return {error:`Observation ${i} has a missing or duplicate stable ID`,items:[]};
+    ids.add(item.id);
+    if(!OBSERVATION_TYPES.has(item.category)||typeof item.headline!=='string'
+        ||item.headline.trim().length<1||item.headline.length>240
+        ||typeof item.summary!=='string'||item.summary.trim().length<1||item.summary.length>2000)
+      return {error:`Observation ${item.id} has an invalid category, headline or summary`,items:[]};
+    const source=item.source;
+    if(!source||typeof source.name!=='string'||source.name.trim().length<1||source.name.length>120
+        ||!SOURCE_TYPES.has(source.kind))
+      return {error:`Observation ${item.id} has incomplete publisher metadata`,items:[]};
+    let url;
+    try{
+      url=new URL(source.url);
+      if(url.protocol!=='https:'||url.username||url.password)
+        throw Error('https publisher URL required');
+    }catch{
+      return {error:`Observation ${item.id} must cite a valid HTTPS source URL`,items:[]};
+    }
+    if(!utcMs(item.publishedAt)||!utcMs(item.knownAt)
+        ||item.publishedAt>item.knownAt||item.knownAt>asOfTime)
+      return {error:`Observation ${item.id} was not verifiably available by asOfTime`,items:[]};
+    if(!Array.isArray(item.assetSymbols)||item.assetSymbols.length<1||item.assetSymbols.length>50
+        ||item.assetSymbols.some(symbol=>!safeSymbol(symbol))
+        ||new Set(item.assetSymbols).size!==item.assetSymbols.length)
+      return {error:`Observation ${item.id} must identify 1–50 unique market symbols`,items:[]};
+    if(!/^sha256:[a-f0-9]{64}$/.test(item.recordFingerprint??'')
+        ||fingerprintMarketObservation(item)!==item.recordFingerprint)
+      return {error:`Observation ${item.id} fingerprint is missing or does not match its normalized record`,items:[]};
+    items.push({id:item.id,category:item.category,headline:item.headline,summary:item.summary,
+      publishedAt:item.publishedAt,knownAt:item.knownAt,assetSymbols:[...item.assetSymbols],
+      source:{name:source.name,kind:source.kind,url:url.href,host:url.host},
+      recordFingerprint:item.recordFingerprint});
+  }
+  return {error:null,items};
+}
+
 function summarize(series,lookbackBars){
   const candles=series.acceptedCandles.slice(-(lookbackBars+1));
   const returns=[];
@@ -96,8 +156,9 @@ function correlation(a,b){
 
 /**
  * `marketContext.series` must contain at least two upstream-accepted Bitunix 1h
- * histories. The accepted status is an upstream assertion; this offline role
- * checks schema, continuity, OHLC relations and the normalized-row fingerprint.
+ * histories. Optional observations carry publisher citations and the time they
+ * became known. Acceptance, source identity and timestamps remain upstream
+ * assertions; this offline role checks schemas and fingerprints only.
  */
 export function analyzeMarketContext(marketContext){
   const seriesList=marketContext?.series;
@@ -120,6 +181,8 @@ export function analyzeMarketContext(marketContext){
     if(series.acceptedCandles.length<lookbackBars+1)
       return blocked(`Market ${series.market.symbol} has fewer rows than the requested lookback`,{lookbackBars});
   }
+  const evidence=validateObservations(marketContext.observations,asOfTime);
+  if(evidence.error)return blocked(evidence.error);
   const markets=seriesList.map(series=>summarize(series,lookbackBars));
   const up=markets.filter(market=>market.returnPct>0).length;
   const down=markets.filter(market=>market.returnPct<0).length;
@@ -144,6 +207,8 @@ export function analyzeMarketContext(marketContext){
       formingBarExcluded:series.provenance.formingBarExcluded,
       ohlcAlignedToSource:series.provenance.ohlcAlignedToSource})),
     breadth:{up,down,flat,breadthPct},regime,markets,correlations,
+    observations:evidence.items,observationCount:evidence.items.length,
+    observationLimit:'Source records are time-checked and fingerprinted, not fetched or fact-checked by this role.',
     interpretation:'Descriptive context and rolling range location only; near-range highs/lows are not confirmed market tops/bottoms.',
     dataLimit:'Upstream acceptance is asserted by the caller and is not independently authenticated by this offline role.',
     descriptiveOnly:true,noTradeSignals:true,noInvestmentRecommendation:true,

@@ -28,17 +28,23 @@ pagination complète, une répétition identique, l'exclusion de la chandelle ou
 Le rôle vérifie l'alignement exact des séries, les relations OHLC, le timestamp de clôture et un SHA-256 calculé
 sur les colonnes normalisées `[time, open, high, low, close, volume]` dans cet ordre.
 
-Le statut d'acceptation et les contrôles de provenance restent des assertions de l'étape amont : ce module hors
-ligne ne contacte pas Bitunix et ne les authentifie pas indépendamment. Une configuration sans ces éléments,
-avec des empreintes non concordantes ou avec des séries désalignées est **BLOQUÉE**. Les tests CI emploient des
-fixtures clairement marquées synthétiques; leur réussite ne prouve ni la qualité de données réelles ni un avantage
-de marché.
+Le rôle peut aussi recevoir `observations[]` : catégorie, titre, résumé, actifs touchés, éditeur, URL HTTPS,
+`publishedAt`, `knownAt` et une empreinte SHA-256 du dossier normalisé. `knownAt` représente le moment où la
+source a rendu l'information disponible; une observation publiée ou connue après `asOfTime` est **BLOQUÉE**.
+Les doublons, URL non HTTPS et empreintes périmées bloquent également le lot. Le rapport conserve les citations
+et les horodatages, sans déduire un sentiment ni changer les signaux.
+
+Les statuts d'acceptation, l'identité de la source et les dates fournies restent des assertions de l'étape amont :
+le module hors ligne ne contacte pas Bitunix ou les éditeurs et ne vérifie pas le contenu des pages. L'empreinte
+contrôle seulement que le dossier structuré n'a pas changé depuis sa préparation; elle n'authentifie pas le site.
+Les tests CI emploient des fixtures clairement marquées synthétiques; leur réussite ne prouve ni la qualité des
+données réelles ni un avantage de marché.
 
 Le rôle calcule des mesures descriptives, pas le « vrai » plus bas ou sommet. Une position près du bas/haut de la
-plage glissante n'est qu'une observation rétrospective. Il ne génère aucun signal, ne modifie aucun indicateur,
-n'apprend pas seul et ne lit pas encore les nouvelles, actions ou sites externes. L'extension à des marchés
-boursiers attendra un flux de données distinct dont la source, la licence, les timestamps de disponibilité et la
-qualité OHLC seront contrôlés.
+plage glissante n'est qu'une observation rétrospective. Il ne génère aucun signal, ne modifie aucun indicateur et
+n'apprend pas seul. Les observations doivent encore lui être fournies : aucun site n'est parcouru automatiquement.
+L'extension aux actions attendra un flux de données distinct dont la source, la licence, les timestamps de
+disponibilité et la qualité OHLC seront contrôlés.
 
 ## Code disponible maintenant
 `runResearchBatch` dans `research-batch.mjs` est l'interface initiale hors ligne. Il accepte uniquement

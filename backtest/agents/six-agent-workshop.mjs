@@ -11,6 +11,8 @@ import {validateWorkshop} from './roles/05-validation.mjs';
 import {coordinate} from './roles/06-coordination.mjs';
 import {analyzeMarketContext} from './roles/07-market-context.mjs';
 export {SEVEN_AGENT_ROLES,SIX_AGENT_ROLES} from './roles/06-coordination.mjs';
+const mdText=value=>String(value??'').replace(/[\r\n]+/g,' ')
+  .replace(/[<>`*_#{}\[\]|]/g,'').replace(/\s{2,}/g,' ').trim();
 
 export function runSevenAgentWorkshop(input={}) {
   const data=auditData(input);
@@ -29,6 +31,7 @@ export function formatWorkshopMarkdown(report) {
   const rows=report.agents.map(a=>`| ${a.id} | ${a.status} |`).join('\n');
   const findings=report.agents.find(a=>a.id==='diagnostics')?.details.findings??[];
   const market=report.agents.find(a=>a.id==='market-context');
+  const observations=market?.details?.observations??[];
   const lines=[
     '# CryptoJuju — Rapport des sept rôles',
     '',
@@ -45,6 +48,17 @@ export function formatWorkshopMarkdown(report) {
     ...(market?.details?.markets?.length?[]:['- Contexte bloqué ou absent; aucune conclusion multi-marchés.']),
     ...(market?.status==='PASS_SYNTHETIC_ONLY'?['- **Fixtures synthétiques : ces chiffres ne décrivent pas le marché réel.**']:[]),
     ...(market?.details?.dataLimit?[`- Limite : ${market.details.dataLimit}`]:[]),
+    '',
+    `## Sources horodatées (${observations.length})`,
+    ...(observations.length?observations.map((item,index)=>{
+      const title=mdText(item.headline);
+      const source=mdText(item.source.name);
+      const href=new URL(item.source.url).href;
+      const published=new Date(item.publishedAt).toISOString();
+      const known=new Date(item.knownAt).toISOString();
+      return `- [${index+1}] ${title} — [${source}](<${href}>), publié ${published}, connu au plus tôt ${known}; actifs : ${item.assetSymbols.join(', ')}.`;
+    }):['- Aucune observation externe fournie pour ce lot.']),
+    ...(market?.details?.observationLimit?[`- ${market.details.observationLimit}`]:[]),
     '',
     '> Tests de recherche uniquement. Aucune transaction ni modification de main.',
     ''

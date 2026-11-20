@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {analyzeMarketContext,fingerprintMarketCandles} from './07-market-context.mjs';
+import {analyzeMarketContext,fingerprintMarketCandles,fingerprintMarketObservation} from './07-market-context.mjs';
 
 const hour=3_600_000;
 function series(symbol,scale){
@@ -17,6 +17,14 @@ function series(symbol,scale){
 function fixture(){
   return {fixtureKind:'SYNTHETIC_CI_ONLY_NOT_BITUNIX',asOfTime:25*hour,lookbackBars:24,
     series:[series('SYNTH_BTC',1),series('SYNTH_ETH',-0.6)]};
+}
+function observation(){
+  const item={id:'notice-001',category:'official_announcement',headline:'BTC network maintenance notice',
+    summary:'Example fixture notice for testing source and time fields.',
+    publishedAt:20*hour,knownAt:21*hour,assetSymbols:['BTCUSDT'],
+    source:{name:'Example Exchange',kind:'official_exchange',url:'https://example.com/notice/001'}};
+  item.recordFingerprint=fingerprintMarketObservation(item);
+  return item;
 }
 
 test('summarizes aligned markets with breadth, range context and correlations, no signals',()=>{
@@ -66,4 +74,35 @@ test('accepts Bitunix only when all declared upstream provenance gates pass',()=
   assert.equal(accepted.status,'PASS_RESEARCH_ONLY');
   input.series[0].provenance.repeatedFetchMatches=false;
   assert.equal(analyzeMarketContext(input).status,'BLOCKED');
+});
+
+test('retains cited observations only when publication and known-at times precede asOf',()=>{
+  const input=fixture();
+  input.observations=[observation()];
+  const report=analyzeMarketContext(input);
+  assert.equal(report.status,'PASS_SYNTHETIC_ONLY');
+  assert.equal(report.details.observationCount,1);
+  assert.equal(report.details.observations[0].source.host,'example.com');
+  const lateKnown=fixture();
+  const late=observation();late.knownAt=26*hour;
+  late.recordFingerprint=fingerprintMarketObservation(late);
+  lateKnown.observations=[late];
+  assert.match(analyzeMarketContext(lateKnown).details.reason,/available by asOfTime/);
+  const latePublished=fixture();
+  const future=observation();future.publishedAt=26*hour;future.knownAt=27*hour;
+  future.recordFingerprint=fingerprintMarketObservation(future);
+  latePublished.observations=[future];
+  assert.equal(analyzeMarketContext(latePublished).status,'BLOCKED');
+});
+
+test('blocks tampered source summaries, duplicate IDs and non-HTTPS citations',()=>{
+  const tampered=fixture();
+  const item=observation();item.summary+=' edited';tampered.observations=[item];
+  assert.match(analyzeMarketContext(tampered).details.reason,/fingerprint/);
+  const duplicate=fixture();duplicate.observations=[observation(),observation()];
+  assert.match(analyzeMarketContext(duplicate).details.reason,/duplicate stable ID/);
+  const insecure=fixture();
+  const bad=observation();bad.source.url='http://example.com/notice/001';
+  bad.recordFingerprint=fingerprintMarketObservation(bad);insecure.observations=[bad];
+  assert.match(analyzeMarketContext(insecure).details.reason,/HTTPS/);
 });
