@@ -1,0 +1,2213 @@
+{
+  "status": "HISTORICAL_PAIRED_TIMEFRAME_COMPARISON",
+  "endUtc": "2026-11-20T00:00:00Z",
+  "riskPolicy": {
+    "atrPeriod": 14,
+    "stopAtrMultiple": 1.5,
+    "targetRMultiple": 2,
+    "maxHoldBars": 12,
+    "riskFraction": 0.01,
+    "maxNotionalFraction": 1,
+    "initialCapital": 1000,
+    "splitFraction": 0.7,
+    "costCases": {
+      "base": {
+        "feeRate": 0.0006,
+        "slippageRate": 0.0005
+      },
+      "stress": {
+        "feeRate": 0.001,
+        "slippageRate": 0.002
+      }
+    }
+  },
+  "results": [
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "15m",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1794268800000,
+        "endTime": 1795132800000,
+        "intervalMs": 900000
+      },
+      "holdoutStartUtc": "2026-11-17T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "BTCUSDT",
+            "timeframe": "15m",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1794268800000,
+            "endTime": 1795132800000,
+            "intervalMs": 900000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "1df2c34fa9499c37b10864a747ee0408a51558c90d315e60dd709a0e7162b5f9",
+          "secondRawSha256": "1df2c34fa9499c37b10864a747ee0408a51558c90d315e60dd709a0e7162b5f9",
+          "overlapRawSha256First": "56d4b9c9f2cdc59b77cf28c10c74c33b33edf34431b5ba73e467c37d4ad72482",
+          "overlapRawSha256Second": "56d4b9c9f2cdc59b77cf28c10c74c33b33edf34431b5ba73e467c37d4ad72482",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "35d9677cd0919329af677af16cc26913c119568a395a93be0c6a4ae2a26c03b7",
+        "corrected": 21
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 102,
+              "returnPct": -20.170131,
+              "closeMarkedMaxDrawdownPct": 20.798742,
+              "winRatePct": 21.568627,
+              "longTrades": 51,
+              "shortTrades": 51,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 41,
+              "rapidOppositeExitWithin6Hours": 57,
+              "rapidOppositeExit6Fraction": 0.401961,
+              "wholeBarsWithoutPosition": 161,
+              "longestWholeBarsWithoutPosition": 17
+            },
+            "variant": {
+              "tradeCount": 93,
+              "returnPct": -17.124163,
+              "closeMarkedMaxDrawdownPct": 17.473789,
+              "winRatePct": 25.806452,
+              "longTrades": 47,
+              "shortTrades": 46,
+              "rapidOppositeExit3": 24,
+              "rapidOppositeExit6": 40,
+              "rapidOppositeExitWithin6Hours": 50,
+              "rapidOppositeExit6Fraction": 0.430108,
+              "wholeBarsWithoutPosition": 230,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 102,
+              "baselineExecutable": 102,
+              "accepted": 93,
+              "rejectedOppositeCross": 9,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 102,
+              "baselineWinners": 22,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 9,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 4,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 18,
+              "baselineWinnersRetainedFraction": 0.818182
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 47,
+              "returnPct": -9.585157,
+              "closeMarkedMaxDrawdownPct": 11.1973,
+              "winRatePct": 25.531915,
+              "longTrades": 24,
+              "shortTrades": 23,
+              "rapidOppositeExit3": 11,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 22,
+              "rapidOppositeExit6Fraction": 0.361702,
+              "wholeBarsWithoutPosition": 80,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -3.99731,
+              "closeMarkedMaxDrawdownPct": 5.849176,
+              "winRatePct": 35.135135,
+              "longTrades": 20,
+              "shortTrades": 17,
+              "rapidOppositeExit3": 7,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 20,
+              "rapidOppositeExit6Fraction": 0.378378,
+              "wholeBarsWithoutPosition": 113,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "candidates": {
+              "total": 47,
+              "baselineExecutable": 47,
+              "accepted": 37,
+              "rejectedOppositeCross": 10,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 47,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 10,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 10,
+              "baselineWinnersRetainedFraction": 0.833333
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 102,
+              "returnPct": -45.089645,
+              "closeMarkedMaxDrawdownPct": 45.320552,
+              "winRatePct": 14.705882,
+              "longTrades": 51,
+              "shortTrades": 51,
+              "rapidOppositeExit3": 12,
+              "rapidOppositeExit6": 25,
+              "rapidOppositeExitWithin6Hours": 36,
+              "rapidOppositeExit6Fraction": 0.245098,
+              "wholeBarsWithoutPosition": 218,
+              "longestWholeBarsWithoutPosition": 17
+            },
+            "variant": {
+              "tradeCount": 93,
+              "returnPct": -39.015953,
+              "closeMarkedMaxDrawdownPct": 39.183514,
+              "winRatePct": 12.903226,
+              "longTrades": 47,
+              "shortTrades": 46,
+              "rapidOppositeExit3": 16,
+              "rapidOppositeExit6": 30,
+              "rapidOppositeExitWithin6Hours": 40,
+              "rapidOppositeExit6Fraction": 0.322581,
+              "wholeBarsWithoutPosition": 226,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 102,
+              "baselineExecutable": 102,
+              "accepted": 93,
+              "rejectedOppositeCross": 9,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 102,
+              "baselineWinners": 15,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 9,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 6,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 9,
+              "baselineWinnersRetainedFraction": 0.6
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 47,
+              "returnPct": -22.562979,
+              "closeMarkedMaxDrawdownPct": 23.476573,
+              "winRatePct": 12.765957,
+              "longTrades": 24,
+              "shortTrades": 23,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 13,
+              "rapidOppositeExitWithin6Hours": 19,
+              "rapidOppositeExit6Fraction": 0.276596,
+              "wholeBarsWithoutPosition": 80,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -15.029394,
+              "closeMarkedMaxDrawdownPct": 15.525434,
+              "winRatePct": 21.621622,
+              "longTrades": 20,
+              "shortTrades": 17,
+              "rapidOppositeExit3": 3,
+              "rapidOppositeExit6": 10,
+              "rapidOppositeExitWithin6Hours": 15,
+              "rapidOppositeExit6Fraction": 0.27027,
+              "wholeBarsWithoutPosition": 109,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "candidates": {
+              "total": 47,
+              "baselineExecutable": 47,
+              "accepted": 37,
+              "rejectedOppositeCross": 10,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 47,
+              "baselineWinners": 6,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 10,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 0,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 6,
+              "baselineWinnersRetainedFraction": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "15m",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1794268800000,
+        "endTime": 1795132800000,
+        "intervalMs": 900000
+      },
+      "holdoutStartUtc": "2026-11-17T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "HYPEUSDT",
+            "timeframe": "15m",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1794268800000,
+            "endTime": 1795132800000,
+            "intervalMs": 900000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "672edd7142d74ba8d82fb4052feaf10cea5a3a09c7ef4320d30a9ce81e04e645",
+          "secondRawSha256": "672edd7142d74ba8d82fb4052feaf10cea5a3a09c7ef4320d30a9ce81e04e645",
+          "overlapRawSha256First": "56c9ccc81b3a99140900c11634daee8a8e609c2d1955d7400ebcae5477b623fb",
+          "overlapRawSha256Second": "56c9ccc81b3a99140900c11634daee8a8e609c2d1955d7400ebcae5477b623fb",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "bba188094037efea11f41d5fd0404199f444789ba1842edc4f19e0c442ea99e0",
+        "corrected": 39
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 104,
+              "returnPct": -2.275199,
+              "closeMarkedMaxDrawdownPct": 12.084129,
+              "winRatePct": 32.692308,
+              "longTrades": 52,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 27,
+              "rapidOppositeExit6": 43,
+              "rapidOppositeExitWithin6Hours": 60,
+              "rapidOppositeExit6Fraction": 0.413462,
+              "wholeBarsWithoutPosition": 154,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "variant": {
+              "tradeCount": 90,
+              "returnPct": -4.243853,
+              "closeMarkedMaxDrawdownPct": 10.375777,
+              "winRatePct": 34.444444,
+              "longTrades": 44,
+              "shortTrades": 46,
+              "rapidOppositeExit3": 23,
+              "rapidOppositeExit6": 40,
+              "rapidOppositeExitWithin6Hours": 52,
+              "rapidOppositeExit6Fraction": 0.444444,
+              "wholeBarsWithoutPosition": 241,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 106,
+              "baselineExecutable": 106,
+              "accepted": 91,
+              "rejectedOppositeCross": 15,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 104,
+              "baselineWinners": 34,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 14,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 6,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 28,
+              "baselineWinnersRetainedFraction": 0.823529
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 40,
+              "returnPct": -1.945634,
+              "closeMarkedMaxDrawdownPct": 8.190523,
+              "winRatePct": 32.5,
+              "longTrades": 20,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 17,
+              "rapidOppositeExit6Fraction": 0.35,
+              "wholeBarsWithoutPosition": 65,
+              "longestWholeBarsWithoutPosition": 14
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -7.799517,
+              "closeMarkedMaxDrawdownPct": 9.91161,
+              "winRatePct": 32.432432,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 13,
+              "rapidOppositeExitWithin6Hours": 15,
+              "rapidOppositeExit6Fraction": 0.351351,
+              "wholeBarsWithoutPosition": 93,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "candidates": {
+              "total": 40,
+              "baselineExecutable": 40,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 40,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 11,
+              "baselineWinnersRetainedFraction": 0.846154
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 104,
+              "returnPct": -24.996218,
+              "closeMarkedMaxDrawdownPct": 25.958149,
+              "winRatePct": 27.884615,
+              "longTrades": 52,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 35,
+              "rapidOppositeExitWithin6Hours": 53,
+              "rapidOppositeExit6Fraction": 0.336538,
+              "wholeBarsWithoutPosition": 150,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "variant": {
+              "tradeCount": 90,
+              "returnPct": -24.320369,
+              "closeMarkedMaxDrawdownPct": 25.319601,
+              "winRatePct": 28.888889,
+              "longTrades": 44,
+              "shortTrades": 46,
+              "rapidOppositeExit3": 21,
+              "rapidOppositeExit6": 37,
+              "rapidOppositeExitWithin6Hours": 50,
+              "rapidOppositeExit6Fraction": 0.411111,
+              "wholeBarsWithoutPosition": 241,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 106,
+              "baselineExecutable": 106,
+              "accepted": 91,
+              "rejectedOppositeCross": 15,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 104,
+              "baselineWinners": 29,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 14,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 6,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 23,
+              "baselineWinnersRetainedFraction": 0.793103
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 40,
+              "returnPct": -11.631624,
+              "closeMarkedMaxDrawdownPct": 12.816498,
+              "winRatePct": 30,
+              "longTrades": 20,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 7,
+              "rapidOppositeExit6": 13,
+              "rapidOppositeExitWithin6Hours": 16,
+              "rapidOppositeExit6Fraction": 0.325,
+              "wholeBarsWithoutPosition": 70,
+              "longestWholeBarsWithoutPosition": 14
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -15.72426,
+              "closeMarkedMaxDrawdownPct": 16.532678,
+              "winRatePct": 21.621622,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 11,
+              "rapidOppositeExitWithin6Hours": 13,
+              "rapidOppositeExit6Fraction": 0.297297,
+              "wholeBarsWithoutPosition": 92,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "candidates": {
+              "total": 40,
+              "baselineExecutable": 40,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 40,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 7,
+              "baselineWinnersRetainedFraction": 0.583333
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "15m",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1794268800000,
+        "endTime": 1795132800000,
+        "intervalMs": 900000
+      },
+      "holdoutStartUtc": "2026-11-17T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "1000PEPEUSDT",
+            "timeframe": "15m",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1794268800000,
+            "endTime": 1795132800000,
+            "intervalMs": 900000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "342aea0691a18484fe185bb044dc452fa287028456447c17c1774e7f0030f5a1",
+          "secondRawSha256": "342aea0691a18484fe185bb044dc452fa287028456447c17c1774e7f0030f5a1",
+          "overlapRawSha256First": "742dbe490ce43077c8bd636042b2b1ffa2b1761c0a5d70d3ae50f3d7522f176d",
+          "overlapRawSha256Second": "742dbe490ce43077c8bd636042b2b1ffa2b1761c0a5d70d3ae50f3d7522f176d",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "fb86b433a6f66f3407e0de389092b9eba8bca9fe3a7a66cd1b0c6628c0c0742f",
+        "corrected": 35
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 95,
+              "returnPct": -12.189541,
+              "closeMarkedMaxDrawdownPct": 12.297453,
+              "winRatePct": 27.368421,
+              "longTrades": 47,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 22,
+              "rapidOppositeExit6": 34,
+              "rapidOppositeExitWithin6Hours": 47,
+              "rapidOppositeExit6Fraction": 0.357895,
+              "wholeBarsWithoutPosition": 134,
+              "longestWholeBarsWithoutPosition": 25
+            },
+            "variant": {
+              "tradeCount": 85,
+              "returnPct": -13.30081,
+              "closeMarkedMaxDrawdownPct": 14.631347,
+              "winRatePct": 21.176471,
+              "longTrades": 43,
+              "shortTrades": 42,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 31,
+              "rapidOppositeExitWithin6Hours": 43,
+              "rapidOppositeExit6Fraction": 0.364706,
+              "wholeBarsWithoutPosition": 215,
+              "longestWholeBarsWithoutPosition": 26
+            },
+            "candidates": {
+              "total": 98,
+              "baselineExecutable": 98,
+              "accepted": 88,
+              "rejectedOppositeCross": 10,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 95,
+              "baselineWinners": 26,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 10,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 8,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 18,
+              "baselineWinnersRetainedFraction": 0.692308
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 49,
+              "returnPct": -8.86698,
+              "closeMarkedMaxDrawdownPct": 12.541347,
+              "winRatePct": 26.530612,
+              "longTrades": 25,
+              "shortTrades": 24,
+              "rapidOppositeExit3": 15,
+              "rapidOppositeExit6": 28,
+              "rapidOppositeExitWithin6Hours": 32,
+              "rapidOppositeExit6Fraction": 0.571429,
+              "wholeBarsWithoutPosition": 55,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "variant": {
+              "tradeCount": 42,
+              "returnPct": -9.420764,
+              "closeMarkedMaxDrawdownPct": 12.899018,
+              "winRatePct": 21.428571,
+              "longTrades": 21,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 12,
+              "rapidOppositeExit6": 21,
+              "rapidOppositeExitWithin6Hours": 23,
+              "rapidOppositeExit6Fraction": 0.5,
+              "wholeBarsWithoutPosition": 110,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "candidates": {
+              "total": 49,
+              "baselineExecutable": 49,
+              "accepted": 42,
+              "rejectedOppositeCross": 7,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 49,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 7,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 4,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 9,
+              "baselineWinnersRetainedFraction": 0.692308
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 95,
+              "returnPct": -25.961283,
+              "closeMarkedMaxDrawdownPct": 25.967303,
+              "winRatePct": 22.105263,
+              "longTrades": 47,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 18,
+              "rapidOppositeExit6": 30,
+              "rapidOppositeExitWithin6Hours": 43,
+              "rapidOppositeExit6Fraction": 0.315789,
+              "wholeBarsWithoutPosition": 139,
+              "longestWholeBarsWithoutPosition": 25
+            },
+            "variant": {
+              "tradeCount": 85,
+              "returnPct": -24.389841,
+              "closeMarkedMaxDrawdownPct": 24.396068,
+              "winRatePct": 20,
+              "longTrades": 43,
+              "shortTrades": 42,
+              "rapidOppositeExit3": 19,
+              "rapidOppositeExit6": 29,
+              "rapidOppositeExitWithin6Hours": 40,
+              "rapidOppositeExit6Fraction": 0.341176,
+              "wholeBarsWithoutPosition": 215,
+              "longestWholeBarsWithoutPosition": 26
+            },
+            "candidates": {
+              "total": 98,
+              "baselineExecutable": 98,
+              "accepted": 88,
+              "rejectedOppositeCross": 10,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 95,
+              "baselineWinners": 21,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 10,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 4,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 17,
+              "baselineWinnersRetainedFraction": 0.809524
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 49,
+              "returnPct": -19.564802,
+              "closeMarkedMaxDrawdownPct": 21.191246,
+              "winRatePct": 14.285714,
+              "longTrades": 25,
+              "shortTrades": 24,
+              "rapidOppositeExit3": 14,
+              "rapidOppositeExit6": 25,
+              "rapidOppositeExitWithin6Hours": 29,
+              "rapidOppositeExit6Fraction": 0.510204,
+              "wholeBarsWithoutPosition": 62,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "variant": {
+              "tradeCount": 42,
+              "returnPct": -16.749977,
+              "closeMarkedMaxDrawdownPct": 18.37108,
+              "winRatePct": 19.047619,
+              "longTrades": 21,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 11,
+              "rapidOppositeExit6": 18,
+              "rapidOppositeExitWithin6Hours": 20,
+              "rapidOppositeExit6Fraction": 0.428571,
+              "wholeBarsWithoutPosition": 114,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "candidates": {
+              "total": 49,
+              "baselineExecutable": 49,
+              "accepted": 42,
+              "rejectedOppositeCross": 7,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 49,
+              "baselineWinners": 7,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 7,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 0,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 7,
+              "baselineWinnersRetainedFraction": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1791676800000,
+        "endTime": 1795132800000,
+        "intervalMs": 3600000
+      },
+      "holdoutStartUtc": "2026-11-08T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "BTCUSDT",
+            "timeframe": "1h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1791676800000,
+            "endTime": 1795132800000,
+            "intervalMs": 3600000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "3d02443467f273a11460288cd3904d014633d458eb5d5eddf491d549e90588de",
+          "secondRawSha256": "3d02443467f273a11460288cd3904d014633d458eb5d5eddf491d549e90588de",
+          "overlapRawSha256First": "5501da4aaa085316e7ea03559adb70747834cc274da83fadd62e19775e502587",
+          "overlapRawSha256Second": "5501da4aaa085316e7ea03559adb70747834cc274da83fadd62e19775e502587",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "3c104553ec2411148dfd64ee58a269640c97fd3ba12c98863d53616f09a1f96a",
+        "corrected": 12
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 103,
+              "returnPct": -22.92274,
+              "closeMarkedMaxDrawdownPct": 23.744482,
+              "winRatePct": 20.38835,
+              "longTrades": 51,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 42,
+              "rapidOppositeExitWithin6Hours": 42,
+              "rapidOppositeExit6Fraction": 0.407767,
+              "wholeBarsWithoutPosition": 179,
+              "longestWholeBarsWithoutPosition": 24
+            },
+            "variant": {
+              "tradeCount": 95,
+              "returnPct": -21.814079,
+              "closeMarkedMaxDrawdownPct": 22.864745,
+              "winRatePct": 20,
+              "longTrades": 46,
+              "shortTrades": 49,
+              "rapidOppositeExit3": 28,
+              "rapidOppositeExit6": 44,
+              "rapidOppositeExitWithin6Hours": 44,
+              "rapidOppositeExit6Fraction": 0.463158,
+              "wholeBarsWithoutPosition": 254,
+              "longestWholeBarsWithoutPosition": 25
+            },
+            "candidates": {
+              "total": 108,
+              "baselineExecutable": 107,
+              "accepted": 99,
+              "rejectedOppositeCross": 8,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 103,
+              "baselineWinners": 21,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 8,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 16,
+              "baselineWinnersRetainedFraction": 0.761905
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 39,
+              "returnPct": -1.051012,
+              "closeMarkedMaxDrawdownPct": 8.105966,
+              "winRatePct": 33.333333,
+              "longTrades": 19,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 7,
+              "rapidOppositeExit6": 16,
+              "rapidOppositeExitWithin6Hours": 16,
+              "rapidOppositeExit6Fraction": 0.410256,
+              "wholeBarsWithoutPosition": 69,
+              "longestWholeBarsWithoutPosition": 9
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -4.306526,
+              "closeMarkedMaxDrawdownPct": 9.987308,
+              "winRatePct": 32.432432,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 16,
+              "rapidOppositeExitWithin6Hours": 16,
+              "rapidOppositeExit6Fraction": 0.432432,
+              "wholeBarsWithoutPosition": 83,
+              "longestWholeBarsWithoutPosition": 8
+            },
+            "candidates": {
+              "total": 39,
+              "baselineExecutable": 39,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 39,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 11,
+              "baselineWinnersRetainedFraction": 0.846154
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 103,
+              "returnPct": -41.487624,
+              "closeMarkedMaxDrawdownPct": 41.487624,
+              "winRatePct": 13.592233,
+              "longTrades": 51,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 16,
+              "rapidOppositeExit6": 35,
+              "rapidOppositeExitWithin6Hours": 35,
+              "rapidOppositeExit6Fraction": 0.339806,
+              "wholeBarsWithoutPosition": 183,
+              "longestWholeBarsWithoutPosition": 24
+            },
+            "variant": {
+              "tradeCount": 95,
+              "returnPct": -42.145972,
+              "closeMarkedMaxDrawdownPct": 42.145972,
+              "winRatePct": 10.526316,
+              "longTrades": 46,
+              "shortTrades": 49,
+              "rapidOppositeExit3": 23,
+              "rapidOppositeExit6": 37,
+              "rapidOppositeExitWithin6Hours": 37,
+              "rapidOppositeExit6Fraction": 0.389474,
+              "wholeBarsWithoutPosition": 268,
+              "longestWholeBarsWithoutPosition": 25
+            },
+            "candidates": {
+              "total": 108,
+              "baselineExecutable": 107,
+              "accepted": 99,
+              "rejectedOppositeCross": 8,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 103,
+              "baselineWinners": 14,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 8,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 9,
+              "baselineWinnersRetainedFraction": 0.642857
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 39,
+              "returnPct": -10.719782,
+              "closeMarkedMaxDrawdownPct": 12.913267,
+              "winRatePct": 30.769231,
+              "longTrades": 19,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 5,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 14,
+              "rapidOppositeExit6Fraction": 0.358974,
+              "wholeBarsWithoutPosition": 80,
+              "longestWholeBarsWithoutPosition": 10
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -13.058608,
+              "closeMarkedMaxDrawdownPct": 13.695745,
+              "winRatePct": 18.918919,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 15,
+              "rapidOppositeExitWithin6Hours": 15,
+              "rapidOppositeExit6Fraction": 0.405405,
+              "wholeBarsWithoutPosition": 100,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "candidates": {
+              "total": 39,
+              "baselineExecutable": 39,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 39,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 7,
+              "baselineWinnersRetainedFraction": 0.583333
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "1h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1791676800000,
+        "endTime": 1795132800000,
+        "intervalMs": 3600000
+      },
+      "holdoutStartUtc": "2026-11-08T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "HYPEUSDT",
+            "timeframe": "1h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1791676800000,
+            "endTime": 1795132800000,
+            "intervalMs": 3600000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "8ce9872e4cb5c4612634885e187dc294181c3bfdd6e660b00acb52ac0d3b0002",
+          "secondRawSha256": "8ce9872e4cb5c4612634885e187dc294181c3bfdd6e660b00acb52ac0d3b0002",
+          "overlapRawSha256First": "e25a5e5b1e18823ddc17239e4f87621633c5a6c0841c25d4fff31df28a97e621",
+          "overlapRawSha256Second": "e25a5e5b1e18823ddc17239e4f87621633c5a6c0841c25d4fff31df28a97e621",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "171e533da1e4d647de3f529fbcd0c8d8c8f72d9dfb637bb4d84c06de65631b66",
+        "corrected": 17
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 103,
+              "returnPct": -12.553252,
+              "closeMarkedMaxDrawdownPct": 17.097417,
+              "winRatePct": 30.097087,
+              "longTrades": 51,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 32,
+              "rapidOppositeExit6": 47,
+              "rapidOppositeExitWithin6Hours": 47,
+              "rapidOppositeExit6Fraction": 0.456311,
+              "wholeBarsWithoutPosition": 150,
+              "longestWholeBarsWithoutPosition": 32
+            },
+            "variant": {
+              "tradeCount": 92,
+              "returnPct": -13.769289,
+              "closeMarkedMaxDrawdownPct": 20.054199,
+              "winRatePct": 31.521739,
+              "longTrades": 44,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 26,
+              "rapidOppositeExit6": 41,
+              "rapidOppositeExitWithin6Hours": 41,
+              "rapidOppositeExit6Fraction": 0.445652,
+              "wholeBarsWithoutPosition": 238,
+              "longestWholeBarsWithoutPosition": 22
+            },
+            "candidates": {
+              "total": 106,
+              "baselineExecutable": 105,
+              "accepted": 94,
+              "rejectedOppositeCross": 11,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 103,
+              "baselineWinners": 31,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 11,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 9,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 22,
+              "baselineWinnersRetainedFraction": 0.709677
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 43,
+              "returnPct": 1.429546,
+              "closeMarkedMaxDrawdownPct": 6.374058,
+              "winRatePct": 32.55814,
+              "longTrades": 21,
+              "shortTrades": 22,
+              "rapidOppositeExit3": 9,
+              "rapidOppositeExit6": 19,
+              "rapidOppositeExitWithin6Hours": 19,
+              "rapidOppositeExit6Fraction": 0.44186,
+              "wholeBarsWithoutPosition": 63,
+              "longestWholeBarsWithoutPosition": 11
+            },
+            "variant": {
+              "tradeCount": 39,
+              "returnPct": 4.650314,
+              "closeMarkedMaxDrawdownPct": 5.90984,
+              "winRatePct": 35.897436,
+              "longTrades": 18,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 10,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 17,
+              "rapidOppositeExit6Fraction": 0.435897,
+              "wholeBarsWithoutPosition": 106,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "candidates": {
+              "total": 43,
+              "baselineExecutable": 43,
+              "accepted": 39,
+              "rejectedOppositeCross": 4,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 43,
+              "baselineWinners": 14,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 4,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 0,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 14,
+              "baselineWinnersRetainedFraction": 1
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 103,
+              "returnPct": -27.474257,
+              "closeMarkedMaxDrawdownPct": 29.338988,
+              "winRatePct": 23.300971,
+              "longTrades": 51,
+              "shortTrades": 52,
+              "rapidOppositeExit3": 29,
+              "rapidOppositeExit6": 44,
+              "rapidOppositeExitWithin6Hours": 44,
+              "rapidOppositeExit6Fraction": 0.427184,
+              "wholeBarsWithoutPosition": 167,
+              "longestWholeBarsWithoutPosition": 32
+            },
+            "variant": {
+              "tradeCount": 92,
+              "returnPct": -26.400073,
+              "closeMarkedMaxDrawdownPct": 29.204514,
+              "winRatePct": 17.391304,
+              "longTrades": 44,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 26,
+              "rapidOppositeExit6": 40,
+              "rapidOppositeExitWithin6Hours": 40,
+              "rapidOppositeExit6Fraction": 0.434783,
+              "wholeBarsWithoutPosition": 242,
+              "longestWholeBarsWithoutPosition": 22
+            },
+            "candidates": {
+              "total": 106,
+              "baselineExecutable": 105,
+              "accepted": 94,
+              "rejectedOppositeCross": 11,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 103,
+              "baselineWinners": 24,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 11,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 10,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 14,
+              "baselineWinnersRetainedFraction": 0.583333
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 43,
+              "returnPct": -4.651944,
+              "closeMarkedMaxDrawdownPct": 8.184185,
+              "winRatePct": 32.55814,
+              "longTrades": 21,
+              "shortTrades": 22,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 17,
+              "rapidOppositeExit6Fraction": 0.395349,
+              "wholeBarsWithoutPosition": 65,
+              "longestWholeBarsWithoutPosition": 11
+            },
+            "variant": {
+              "tradeCount": 39,
+              "returnPct": -3.154531,
+              "closeMarkedMaxDrawdownPct": 7.270347,
+              "winRatePct": 33.333333,
+              "longTrades": 18,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 9,
+              "rapidOppositeExit6": 16,
+              "rapidOppositeExitWithin6Hours": 16,
+              "rapidOppositeExit6Fraction": 0.410256,
+              "wholeBarsWithoutPosition": 110,
+              "longestWholeBarsWithoutPosition": 12
+            },
+            "candidates": {
+              "total": 43,
+              "baselineExecutable": 43,
+              "accepted": 39,
+              "rejectedOppositeCross": 4,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 43,
+              "baselineWinners": 14,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 4,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 1,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 13,
+              "baselineWinnersRetainedFraction": 0.928571
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "1h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1791676800000,
+        "endTime": 1795132800000,
+        "intervalMs": 3600000
+      },
+      "holdoutStartUtc": "2026-11-08T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "1000PEPEUSDT",
+            "timeframe": "1h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1791676800000,
+            "endTime": 1795132800000,
+            "intervalMs": 3600000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "2000b6eb30c031b4475c437035a0a8c937f2e9a94fbe35f88b72dc38bb74c704",
+          "secondRawSha256": "2000b6eb30c031b4475c437035a0a8c937f2e9a94fbe35f88b72dc38bb74c704",
+          "overlapRawSha256First": "4271f7b16b75c1412ce8de932da3a738008373df674f774244cf4fad7a23c2a6",
+          "overlapRawSha256Second": "4271f7b16b75c1412ce8de932da3a738008373df674f774244cf4fad7a23c2a6",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "d35219a962752473e0e74454b44a4fae7b9b9ff11c28b5ec13834f6431ee5dae",
+        "corrected": 16
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 96,
+              "returnPct": -5.263684,
+              "closeMarkedMaxDrawdownPct": 9.237782,
+              "winRatePct": 29.166667,
+              "longTrades": 48,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 22,
+              "rapidOppositeExit6": 36,
+              "rapidOppositeExitWithin6Hours": 36,
+              "rapidOppositeExit6Fraction": 0.375,
+              "wholeBarsWithoutPosition": 185,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "variant": {
+              "tradeCount": 85,
+              "returnPct": -1.259166,
+              "closeMarkedMaxDrawdownPct": 13.093681,
+              "winRatePct": 34.117647,
+              "longTrades": 41,
+              "shortTrades": 44,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 34,
+              "rapidOppositeExitWithin6Hours": 34,
+              "rapidOppositeExit6Fraction": 0.4,
+              "wholeBarsWithoutPosition": 242,
+              "longestWholeBarsWithoutPosition": 16
+            },
+            "candidates": {
+              "total": 99,
+              "baselineExecutable": 98,
+              "accepted": 87,
+              "rejectedOppositeCross": 11,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 96,
+              "baselineWinners": 28,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 11,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 25,
+              "baselineWinnersRetainedFraction": 0.892857
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 39,
+              "returnPct": -3.698452,
+              "closeMarkedMaxDrawdownPct": 8.899371,
+              "winRatePct": 33.333333,
+              "longTrades": 19,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 14,
+              "rapidOppositeExit6Fraction": 0.358974,
+              "wholeBarsWithoutPosition": 78,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -0.788774,
+              "closeMarkedMaxDrawdownPct": 9.262441,
+              "winRatePct": 32.432432,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 10,
+              "rapidOppositeExit6": 15,
+              "rapidOppositeExitWithin6Hours": 15,
+              "rapidOppositeExit6Fraction": 0.405405,
+              "wholeBarsWithoutPosition": 104,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 39,
+              "baselineExecutable": 39,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 39,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 11,
+              "baselineWinnersRetainedFraction": 0.846154
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 96,
+              "returnPct": -15.420286,
+              "closeMarkedMaxDrawdownPct": 17.883817,
+              "winRatePct": 26.041667,
+              "longTrades": 48,
+              "shortTrades": 48,
+              "rapidOppositeExit3": 21,
+              "rapidOppositeExit6": 35,
+              "rapidOppositeExitWithin6Hours": 35,
+              "rapidOppositeExit6Fraction": 0.364583,
+              "wholeBarsWithoutPosition": 183,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "variant": {
+              "tradeCount": 85,
+              "returnPct": -11.710928,
+              "closeMarkedMaxDrawdownPct": 16.290588,
+              "winRatePct": 29.411765,
+              "longTrades": 41,
+              "shortTrades": 44,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 34,
+              "rapidOppositeExitWithin6Hours": 34,
+              "rapidOppositeExit6Fraction": 0.4,
+              "wholeBarsWithoutPosition": 237,
+              "longestWholeBarsWithoutPosition": 16
+            },
+            "candidates": {
+              "total": 99,
+              "baselineExecutable": 98,
+              "accepted": 87,
+              "rejectedOppositeCross": 11,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 96,
+              "baselineWinners": 25,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 11,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 22,
+              "baselineWinnersRetainedFraction": 0.88
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 39,
+              "returnPct": -7.392939,
+              "closeMarkedMaxDrawdownPct": 10.1563,
+              "winRatePct": 30.769231,
+              "longTrades": 19,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 6,
+              "rapidOppositeExit6": 11,
+              "rapidOppositeExitWithin6Hours": 11,
+              "rapidOppositeExit6Fraction": 0.282051,
+              "wholeBarsWithoutPosition": 78,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "variant": {
+              "tradeCount": 37,
+              "returnPct": -4.384243,
+              "closeMarkedMaxDrawdownPct": 10.621412,
+              "winRatePct": 29.72973,
+              "longTrades": 19,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 10,
+              "rapidOppositeExit6": 15,
+              "rapidOppositeExitWithin6Hours": 15,
+              "rapidOppositeExit6Fraction": 0.405405,
+              "wholeBarsWithoutPosition": 101,
+              "longestWholeBarsWithoutPosition": 16
+            },
+            "candidates": {
+              "total": 39,
+              "baselineExecutable": 39,
+              "accepted": 37,
+              "rejectedOppositeCross": 2,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 39,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 2,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 10,
+              "baselineWinnersRetainedFraction": 0.833333
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1781308800000,
+        "endTime": 1795132800000,
+        "intervalMs": 14400000
+      },
+      "holdoutStartUtc": "2026-10-03T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "BTCUSDT",
+            "timeframe": "4h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1781308800000,
+            "endTime": 1795132800000,
+            "intervalMs": 14400000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "2d75f087bcff103efe46e439af847098aefa86ea37f8bf550b4537e86b73b54c",
+          "secondRawSha256": "2d75f087bcff103efe46e439af847098aefa86ea37f8bf550b4537e86b73b54c",
+          "overlapRawSha256First": "2fe43a36e98c43843f0d63a4ae6f9f0cedf1fcc757a2f93dcfaa44261c0b5e30",
+          "overlapRawSha256Second": "2fe43a36e98c43843f0d63a4ae6f9f0cedf1fcc757a2f93dcfaa44261c0b5e30",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "103e9607de58f36a7fec1a1f5ed2ca3fad681d008409a4d0f90576645e9ba3d3",
+        "corrected": 4
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 99,
+              "returnPct": -9.300062,
+              "closeMarkedMaxDrawdownPct": 12.993531,
+              "winRatePct": 33.333333,
+              "longTrades": 49,
+              "shortTrades": 50,
+              "rapidOppositeExit3": 20,
+              "rapidOppositeExit6": 36,
+              "rapidOppositeExitWithin6Hours": 7,
+              "rapidOppositeExit6Fraction": 0.363636,
+              "wholeBarsWithoutPosition": 166,
+              "longestWholeBarsWithoutPosition": 19
+            },
+            "variant": {
+              "tradeCount": 91,
+              "returnPct": -2.936541,
+              "closeMarkedMaxDrawdownPct": 12.20741,
+              "winRatePct": 37.362637,
+              "longTrades": 46,
+              "shortTrades": 45,
+              "rapidOppositeExit3": 24,
+              "rapidOppositeExit6": 39,
+              "rapidOppositeExitWithin6Hours": 12,
+              "rapidOppositeExit6Fraction": 0.428571,
+              "wholeBarsWithoutPosition": 216,
+              "longestWholeBarsWithoutPosition": 20
+            },
+            "candidates": {
+              "total": 101,
+              "baselineExecutable": 101,
+              "accepted": 92,
+              "rejectedOppositeCross": 8,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 99,
+              "baselineWinners": 33,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 8,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 6,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 27,
+              "baselineWinnersRetainedFraction": 0.818182
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 48,
+              "returnPct": -14.403249,
+              "closeMarkedMaxDrawdownPct": 15.516784,
+              "winRatePct": 25,
+              "longTrades": 24,
+              "shortTrades": 24,
+              "rapidOppositeExit3": 9,
+              "rapidOppositeExit6": 19,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.395833,
+              "wholeBarsWithoutPosition": 56,
+              "longestWholeBarsWithoutPosition": 9
+            },
+            "variant": {
+              "tradeCount": 41,
+              "returnPct": -12.095587,
+              "closeMarkedMaxDrawdownPct": 14.022882,
+              "winRatePct": 21.95122,
+              "longTrades": 21,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 12,
+              "rapidOppositeExit6": 19,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.463415,
+              "wholeBarsWithoutPosition": 97,
+              "longestWholeBarsWithoutPosition": 10
+            },
+            "candidates": {
+              "total": 48,
+              "baselineExecutable": 48,
+              "accepted": 41,
+              "rejectedOppositeCross": 6,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 48,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 6,
+              "baselineWinnersLostAtPhaseBoundary": 1,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 1,
+              "baselineWinnersRetained": 8,
+              "baselineWinnersRetainedFraction": 0.666667
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 99,
+              "returnPct": -24.357291,
+              "closeMarkedMaxDrawdownPct": 26.617832,
+              "winRatePct": 29.292929,
+              "longTrades": 49,
+              "shortTrades": 50,
+              "rapidOppositeExit3": 16,
+              "rapidOppositeExit6": 32,
+              "rapidOppositeExitWithin6Hours": 6,
+              "rapidOppositeExit6Fraction": 0.323232,
+              "wholeBarsWithoutPosition": 166,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "variant": {
+              "tradeCount": 91,
+              "returnPct": -19.20155,
+              "closeMarkedMaxDrawdownPct": 22.203731,
+              "winRatePct": 28.571429,
+              "longTrades": 46,
+              "shortTrades": 45,
+              "rapidOppositeExit3": 23,
+              "rapidOppositeExit6": 35,
+              "rapidOppositeExitWithin6Hours": 12,
+              "rapidOppositeExit6Fraction": 0.384615,
+              "wholeBarsWithoutPosition": 210,
+              "longestWholeBarsWithoutPosition": 20
+            },
+            "candidates": {
+              "total": 101,
+              "baselineExecutable": 101,
+              "accepted": 92,
+              "rejectedOppositeCross": 8,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 99,
+              "baselineWinners": 29,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 8,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 9,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 20,
+              "baselineWinnersRetainedFraction": 0.689655
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 48,
+              "returnPct": -19.15721,
+              "closeMarkedMaxDrawdownPct": 19.797226,
+              "winRatePct": 12.5,
+              "longTrades": 24,
+              "shortTrades": 24,
+              "rapidOppositeExit3": 9,
+              "rapidOppositeExit6": 19,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.395833,
+              "wholeBarsWithoutPosition": 58,
+              "longestWholeBarsWithoutPosition": 9
+            },
+            "variant": {
+              "tradeCount": 41,
+              "returnPct": -18.827413,
+              "closeMarkedMaxDrawdownPct": 19.614845,
+              "winRatePct": 14.634146,
+              "longTrades": 21,
+              "shortTrades": 20,
+              "rapidOppositeExit3": 11,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.414634,
+              "wholeBarsWithoutPosition": 93,
+              "longestWholeBarsWithoutPosition": 10
+            },
+            "candidates": {
+              "total": 48,
+              "baselineExecutable": 48,
+              "accepted": 41,
+              "rejectedOppositeCross": 6,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 48,
+              "baselineWinners": 6,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 6,
+              "baselineWinnersLostAtPhaseBoundary": 1,
+              "delayedBaselineWinnersNowNonpositive": 2,
+              "baselineWinnersWithoutDelayedTrade": 1,
+              "baselineWinnersRetained": 3,
+              "baselineWinnersRetainedFraction": 0.5
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "4h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1781308800000,
+        "endTime": 1795132800000,
+        "intervalMs": 14400000
+      },
+      "holdoutStartUtc": "2026-10-03T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "HYPEUSDT",
+            "timeframe": "4h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1781308800000,
+            "endTime": 1795132800000,
+            "intervalMs": 14400000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "3f4dd92e3adb2c2b2951503c6f24a24ad94b7bdba35d6af0d3c66d6eed5e4351",
+          "secondRawSha256": "3f4dd92e3adb2c2b2951503c6f24a24ad94b7bdba35d6af0d3c66d6eed5e4351",
+          "overlapRawSha256First": "49feb42b6100cbfcfd3ec78f54c40a0c4f267165e57ef1f787a09901873e3ff5",
+          "overlapRawSha256Second": "49feb42b6100cbfcfd3ec78f54c40a0c4f267165e57ef1f787a09901873e3ff5",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "67426fc253a910497f6b979b8f52fcd1b0675fd3546107a70dbd15da7a58f611",
+        "corrected": 3
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 107,
+              "returnPct": -17.191423,
+              "closeMarkedMaxDrawdownPct": 17.191423,
+              "winRatePct": 26.168224,
+              "longTrades": 53,
+              "shortTrades": 54,
+              "rapidOppositeExit3": 23,
+              "rapidOppositeExit6": 44,
+              "rapidOppositeExitWithin6Hours": 9,
+              "rapidOppositeExit6Fraction": 0.411215,
+              "wholeBarsWithoutPosition": 124,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "variant": {
+              "tradeCount": 94,
+              "returnPct": -4.889528,
+              "closeMarkedMaxDrawdownPct": 8.692268,
+              "winRatePct": 31.914894,
+              "longTrades": 45,
+              "shortTrades": 49,
+              "rapidOppositeExit3": 27,
+              "rapidOppositeExit6": 46,
+              "rapidOppositeExitWithin6Hours": 12,
+              "rapidOppositeExit6Fraction": 0.489362,
+              "wholeBarsWithoutPosition": 216,
+              "longestWholeBarsWithoutPosition": 19
+            },
+            "candidates": {
+              "total": 107,
+              "baselineExecutable": 107,
+              "accepted": 94,
+              "rejectedOppositeCross": 12,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 107,
+              "baselineWinners": 28,
+              "rejectedWinningBaselineTrades": 1,
+              "rejectedLosingBaselineTrades": 11,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 1,
+              "baselineWinnersRetained": 24,
+              "baselineWinnersRetainedFraction": 0.857143
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 43,
+              "returnPct": -4.588264,
+              "closeMarkedMaxDrawdownPct": 9.912818,
+              "winRatePct": 32.55814,
+              "longTrades": 22,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 7,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.395349,
+              "wholeBarsWithoutPosition": 69,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "variant": {
+              "tradeCount": 38,
+              "returnPct": -6.84092,
+              "closeMarkedMaxDrawdownPct": 10.66532,
+              "winRatePct": 23.684211,
+              "longTrades": 20,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 9,
+              "rapidOppositeExit6": 18,
+              "rapidOppositeExitWithin6Hours": 3,
+              "rapidOppositeExit6Fraction": 0.473684,
+              "wholeBarsWithoutPosition": 88,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "candidates": {
+              "total": 44,
+              "baselineExecutable": 43,
+              "accepted": 38,
+              "rejectedOppositeCross": 5,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 43,
+              "baselineWinners": 14,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 5,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 9,
+              "baselineWinnersRetainedFraction": 0.642857
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 107,
+              "returnPct": -24.429225,
+              "closeMarkedMaxDrawdownPct": 24.429225,
+              "winRatePct": 25.233645,
+              "longTrades": 53,
+              "shortTrades": 54,
+              "rapidOppositeExit3": 19,
+              "rapidOppositeExit6": 39,
+              "rapidOppositeExitWithin6Hours": 8,
+              "rapidOppositeExit6Fraction": 0.364486,
+              "wholeBarsWithoutPosition": 124,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "variant": {
+              "tradeCount": 94,
+              "returnPct": -15.172356,
+              "closeMarkedMaxDrawdownPct": 15.172356,
+              "winRatePct": 26.595745,
+              "longTrades": 45,
+              "shortTrades": 49,
+              "rapidOppositeExit3": 26,
+              "rapidOppositeExit6": 45,
+              "rapidOppositeExitWithin6Hours": 11,
+              "rapidOppositeExit6Fraction": 0.478723,
+              "wholeBarsWithoutPosition": 205,
+              "longestWholeBarsWithoutPosition": 19
+            },
+            "candidates": {
+              "total": 107,
+              "baselineExecutable": 107,
+              "accepted": 94,
+              "rejectedOppositeCross": 12,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 107,
+              "baselineWinners": 27,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 12,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 22,
+              "baselineWinnersRetainedFraction": 0.814815
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 43,
+              "returnPct": -7.756013,
+              "closeMarkedMaxDrawdownPct": 11.748627,
+              "winRatePct": 27.906977,
+              "longTrades": 22,
+              "shortTrades": 21,
+              "rapidOppositeExit3": 7,
+              "rapidOppositeExit6": 17,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.395349,
+              "wholeBarsWithoutPosition": 73,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "variant": {
+              "tradeCount": 38,
+              "returnPct": -9.683148,
+              "closeMarkedMaxDrawdownPct": 12.731445,
+              "winRatePct": 23.684211,
+              "longTrades": 20,
+              "shortTrades": 18,
+              "rapidOppositeExit3": 8,
+              "rapidOppositeExit6": 16,
+              "rapidOppositeExitWithin6Hours": 3,
+              "rapidOppositeExit6Fraction": 0.421053,
+              "wholeBarsWithoutPosition": 88,
+              "longestWholeBarsWithoutPosition": 13
+            },
+            "candidates": {
+              "total": 44,
+              "baselineExecutable": 43,
+              "accepted": 38,
+              "rejectedOppositeCross": 5,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 43,
+              "baselineWinners": 12,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 5,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 9,
+              "baselineWinnersRetainedFraction": 0.75
+            }
+          }
+        }
+      }
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "4h",
+      "status": "COMPLETE",
+      "historyWindow": {
+        "startTime": 1781308800000,
+        "endTime": 1795132800000,
+        "intervalMs": 14400000
+      },
+      "holdoutStartUtc": "2026-10-03T00:00:00.000Z",
+      "provenance": {
+        "normalizationVersion": "bitunix-open-envelope-v1",
+        "readback": {
+          "protocol": "CJ_BITUNIX_CLOSED_CANDLE_REPEATABILITY_V1",
+          "status": "STABLE_TWO_READS",
+          "reason": null,
+          "market": {
+            "symbol": "1000PEPEUSDT",
+            "timeframe": "4h",
+            "exchange": "Bitunix"
+          },
+          "historyWindow": {
+            "startTime": 1781308800000,
+            "endTime": 1795132800000,
+            "intervalMs": 14400000
+          },
+          "checkedRaw": 963,
+          "checkedDerived": 960,
+          "firstRawSha256": "7d40c32b11a1860fd3bca284490ad9c7094fcd3e8db5b49afe164120b195981e",
+          "secondRawSha256": "7d40c32b11a1860fd3bca284490ad9c7094fcd3e8db5b49afe164120b195981e",
+          "overlapRawSha256First": "d5f3b2e22d8d32acda7ad7d5a1c83f25158e667b859a8655390181ed674d3666",
+          "overlapRawSha256Second": "d5f3b2e22d8d32acda7ad7d5a1c83f25158e667b859a8655390181ed674d3666",
+          "differences": [],
+          "differenceCount": 0,
+          "evidence": "Read-only Bitunix LAST_PRICE double read; no signal or trading orders",
+          "disclaimer": "A single repeatability check does not prove always-on service, TradingView parity or strategy performance."
+        },
+        "derivedSha256": "ffe4a7198835fe32027da6b86e51c42a5838b8154ac4ae904e9f1b40431036f1",
+        "corrected": 5
+      },
+      "comparisons": {
+        "base": {
+          "training": {
+            "baseline": {
+              "tradeCount": 89,
+              "returnPct": -0.539759,
+              "closeMarkedMaxDrawdownPct": 6.731276,
+              "winRatePct": 35.955056,
+              "longTrades": 44,
+              "shortTrades": 45,
+              "rapidOppositeExit3": 21,
+              "rapidOppositeExit6": 34,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.382022,
+              "wholeBarsWithoutPosition": 175,
+              "longestWholeBarsWithoutPosition": 19
+            },
+            "variant": {
+              "tradeCount": 86,
+              "returnPct": 3.311069,
+              "closeMarkedMaxDrawdownPct": 4.985163,
+              "winRatePct": 34.883721,
+              "longTrades": 43,
+              "shortTrades": 43,
+              "rapidOppositeExit3": 22,
+              "rapidOppositeExit6": 36,
+              "rapidOppositeExitWithin6Hours": 14,
+              "rapidOppositeExit6Fraction": 0.418605,
+              "wholeBarsWithoutPosition": 236,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 91,
+              "baselineExecutable": 91,
+              "accepted": 87,
+              "rejectedOppositeCross": 4,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 89,
+              "baselineWinners": 32,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 4,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 5,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 27,
+              "baselineWinnersRetainedFraction": 0.84375
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 33,
+              "returnPct": 4.903516,
+              "closeMarkedMaxDrawdownPct": 4.228005,
+              "winRatePct": 39.393939,
+              "longTrades": 17,
+              "shortTrades": 16,
+              "rapidOppositeExit3": 3,
+              "rapidOppositeExit6": 10,
+              "rapidOppositeExitWithin6Hours": 0,
+              "rapidOppositeExit6Fraction": 0.30303,
+              "wholeBarsWithoutPosition": 97,
+              "longestWholeBarsWithoutPosition": 14
+            },
+            "variant": {
+              "tradeCount": 32,
+              "returnPct": 2.111775,
+              "closeMarkedMaxDrawdownPct": 3.56979,
+              "winRatePct": 31.25,
+              "longTrades": 17,
+              "shortTrades": 15,
+              "rapidOppositeExit3": 5,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 3,
+              "rapidOppositeExit6Fraction": 0.4375,
+              "wholeBarsWithoutPosition": 112,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "candidates": {
+              "total": 34,
+              "baselineExecutable": 33,
+              "accepted": 32,
+              "rejectedOppositeCross": 1,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 33,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 1,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 10,
+              "baselineWinnersRetainedFraction": 0.769231
+            }
+          }
+        },
+        "stress": {
+          "training": {
+            "baseline": {
+              "tradeCount": 89,
+              "returnPct": -8.252753,
+              "closeMarkedMaxDrawdownPct": 11.334395,
+              "winRatePct": 31.460674,
+              "longTrades": 44,
+              "shortTrades": 45,
+              "rapidOppositeExit3": 19,
+              "rapidOppositeExit6": 32,
+              "rapidOppositeExitWithin6Hours": 4,
+              "rapidOppositeExit6Fraction": 0.359551,
+              "wholeBarsWithoutPosition": 176,
+              "longestWholeBarsWithoutPosition": 19
+            },
+            "variant": {
+              "tradeCount": 86,
+              "returnPct": -4.479106,
+              "closeMarkedMaxDrawdownPct": 7.200991,
+              "winRatePct": 34.883721,
+              "longTrades": 43,
+              "shortTrades": 43,
+              "rapidOppositeExit3": 19,
+              "rapidOppositeExit6": 32,
+              "rapidOppositeExitWithin6Hours": 13,
+              "rapidOppositeExit6Fraction": 0.372093,
+              "wholeBarsWithoutPosition": 237,
+              "longestWholeBarsWithoutPosition": 18
+            },
+            "candidates": {
+              "total": 91,
+              "baselineExecutable": 91,
+              "accepted": 87,
+              "rejectedOppositeCross": 4,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 0
+            },
+            "opportunity": {
+              "baselineTrades": 89,
+              "baselineWinners": 28,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 4,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 4,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 24,
+              "baselineWinnersRetainedFraction": 0.857143
+            }
+          },
+          "holdout": {
+            "baseline": {
+              "tradeCount": 33,
+              "returnPct": 2.433952,
+              "closeMarkedMaxDrawdownPct": 4.534835,
+              "winRatePct": 39.393939,
+              "longTrades": 17,
+              "shortTrades": 16,
+              "rapidOppositeExit3": 3,
+              "rapidOppositeExit6": 8,
+              "rapidOppositeExitWithin6Hours": 0,
+              "rapidOppositeExit6Fraction": 0.242424,
+              "wholeBarsWithoutPosition": 97,
+              "longestWholeBarsWithoutPosition": 14
+            },
+            "variant": {
+              "tradeCount": 32,
+              "returnPct": -0.299662,
+              "closeMarkedMaxDrawdownPct": 4.199571,
+              "winRatePct": 31.25,
+              "longTrades": 17,
+              "shortTrades": 15,
+              "rapidOppositeExit3": 5,
+              "rapidOppositeExit6": 14,
+              "rapidOppositeExitWithin6Hours": 3,
+              "rapidOppositeExit6Fraction": 0.4375,
+              "wholeBarsWithoutPosition": 112,
+              "longestWholeBarsWithoutPosition": 15
+            },
+            "candidates": {
+              "total": 34,
+              "baselineExecutable": 33,
+              "accepted": 32,
+              "rejectedOppositeCross": 1,
+              "rejectedNonpersistent": 0,
+              "phaseBoundary": 1
+            },
+            "opportunity": {
+              "baselineTrades": 33,
+              "baselineWinners": 13,
+              "rejectedWinningBaselineTrades": 0,
+              "rejectedLosingBaselineTrades": 1,
+              "baselineWinnersLostAtPhaseBoundary": 0,
+              "delayedBaselineWinnersNowNonpositive": 3,
+              "baselineWinnersWithoutDelayedTrade": 0,
+              "baselineWinnersRetained": 10,
+              "baselineWinnersRetainedFraction": 0.769231
+            }
+          }
+        }
+      }
+    }
+  ]
+}

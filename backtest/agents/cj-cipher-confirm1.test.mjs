@@ -120,3 +120,20 @@ test('registered future criteria cannot promote missing, undersized or losing co
  assert.equal(evaluateCipherConfirmationForward(cases).status,'INSUFFICIENT_TRADES');
  assert.equal(evaluateCipherConfirmationForward(cases).eligibleForBroaderResearch,false);
 });
+
+test('15m and 4h fills follow their own candle grid and keep the one-bar delay',()=>{
+ for (const [timeframe, intervalMs] of [['15m', H/4], ['4h', H*4]]) {
+  const alignedStart = Math.floor(T / intervalMs) * intervalMs;
+  const candles = bars.map((bar, index) => ({...bar, time: alignedStart + index * intervalMs}));
+  const result = runCipherConfirmOneStudy({
+   bars: candles, market: {...market, timeframe},
+   historyWindow: {startTime: alignedStart, endTime: alignedStart + 960 * intervalMs, intervalMs}
+  });
+  const accepted = result.events.filter(event => event.disposition === 'accepted');
+  assert.ok(accepted.length > 0);
+  assert.ok(accepted.every(event => event.entryTime - event.originTime === 2 * intervalMs));
+  const trades = result.portfolio.scenarios.base.cj_cipher_v11_confirm1_atr.holdout.trades;
+  assert.ok(trades.length > 0);
+  assert.ok(trades.every(trade => accepted.some(event => event.entryTime === trade.entryTime)));
+ }
+});

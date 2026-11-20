@@ -232,12 +232,15 @@ export function runIntegratedVectorRiskStudy({
  strategyIds=INTEGRATED_RECOVERY_LOCK.strategyIds
 }={}){
  validatePolicy(policy);
+ const isCipher=JSON.stringify(strategyIds)===JSON.stringify(INTEGRATED_CIPHER_CONFIRM1_IDS);
+ const intervals=isCipher?{'15m':900000,'1h':3600000,'4h':14400000}:{'1h':3600000};
+ const intervalMs=Object.hasOwn(intervals,market?.timeframe)?intervals[market.timeframe]:null;
  if(market?.exchange!=='Bitunix'||market?.priceType!=='LAST_PRICE'||
-    market?.timeframe!=='1h'||!INTEGRATED_RECOVERY_LOCK.symbols.includes(market?.symbol)||
+    !intervalMs||!INTEGRATED_RECOVERY_LOCK.symbols.includes(market?.symbol)||
     !historyWindow||!Array.isArray(bars)||bars.length!==960)
-  throw Error('Only verified 960-closed-bar BTC/HYPE/PEPE 1h pilot allowed');
+  throw Error('Only verified 960-closed-bar BTC/HYPE/PEPE pilot at a supported interval allowed');
  const clean=requireCleanHistory(classifyHistory(bars,historyWindow));
- if(clean.length!==960||historyWindow.intervalMs!==3600000||
+ if(clean.length!==960||historyWindow.intervalMs!==intervalMs||
     !verifiedIds(strategyIds)||!commandsByVariant||
     Object.keys(commandsByVariant).length!==strategyIds.length||
     !strategyIds.every(id=>Object.hasOwn(commandsByVariant,id)))

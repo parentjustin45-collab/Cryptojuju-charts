@@ -8,15 +8,16 @@ import {runIntegratedVectorRiskStudy,INTEGRATED_CIPHER_CONFIRM1_IDS}
 const freeze=x=>{if(x&&typeof x==='object'){Object.values(x).forEach(freeze);Object.freeze(x)}return x};
 export const CIPHER_CONFIRM1_LOCK=freeze(JSON.parse(readFileSync(
  new URL('./cj-cipher-v11-lock.json',import.meta.url),'utf8')));
-const H=3600000,round=x=>Math.round(x*1e6)/1e6;
+const H=3600000, intervalByTimeframe=Object.freeze({'15m':H/4,'1h':H,'4h':4*H});
+const round=x=>Math.round(x*1e6)/1e6;
 
 // Input rows are snapshots at CLOSE. Extra-bar confirmation is dated at its
 // actual close, never backdated onto the original cross. Cross exits stay prompt.
-export function buildCipherConfirmOne(rows){
- if(!Array.isArray(rows)||!rows.length)throw Error('Closed WaveTrend rows required');
+export function buildCipherConfirmOne(rows, intervalMs=H){
+ if(!Object.values(intervalByTimeframe).includes(intervalMs)||!Array.isArray(rows)||!rows.length)throw Error('Closed WaveTrend rows required');
  for(let i=0;i<rows.length;i++){
   const x=rows[i];
-  if(!Number.isSafeInteger(x?.time)||(i&&x.time-rows[i-1].time!==H)||
+  if(!Number.isSafeInteger(x?.time)||(i&&x.time-rows[i-1].time!==intervalMs)||
      ![null,'long','short'].includes(x.signal)||
      ![x.wt1,x.wt2].every(v=>v===null||Number.isFinite(v))||
      (x.signal!==null&&(!Number.isFinite(x.wt1)||!Number.isFinite(x.wt2)||
@@ -37,7 +38,7 @@ export function buildCipherConfirmOne(rows){
     else if(x.signal!==null)pending.disposition='rejected_opposite_cross';
     else if(!persists)pending.disposition='rejected_nonpersistent';
     else{
-     pending.disposition='accepted';pending.entryTime=x.time+H;
+     pending.disposition='accepted';pending.entryTime=x.time+intervalMs;
      commands.push({time:x.time,side:pending.side});
      authorizedSide=pending.side;
     }
@@ -65,7 +66,7 @@ export function buildCipherConfirmOne(rows){
    usesFutureForDecisions:false,optimizedParameters:false};
 }
 
-function tradeMetrics(result,bars,from,to){
+function tradeMetrics(result,bars,from,to,intervalMs){
  const occupied=new Set(),byTime=new Map(bars.map((b,i)=>[b.time,i]));
  let longestEmpty=0,emptyRun=0;
  for(const t of result.trades){
@@ -78,25 +79,26 @@ function tradeMetrics(result,bars,from,to){
   emptyRun=occupied.has(i)?0:emptyRun+1;longestEmpty=Math.max(longestEmpty,emptyRun);
  }
  const rapid=n=>result.trades.filter(t=>t.exitReason==='vector_signal'&&
-   (t.exitTime-t.entryTime)/H<=n).length;
+   (t.exitTime-t.entryTime)/intervalMs<=n).length;
  return {tradeCount:result.tradeCount,returnPct:result.returnPct,
   closeMarkedMaxDrawdownPct:result.closeMarkedMaxDrawdownPct,
   winRatePct:result.winRatePct,
   longTrades:result.trades.filter(t=>t.side==='long').length,
   shortTrades:result.trades.filter(t=>t.side==='short').length,
   rapidOppositeExit3:rapid(3),rapidOppositeExit6:rapid(6),
+  rapidOppositeExitWithin6Hours:rapid(6*H/intervalMs),
   rapidOppositeExit6Fraction:result.tradeCount?round(rapid(6)/result.tradeCount):null,
   wholeBarsWithoutPosition:to-from-occupied.size,
   longestWholeBarsWithoutPosition:longestEmpty};
 }
 
 // Ex-post attribution only. Labels are never fed back into signal construction.
-export function auditCipherOpportunityCost({baseline,variant,events,bars,phase}){
+export function auditCipherOpportunityCost({baseline,variant,events,bars,phase,intervalMs=H}){
  const byOrigin=new Map(events.filter(e=>e.phase===phase).map(e=>[e.originTime,e]));
  const byEntry=new Map(variant.trades.map(t=>[t.entryTime,t]));
  const index=new Map(bars.map((b,i)=>[b.time,i]));
  const details=baseline.trades.map(t=>{
-  const originTime=t.entryTime-H,e=byOrigin.get(originTime);
+  const originTime=t.entryTime-intervalMs,e=byOrigin.get(originTime);
   if(!e||e.side!==t.side)throw Error('Baseline ATR trade lacks a confirmed source cross');
   const delayed=e.entryTime===null?null:byEntry.get(e.entryTime);
   if(delayed&&delayed.side!==t.side)throw Error('Delayed trade direction mismatch');
@@ -124,7 +126,8 @@ export function auditCipherOpportunityCost({baseline,variant,events,bars,phase})
 }
 
 export function runCipherConfirmOneStudy({bars,market,historyWindow}){
- const wave=calculateCjCipherWaveTrend(bars),built=buildCipherConfirmOne(wave);
+ const intervalMs=intervalByTimeframe[market?.timeframe];
+ const wave=calculateCjCipherWaveTrend(bars),built=buildCipherConfirmOne(wave,intervalMs);
  const portfolio=runIntegratedVectorRiskStudy({bars,market,historyWindow,
   commandsByVariant:built.commandsByVariant,strategyIds:INTEGRATED_CIPHER_CONFIRM1_IDS,
   policy:CIPHER_CONFIRM1_LOCK.risk});
@@ -137,14 +140,14 @@ export function runCipherConfirmOneStudy({bars,market,historyWindow}){
    const from=phase==='training'?0:672,to=phase==='training'?672:960;
    const events=built.events.filter(e=>e.phase===phase);
    comparisons[cost][phase]={
-    baseline:tradeMetrics(baseline,bars,from,to),
-    variant:tradeMetrics(variant,bars,from,to),
+    baseline:tradeMetrics(baseline,bars,from,to,intervalMs),
+    variant:tradeMetrics(variant,bars,from,to,intervalMs),
     candidates:{total:events.length,baselineExecutable:events.filter(e=>e.baselineExecutable).length,
      accepted:events.filter(e=>e.disposition==='accepted').length,
      rejectedOppositeCross:events.filter(e=>e.disposition==='rejected_opposite_cross').length,
      rejectedNonpersistent:events.filter(e=>e.disposition==='rejected_nonpersistent').length,
      phaseBoundary:events.filter(e=>e.disposition==='phase_boundary').length},
-    opportunity:auditCipherOpportunityCost({baseline,variant,events:built.events,bars,phase})
+    opportunity:auditCipherOpportunityCost({baseline,variant,events:built.events,bars,phase,intervalMs})
    };
   }
  }
