@@ -90,7 +90,14 @@ export async function fetchBitunixDataPilot({
         if(trial<retries)await pause(300*(trial+1));
       }
     }
-    requests.push({startTime:start,endTime:end,limit,attempts,received:chunk?.length??0,error:lastError});
+    // Diagnostic only: fingerprint the exact returned page, including failed/short pages.
+    // Do not alter acceptance, retries, raw rows or normalized candle hashes.
+    const pageRows=Array.isArray(chunk)?chunk:null;
+    const pageTimes=pageRows?pageRows.map(row=>Number(row?.time)).filter(Number.isFinite):[];
+    requests.push({startTime:start,endTime:end,limit,attempts,received:chunk?.length??0,error:lastError,
+      pageRawSha256:pageRows?sha256(pageRows):null,
+      pageFirstTime:pageTimes.length?Math.min(...pageTimes):null,
+      pageLastTime:pageTimes.length?Math.max(...pageTimes):null});
     if(lastError!==null){
       if(!Array.isArray(chunk))
         return fail('PUBLIC_REST_REQUEST_FAILED',base,rawRows,null,{requests,fetchError:lastError});
