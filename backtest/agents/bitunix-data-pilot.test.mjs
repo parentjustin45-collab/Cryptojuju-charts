@@ -106,7 +106,7 @@ test('longer 960-bar pilot paginates exactly and preserves all boundaries',async
  assert.equal(windows.at(-1).endTime,boundary);
  for(let i=1;i<windows.length;i++)
    assert.equal(windows[i-1].endTime,windows[i].startTime);
- await assert.rejects(run({closedBars:961}),/Unsafe pilot/);
+ await assert.rejects(run({closedBars:8761}),/Unsafe pilot/);
 });
 test('960-bar pilot blocks missing interior bars rather than interpolating',async()=>{
  const size=960,anchor=3,base=boundary-(size+anchor)*step;
