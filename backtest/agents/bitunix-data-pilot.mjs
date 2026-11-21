@@ -81,6 +81,8 @@ export async function fetchBitunixDataPilot({
       try{
         chunk=await fetchPage({symbol,interval:timeframe,startTime:start,endTime:end,limit});
         if(!Array.isArray(chunk))throw Error('Bitunix page response must be an array');
+        if(chunk.length!==limit)
+          throw Error(`Bitunix incomplete page: expected ${limit}, received ${chunk.length}`);
         lastError=null;break;
       }catch(e){
         lastError=String(e?.message??e);
