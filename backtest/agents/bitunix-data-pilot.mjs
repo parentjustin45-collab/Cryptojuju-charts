@@ -72,6 +72,7 @@ export async function fetchBitunixDataPilot({
   };
   const base={market,historyWindow:window,provenance};
   const rawRows=[],requests=[];
+  let incompletePage=false;
   for(let start=anchorStart;start<endTime;start+=pageBars*intervalMs){
     const end=Math.min(endTime,start+pageBars*intervalMs);
     const limit=(end-start)/intervalMs;
@@ -90,8 +91,13 @@ export async function fetchBitunixDataPilot({
       }
     }
     requests.push({startTime:start,endTime:end,limit,attempts,received:chunk?.length??0,error:lastError});
-    if(lastError!==null)
-      return fail('PUBLIC_REST_REQUEST_FAILED',base,rawRows,null,{requests,fetchError:lastError});
+    if(lastError!==null){
+      if(!Array.isArray(chunk))
+        return fail('PUBLIC_REST_REQUEST_FAILED',base,rawRows,null,{requests,fetchError:lastError});
+      // Retain observed rows for diagnostics and explicit shorter-history
+      // eligibility checks. An incomplete page can NEVER be accepted.
+      incompletePage=true;
+    }
     // Do not allow an incomplete or padded page to go unnoticed. The
     // existing fetchPage adapter may filter extra rows: count all expected.
     rawRows.push(...chunk);
@@ -117,7 +123,8 @@ export async function fetchBitunixDataPilot({
     normalizedClass.status==='READY'&&
     normalizedClass.quality.outOfRange===0&&
     normalizedClass.candles.length===expectedRaw;
-  if(!ready)return fail('OHLC_PROVENANCE_OR_CONTINUITY_FAILED',base,rawRows,derived,{requests,quality});
+  if(incompletePage||!ready)
+    return fail('OHLC_PROVENANCE_OR_CONTINUITY_FAILED',base,rawRows,derived,{requests,quality});
   const acceptedCandles=normalizedClass.candles.filter(x=>x.time>=startTime&&x.time<endTime);
   const role1=auditData({market,historyWindow:window,candles:acceptedCandles});
   if(role1.status!=='PASS'||acceptedCandles.length!==closedBars)
