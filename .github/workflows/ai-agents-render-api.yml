@@ -1,0 +1,28 @@
+name: DEV Render CryptoJuju API integration smoke
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/**'
+      - 'backtest/agents/render-*.test.mjs'
+      - '.github/workflows/ai-agents-render-api.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration-without-live-data-or-secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exactly the staging API dependencies without tokens
+        run: npm install --prefix backtest/agents/render --no-audit --no-fund
+      - name: Unit gates, ledger idempotency and API route guards
+        run: node --test backtest/agents/render-plan.test.mjs backtest/agents/render-runtime.test.mjs backtest/agents/render-api.test.mjs
+      - name: Real HTTP smoke (synthetic upstream, agents disabled)
+        run: node backtest/agents/render/integration-smoke.mjs
+        env:
+          CJ_AGENT_RUNTIME_ENABLED: '0'
