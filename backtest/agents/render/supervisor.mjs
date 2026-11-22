@@ -103,7 +103,7 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
   return {status,evidence};
 }
 
-async function initializeDb(){
+export async function initializeDb(){
   const url=process.env.DATABASE_URL;
   if(!url)throw Error('DATABASE_URL missing: no persistent research is permitted');
   const {default:pg}=await import('pg');
