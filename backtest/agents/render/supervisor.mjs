@@ -65,13 +65,38 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
     try {
       const summary=JSON.parse(await readFile(join(outFolder(slot),'data','summary.json'),'utf8'));
       const assessment=assessBitunixData(summary);
-      status=assessment.status;
+      status=(result.exitCode===0 && !result.timedOut && !result.error)
+        ? assessment.status:'BLOCKED';
       evidence={...evidence,checks:summary.checks.map(c=>({
         symbol:c.symbol,timeframe:c.timeframe,acceptedBars:c.acceptedBars,
         consistencyStatus:c.consistencyStatus,sha256:c.sha256,status:c.status
       })),assessment};
     }catch(err){
       status='BLOCKED';evidence={...evidence,assessment:{reason:String(err?.message??err)}};
+    }
+  }
+  if(agent.id==='vector' || agent.id==='cipher'){
+    try {
+      const file=agent.id==='vector'
+        ? join(outFolder(slot),'data','vector-v11-summary.json')
+        : join(outFolder(slot),'cipher','cj-cipher-pilot-summary.json');
+      const summary=JSON.parse(await readFile(file,'utf8'));
+      const cases=Array.isArray(summary.cases)?summary.cases:[];
+      const accepted=agent.id==='vector'
+        ? summary.status==='RESEARCH_SIGNAL_REPLAY_COMPLETE' &&
+          cases.length===9 && summary.passed===9 && summary.blocked===0 &&
+          summary.candidateComparisonsPassed===9 && summary.candidateComparisonsBlocked===0
+        : summary.status==='CIPHER_3_MARKETS_FIRST_PILOT_COMPLETE' &&
+          cases.length===3 && summary.validated===3 && summary.blocked===0;
+      status=(status==='EXECUTED_RESEARCH_ONLY' && accepted)?status:'BLOCKED';
+      evidence={...evidence,summary:{protocol:summary.protocol,status:summary.status,
+        cases:cases.length,passed:summary.passed??summary.validated,
+        blocked:summary.blocked??null,metadataError:summary.metadataError??null,
+        fatalError:summary.fatalError??null}};
+    }catch(err){
+      status='BLOCKED';
+      evidence={...evidence,reason:'MISSING_OR_INVALID_SPECIALIST_SUMMARY',
+        message:String(err?.message??err)};
     }
   }
   return {status,evidence};
