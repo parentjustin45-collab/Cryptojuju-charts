@@ -17,7 +17,7 @@ function validUrl(value){
   try {
     const u=new URL(value);
     return ['postgresql:','postgres:'].includes(u.protocol) &&
-      !!u.hostname&&!!u.username&&!!u.pathname&&u.pathname!=='/';
+      !!u.hostname&&!!u.username&&!!u.password&&!!u.pathname&&u.pathname!=='/';
   }catch{return false;}
 }
 export async function probeDatabase({url=process.env.DATABASE_URL,PoolClass=null}={}){
