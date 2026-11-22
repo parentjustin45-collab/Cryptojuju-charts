@@ -157,7 +157,7 @@ export async function main(){
       console.error('CJ_AGENT_CYCLE_ERROR '+lastError);
     }finally{busy=false;}
   };
-  const http=createServer((req,res)=>{
+  const http=process.env.CJ_AGENT_HTTP_DISABLED==='1'?null:createServer((req,res)=>{
     if(req.method!=='GET'||req.url!=='/healthz'){
       res.writeHead(404,{'content-type':'application/json'});res.end('{"error":"not_found"}');return;
     }
@@ -166,12 +166,12 @@ export async function main(){
       lastCycle,healthy:!lastError,workInProgress:busy}));
   });
   const port=Number(process.env.PORT??10000);
-  await new Promise(resolve=>http.listen(port,'0.0.0.0',resolve));
-  console.log('CJ_AGENT_RUNTIME_DETERMINISTIC port='+port);
+  if(http)await new Promise(resolve=>http.listen(port,'0.0.0.0',resolve));
+  console.log('CJ_AGENT_RUNTIME_DETERMINISTIC '+(http?'port='+port:'embedded=true'));
   const timer=setInterval(()=>{void tick();},60000);
   timer.unref();
   await tick();
-  const stop=async()=>{clearInterval(timer);http.close();await db.end();};
+  const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
   process.once('SIGTERM',()=>{void stop();});
   process.once('SIGINT',()=>{void stop();});
 }
