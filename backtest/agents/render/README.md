@@ -48,3 +48,51 @@ node --test backtest/agents/render-plan.test.mjs backtest/agents/render-runtime.
 Les tests sont entièrement synthétiques (fausse base), n'affirment rien sur le
 marché réel. La branche main, le site public et les services Render actifs
 n'ont pas été modifiés.
+
+## Intégration de l'API existante : état contrôlé le 22 novembre 2026
+
+- Fichier de test d'intégration : `integrated-api.mjs`.
+  Il conserve `GET /` et `GET /api/bitunix/proxy` version API 1.1.0,
+  ajoute `GET /healthz` et `GET /api/agents/status`.
+- Par défaut, le serveur continue de répondre même si les agents ne peuvent pas
+  démarrer : `CJ_AGENT_RUNTIME_ENABLED` absent/0 = DISABLED;
+  `DATABASE_URL` absent = BLOCKED, **aucun faux statut RUNNING**.
+- Smoke HTTP réel mais source Bitunix simulée dans
+  `integration-smoke.mjs`; GitHub Actions
+  `.github/workflows/ai-agents-render-api.yml` installe Express/CORS/pg
+  et valide routes, refus de proxy arbitraire, mémoire et journal.
+- Mémoire `knowledge.mjs` : hypothèses/contre-preuves liées à source SHA-256,
+  commit et disponibilité de l'information; table `cj_agent_insights`
+  créée uniquement lorsque Render initialise réellement PostgreSQL.
+  **Aucun moteur LLM activé. Aucun résultat réel ajouté pour l'instant.**
+- Préparation de compilation (quand l'application API pointe sur ce code) :
+  `npm install --prefix backtest/agents/render --no-audit --no-fund`.
+- Commande de démarrage de la version intégrée :
+  `node backtest/agents/render/integrated-api.mjs`.
+
+### Blocage d'accès GitHub — action du propriétaire
+
+L'installation GitHub de l'application sélectionne actuellement
+`Cryptojuju-charts` mais pas `cryptojuju-api`.
+Pour créer une branche `dev/render-ai-agents` dans le deuxième dépôt,
+ajouter **seulement** `parentjustin45-collab/cryptojuju-api` aux
+dépôts autorisés sur
+https://github.com/settings/installations/174822231 .
+Ne jamais donner de token dans une conversation. Le dépôt API `main`
+n'a pas été modifié, sa configuration Render pointe toujours dessus.
+
+### Blocage d'accès Postgres — action dans Render (après branche/API)
+
+Base existante `cryptojuju-tv-momentum-pilot-db`, région Ohio,
+1 Go; politique réseau externe fermée. Utiliser une **URL interne**
+dans Render > service API > Environment : clé secrète `DATABASE_URL`.
+Éviter d'ouvrir la base à Internet ou d'envoyer l'URL au chat.
+Le contrôle d'accès DB, la création des tables et le fonctionnement
+réel doivent être vérifiés avec des logs après un déploiement de
+développement. La base connectée n'est pas encore confirmée.
+
+**Ne pas déployer aveuglément l'entrée intégrée dans le service
+`cryptojuju-api` : il faut d'abord une branche de développement
+accessible, une stratégie de synchronisation du code Charts et un
+test de bout en bout sans perte du proxy client.** Aucune dépense
+supplémentaire ni changement `main` ne sont autorisés par ce guide.
