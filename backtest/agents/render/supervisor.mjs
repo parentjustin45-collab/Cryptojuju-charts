@@ -10,6 +10,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostics} from './plan.mjs';
+import {initializeSpecialistMemory} from './knowledge.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const OUTPUT_LIMIT=12000;
@@ -114,6 +115,7 @@ async function initializeDb(){
     "started_at timestamptz NOT NULL DEFAULT now(), "+
     "finished_at timestamptz, evidence jsonb, "+
     "PRIMARY KEY(agent, slot))");
+  await initializeSpecialistMemory(db);
   return db;
 }
 
