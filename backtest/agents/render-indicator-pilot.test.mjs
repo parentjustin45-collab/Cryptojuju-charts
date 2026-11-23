@@ -42,10 +42,14 @@ test('Momentum and SPEED complete nine isolated deterministic research summaries
    return JSON.stringify(name.endsWith('-repeatability.json')?v.repeat:v.source);
  };
  for(const kind of ['momentum','speed']){
-   const r=await researchSpecialist(kind,'/synthetic/in-memory-only',{read});
+   const detailFiles=new Map();
+   const writeDetails=async(path,body)=>detailFiles.set(path,JSON.parse(body));
+   const r=await researchSpecialist(kind,'/synthetic/in-memory-only',{read,writeDetails});
    assert.equal(r.status,VALID_STATUSES[kind],kind);
    assert.equal(r.passed,9,kind);assert.equal(r.blocked,0,kind);
    assert.equal(r.cases.length,9,kind);
+   assert.equal(detailFiles.size,9,kind);
+   assert.equal([...detailFiles.values()].every(x=>x.bars.length===480 && x.causalOnly===true && x.sourceSha256==='a'.repeat(64)),true);
    assert.equal(r.cases.every(c=>c.evidence.sampledPrefixChecks===3),true);
    assert.equal(r.performanceVerified,false);
    assert.equal(r.liveOrders,false);
@@ -57,4 +61,14 @@ test('missing or forged source blocks an individual case, never fabricates a pas
  assert.equal(result.passed,0);
  assert.equal(result.blocked,9);
  await assert.rejects(()=>researchSpecialist('unknown','/'));
+});
+
+test('a failed per-bar archive write blocks the research case',async()=>{
+  const f=fixture('BTCUSDT','1h');
+  const read=async filename=>JSON.stringify(String(filename).endsWith('-repeatability.json')?f.repeat:f.source);
+  const r=await researchSpecialist('speed','/synthetic',{read,
+    writeDetails:async()=>{throw Error('simulated disk failure')}});
+  assert.equal(r.passed,0);
+  assert.equal(r.blocked,9);
+  assert.equal(r.status,'BLOCKED');
 });
