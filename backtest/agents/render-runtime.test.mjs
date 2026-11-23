@@ -36,11 +36,11 @@ test('all six are recorded once in PostgreSQL ledger without subprocesses in tes
   };
   const now=new Date('2026-11-22T15:58:00Z');
   const allowedIds=['bitunix-data','vector','momentum','speed','cipher','diagnostics'];
-  const first=await runDueCycle(db,now,{executor,allowedIds});
+  const first=await runDueCycle(db,now,{executor,allowedIds,sourceFilesReady:async()=>true});
   assert.equal(first.completed.length,6);
   assert.equal(calls.length,5);
   assert.equal(db.rows.get('diagnostics|'+first.slot).evidence.automaticCodeChanges,false);
-  const second=await runDueCycle(db,now,{executor,allowedIds});
+  const second=await runDueCycle(db,now,{executor,allowedIds,sourceFilesReady:async()=>true});
   assert.equal(second.completed.length,0);
   assert.equal(db.rows.size,6);
 });
@@ -75,4 +75,36 @@ test('runtime defaults to no research and refuses unrecognized allowlist values'
  assert.deepEqual(gated.completed.map(x=>x.agent),['bitunix-data']);
  assert.deepEqual(calls,['bitunix-data']);
  assert.equal(db.rows.size,1);
+});
+
+test('Vector rehydrates absent disk data only through an accepted fresh Bitunix check',async()=>{
+  const db=fakeLedger(),called=[];
+  const executor=async agent=>{
+    called.push(agent.id);
+    return agent.id==='bitunix-data'
+      ? {status:'DATA_READY_FOR_RESEARCH_ONLY',
+         evidence:{checks:[{symbol:'BTCUSDT',timeframe:'1h',sha256:'a'.repeat(64),status:'DATA_READY_FOR_RESEARCH_ONLY'}]}}
+      : {status:'EXECUTED_RESEARCH_ONLY',evidence:{summary:{cases:9,passed:9}}};
+  };
+  const res=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{
+    executor,allowedIds:['bitunix-data','vector'],sourceFilesReady:async()=>false
+  });
+  assert.deepEqual(called,['bitunix-data','bitunix-data','vector']);
+  assert.equal(db.rows.get('vector|'+res.slot).status,'EXECUTED_RESEARCH_ONLY');
+  assert.equal(db.rows.get('vector|'+res.slot).evidence.sourceRehydrated,true);
+  assert.equal(res.completed.find(x=>x.agent==='vector').sourceRehydrated,true);
+});
+test('Vector rejects failed data refresh without proceeding to Vector itself',async()=>{
+  const db=fakeLedger(),called=[];
+  const executor=async agent=>{
+    called.push(agent.id);
+    return {status:called.length===1?'DATA_READY_FOR_RESEARCH_ONLY':'BLOCKED',evidence:{}};
+  };
+  const res=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{
+    executor,allowedIds:['bitunix-data','vector'],sourceFilesReady:async()=>false
+  });
+  assert.deepEqual(called,['bitunix-data','bitunix-data']);
+  const vector=db.rows.get('vector|'+res.slot);
+  assert.equal(vector.status,'BLOCKED');
+  assert.equal(vector.evidence.reason,'VECTOR_INPUT_REHYDRATION_FAILED');
 });
