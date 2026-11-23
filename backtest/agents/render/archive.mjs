@@ -24,8 +24,12 @@ export function shouldArchive(agent,name){
   if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,179}\.(json|md|html)$/.test(name))return false;
   if(agent==='bitunix-data')return true; // First stage owns entire data folder.
   if(agent==='vector')return /vector|regime|scoreboard|timing/i.test(name);
-  if(agent==='momentum')return name==='momentum-render-summary.json';
-  if(agent==='speed')return name==='speed-render-summary.json';
+  if(agent==='momentum')
+    return name==='momentum-render-summary.json'||
+      /^momentum-(BTCUSDT|ETHUSDT|SOLUSDT)-(15m|1h|4h)-detail\.json$/.test(name);
+  if(agent==='speed')
+    return name==='speed-render-summary.json'||
+      /^speed-(BTCUSDT|ETHUSDT|SOLUSDT)-(15m|1h|4h)-detail\.json$/.test(name);
   if(agent==='cipher')return true;
   return false;
 }
@@ -36,6 +40,9 @@ export async function listArchiveInputs(agent,slot,{root=baseFor(slot),requireSu
   const names=(await readdir(folder)).filter(name=>shouldArchive(agent,name)).sort();
   if(requireSummary&&!names.includes(summaryFiles[agent]))
     throw Error('MISSING_MANDATORY_ARCHIVE_SUMMARY');
+  if(requireSummary&&['momentum','speed'].includes(agent)&&
+      names.filter(name=>name.startsWith(agent+'-')&&name.endsWith('-detail.json')).length!==9)
+    throw Error('MISSING_NINE_PER_BAR_RESEARCH_ARCHIVES');
   if(names.length>250)throw Error('ARCHIVE_FILE_COUNT_EXCEEDED');
   let total=0;
   const files=[];
