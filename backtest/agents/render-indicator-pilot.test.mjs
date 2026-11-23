@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CASES,requireVerifiedInput,researchSpecialist,VALID_STATUSES}
-  from './agents/run-render-indicator-pilot.mjs';
+  from './run-render-indicator-pilot.mjs';
 
 function fixture(symbol,timeframe){
  const step={'15m':900000,'1h':3600000,'4h':14400000}[timeframe];
