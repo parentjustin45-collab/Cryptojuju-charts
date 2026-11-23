@@ -63,6 +63,8 @@ test('archive allowlists include all native test reports without leaking adjacen
   assert.equal(shouldArchive('vector','BTCUSDT-1h-vector-v11.json'),true);
   assert.equal(shouldArchive('vector','vector-market-regimes-summary.md'),true);
   assert.equal(shouldArchive('momentum','momentum-render-summary.json'),true);
+  assert.equal(shouldArchive('momentum','momentum-BTCUSDT-1h-detail.json'),true);
+  assert.equal(shouldArchive('speed','speed-SOLUSDT-15m-detail.json'),true);
   assert.equal(shouldArchive('speed','speed-render-summary.json'),true);
   assert.equal(shouldArchive('cipher','HYPEUSDT-source-first.json'),true);
   assert.equal(shouldArchive('bitunix-data','../secrets.json'),false);
@@ -127,4 +129,17 @@ test('storage capacity logs real pg database usage and warns before quota',async
   assert.equal(cap.dbBytes,840000000);
   assert.equal(cap.warning,true);
   assert.equal(cap.configuredBudgetBytes,1073741824);
+});
+
+test('successful Momentum and SPEED archives require all nine per-bar timelines',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'cj-perbar-incomplete-'));
+  try{
+    await mkdir(join(root,'data'));
+    await writeFile(join(root,'data','momentum-render-summary.json'),'{"passed":9}');
+    await writeFile(join(root,'data','speed-render-summary.json'),'{"passed":9}');
+    await assert.rejects(()=>listArchiveInputs('momentum',SLOT,{root}),
+      /MISSING_NINE_PER_BAR_RESEARCH_ARCHIVES/);
+    await assert.rejects(()=>listArchiveInputs('speed',SLOT,{root}),
+      /MISSING_NINE_PER_BAR_RESEARCH_ARCHIVES/);
+  }finally{await rm(root,{recursive:true,force:true});}
 });
