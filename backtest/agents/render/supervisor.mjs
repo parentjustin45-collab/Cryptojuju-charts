@@ -41,6 +41,8 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
   // Never enable trading or allow a child to deploy code.
   delete env.BITUNIX_API_KEY;delete env.BITUNIX_API_SECRET;
   delete env.GITHUB_TOKEN;delete env.GH_TOKEN;delete env.OPENAI_API_KEY;
+  // Research children use public Bitunix only; keep DB secrets in supervisor.
+  delete env.DATABASE_URL;
   env.CJ_TRADING_ENABLED='0';
   const started=Date.now();
   const result=await new Promise(resolve=>{
@@ -138,9 +140,23 @@ async function priorReports(db,slot) {
   return r.rows;
 }
 
-export async function runDueCycle(db,now=new Date(),{executor=executeResearchProcess}={}){
+export function parseAllowedSpecialists(raw){
+  if(typeof raw!=='string'||!raw.trim())return [];
+  const ids=raw.split(',').map(s=>s.trim());
+  const known=new Set(SPECIALISTS.map(x=>x.id));
+  if(ids.some(id=>!known.has(id))||new Set(ids).size!==ids.length)
+    throw Error('CJ_AGENT_ALLOWED_IDS must list distinct known specialists');
+  return ids;
+}
+
+export async function runDueCycle(db,now=new Date(),{
+  executor=executeResearchProcess,allowedIds=[]
+}={}){
+  if(!Array.isArray(allowedIds)||allowedIds.some(id=>!SPECIALISTS.some(a=>a.id===id)))
+    throw Error('Invalid explicit specialist allowlist');
+  const allow=new Set(allowedIds);
   const slot=utcSlot(now),completed=[];
-  for(const agent of dueSpecialists(now)){
+  for(const agent of dueSpecialists(now).filter(a=>allow.has(a.id))){
     if(!(await claim(db,agent.id,slot)))continue;
     let result;
     try{
@@ -170,13 +186,17 @@ export async function runDueCycle(db,now=new Date(),{executor=executeResearchPro
 export async function main(){
   if(process.env.CJ_AGENT_RUNTIME_ENABLED!=='1')
     throw Error('Set CJ_AGENT_RUNTIME_ENABLED=1 only after deployment approval');
+  const allowedIds=parseAllowedSpecialists(process.env.CJ_AGENT_ALLOWED_IDS);
+  if(allowedIds.length===0)
+    throw Error('No specialist explicitly enabled: set CJ_AGENT_ALLOWED_IDS');
+  console.log('CJ_AGENT_ALLOWED_IDS '+allowedIds.join(','));
   const db=await initializeDb();
   let busy=false,lastCycle=null,lastError=null;
   const tick=async()=>{
     if(busy)return;
     busy=true;
     try {
-      const r=await runDueCycle(db,new Date());
+      const r=await runDueCycle(db,new Date(),{allowedIds});
       lastCycle=r.slot;lastError=null;
       for(const outcome of r.completed)console.log('CJ_AGENT '+JSON.stringify(outcome));
     }catch(e){
