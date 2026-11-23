@@ -106,5 +106,20 @@ test('Vector rejects failed data refresh without proceeding to Vector itself',as
   assert.deepEqual(called,['bitunix-data','bitunix-data']);
   const vector=db.rows.get('vector|'+res.slot);
   assert.equal(vector.status,'BLOCKED');
-  assert.equal(vector.evidence.reason,'VECTOR_INPUT_REHYDRATION_FAILED');
+  assert.equal(vector.evidence.reason,'RESEARCH_INPUT_REHYDRATION_FAILED');
+});
+
+test('Momentum and SPEED cannot start without accepted exact-hour data',async()=>{
+ const db=fakeLedger(),calls=[];
+ const result=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{
+  allowedIds:['bitunix-data','momentum','speed'],
+  executor:async a=>{calls.push(a.id);return {status:'BLOCKED',evidence:{}};},
+  sourceFilesReady:async()=>false
+ });
+ assert.deepEqual(calls,['bitunix-data']);
+ for(const id of ['momentum','speed']){
+  const row=db.rows.get(id+'|'+result.slot);
+  assert.equal(row.status,'BLOCKED');
+  assert.equal(row.evidence.reason,'DEPENDENCY_BITUNIX_DATA_NOT_READY');
+ }
 });
