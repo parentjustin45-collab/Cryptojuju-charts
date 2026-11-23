@@ -5,6 +5,8 @@ on:
     paths:
       - 'backtest/agents/render/**'
       - 'backtest/agents/render-archive.test.mjs'
+      - 'backtest/agents/run-render-indicator-pilot.mjs'
+      - 'backtest/agents/render-indicator-pilot.test.mjs'
       - '.github/workflows/ai-agents-postgres-archive.yml'
   workflow_dispatch:
 permissions:
