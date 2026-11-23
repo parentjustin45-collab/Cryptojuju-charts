@@ -44,6 +44,7 @@ try {
   assert.equal(repeat.completed.length,0);
   const rows=await db.query('SELECT agent,status,evidence FROM cj_agent_runs WHERE slot=$1',[first.slot]);
   assert.equal(rows.rowCount,6);
+  console.log('CJ_PG18_ARCHIVE_DIAGNOSTIC '+JSON.stringify(rows.rows.map(x=>({agent:x.agent,status:x.status,reason:x.evidence?.reason??null,archiveError:x.evidence?.archiveError??null,receipt:x.evidence?.archive?.files??null}))));
   assert.equal(rows.rows.find(x=>x.agent==='bitunix-data').status,'DATA_READY_FOR_RESEARCH_ONLY');
   assert.equal(rows.rows.find(x=>x.agent==='diagnostics').evidence.automaticCodeChanges,false);
   for(const id of ['bitunix-data','vector','momentum','speed','cipher']){
