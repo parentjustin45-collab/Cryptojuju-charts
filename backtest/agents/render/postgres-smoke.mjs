@@ -13,11 +13,12 @@ try {
     status:agent.id==='bitunix-data'?'DATA_READY_FOR_RESEARCH_ONLY':'EXECUTED_RESEARCH_ONLY',
     evidence:{testFixture:true,automaticPromotion:false}
   });
-  const first=await runDueCycle(db,slot,{executor});
+  const allowedIds=['bitunix-data','vector','momentum','speed','cipher','diagnostics'];
+  const first=await runDueCycle(db,slot,{executor,allowedIds});
   assert.equal(first.completed.length,6);
   assert.deepEqual(first.completed.map(x=>x.agent),
     ['bitunix-data','vector','momentum','speed','cipher','diagnostics']);
-  const repeat=await runDueCycle(db,slot,{executor});
+  const repeat=await runDueCycle(db,slot,{executor,allowedIds});
   assert.equal(repeat.completed.length,0);
   const rows=await db.query('SELECT agent,status,evidence FROM cj_agent_runs WHERE slot=$1',[first.slot]);
   assert.equal(rows.rowCount,6);
@@ -46,3 +47,5 @@ try {
 }finally{
   await db.end();
 }
+
+
