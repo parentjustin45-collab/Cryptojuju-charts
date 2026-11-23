@@ -178,7 +178,12 @@ export async function runDueCycle(db,now=new Date(),{
         message:String(error?.message??error)}};
     }
     await record(db,agent.id,slot,result);
-    completed.push({agent:agent.id,status:result.status});
+    completed.push({agent:agent.id,status:result.status,
+      elapsedMs:result.evidence?.elapsedMs??null,
+      totalChecks:Array.isArray(result.evidence?.checks)?result.evidence.checks.length:null,
+      passedChecks:Array.isArray(result.evidence?.checks)
+        ?result.evidence.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length:null,
+      reason:result.evidence?.assessment?.reason??result.evidence?.reason??null});
   }
   return {slot,completed};
 }
