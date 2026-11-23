@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runDueCycle,parseAllowedSpecialists} from './render/supervisor.mjs';
+import {runDueCycle as realRunDueCycle,parseAllowedSpecialists} from './render/supervisor.mjs';
+const mockReceipt=async()=>({status:'ARCHIVED_DURABLY',files:1});
+const mockCapacity=async()=>({dbBytes:1024,warning:false});
+const runDueCycle=(db,now,opts={})=>realRunDueCycle(db,now,{
+  archiveRun:mockReceipt,capacityReader:mockCapacity,...opts});
 function fakeLedger(){
   const rows=new Map();
   return {rows,async query(sql,parameters){
@@ -122,4 +126,18 @@ test('Momentum and SPEED cannot start without accepted exact-hour data',async()=
   assert.equal(row.status,'BLOCKED');
   assert.equal(row.evidence.reason,'DEPENDENCY_BITUNIX_DATA_NOT_READY');
  }
+});
+
+test('archive failure blocks an otherwise successful data agent and its dependents',async()=>{
+  const db=fakeLedger();
+  const result=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{
+    allowedIds:['bitunix-data','vector'],
+    executor:async()=>({status:'DATA_READY_FOR_RESEARCH_ONLY',evidence:{}}),
+    sourceFilesReady:async()=>true,
+    archiveRun:async()=>{throw Error('Archive disk or transaction failure');}
+  });
+  const input=db.rows.get('bitunix-data|'+result.slot);
+  assert.equal(input.status,'BLOCKED');
+  assert.equal(input.evidence.reason,'ARCHIVE_PERSISTENCE_FAILED');
+  assert.equal(db.rows.get('vector|'+result.slot).status,'BLOCKED');
 });
