@@ -5,6 +5,7 @@ on:
     paths:
       - 'backtest/agents/render/**'
       - 'backtest/agents/render-*.test.mjs'
+      - 'backtest/agents/run-render-indicator-pilot.mjs'
       - '.github/workflows/ai-agents-render-api.yml'
   workflow_dispatch:
 permissions:
