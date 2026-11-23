@@ -5,7 +5,7 @@
  */
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
-import {mkdir,readFile} from 'node:fs/promises';
+import {mkdir,readFile,access} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -95,7 +95,13 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
       evidence={...evidence,summary:{protocol:summary.protocol,status:summary.status,
         cases:cases.length,passed:summary.passed??summary.validated,
         blocked:summary.blocked??null,metadataError:summary.metadataError??null,
-        fatalError:summary.fatalError??null}};
+        fatalError:summary.fatalError??null,
+        caseMetrics:agent.id==='vector'?cases.map(x=>({
+          symbol:x.symbol,timeframe:x.timeframe,status:x.status,
+          signals:x.signals,holdoutTrades:x.holdoutTrades,
+          trainingTrades:x.trainingTrades,v12Status:x.v12Status,
+          noLookaheadPrefixChecks:x.noLookaheadPrefixChecks
+        })):undefined}};
     }catch(err){
       status='BLOCKED';
       evidence={...evidence,reason:'MISSING_OR_INVALID_SPECIALIST_SUMMARY',
@@ -133,6 +139,19 @@ async function record(db,id,slot,result){
     "WHERE agent=$1 AND slot=$2",
     [id,slot,result.status,result.evidence?.exitCode??null,JSON.stringify(result.evidence??{})]);
 }
+export async function hasVectorSourceFiles(slot,{accessImpl=access}={}){
+  const dir=join(outFolder(slot),'data');
+  for(const symbol of ['BTCUSDT','ETHUSDT','SOLUSDT']){
+    for(const timeframe of ['15m','1h','4h']){
+      for(const suffix of ['.json','-repeatability.json']){
+        try{await accessImpl(join(dir,symbol+'-'+timeframe+suffix));}
+        catch{return false;}
+      }
+    }
+  }
+  return true;
+}
+
 async function priorReports(db,slot) {
   const r=await db.query(
     "SELECT agent,status,exit_code FROM cj_agent_runs "+
@@ -150,7 +169,7 @@ export function parseAllowedSpecialists(raw){
 }
 
 export async function runDueCycle(db,now=new Date(),{
-  executor=executeResearchProcess,allowedIds=[]
+  executor=executeResearchProcess,allowedIds=[],sourceFilesReady=hasVectorSourceFiles
 }={}){
   if(!Array.isArray(allowedIds)||allowedIds.some(id=>!SPECIALISTS.some(a=>a.id===id)))
     throw Error('Invalid explicit specialist allowlist');
@@ -158,13 +177,25 @@ export async function runDueCycle(db,now=new Date(),{
   const slot=utcSlot(now),completed=[];
   for(const agent of dueSpecialists(now).filter(a=>allow.has(a.id))){
     if(!(await claim(db,agent.id,slot)))continue;
-    let result;
+    let result,refreshedInput=null;
     try{
       if(agent.id==='vector'){
         const data=await db.query(
           "SELECT status FROM cj_agent_runs WHERE agent='bitunix-data' AND slot=$1",[slot]);
         if(data.rows[0]?.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
           result={status:'BLOCKED',evidence:{reason:'DEPENDENCY_BITUNIX_DATA_NOT_READY'}};
+        }else if(!(await sourceFilesReady(slot))){
+          // Render uses an ephemeral filesystem: the validated DB record can
+          // outlive the actual candle files after a service deployment.
+          // Rehydrate ONLY from fresh, independently verified public candles.
+          // The old DB data result is not treated as authorization to skip checks.
+          const dataAgent=SPECIALISTS.find(a=>a.id==='bitunix-data');
+          refreshedInput=await executor(dataAgent,slot);
+          if(refreshedInput.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
+            result={status:'BLOCKED',
+              evidence:{reason:'VECTOR_INPUT_REHYDRATION_FAILED',
+                rehydrationStatus:refreshedInput.status}};
+          }
         }
       }
       if(!result && agent.id==='diagnostics'){
@@ -177,13 +208,22 @@ export async function runDueCycle(db,now=new Date(),{
       result={status:'BLOCKED',evidence:{reason:'UNHANDLED_RESEARCH_ERROR',
         message:String(error?.message??error)}};
     }
+    if(refreshedInput&&result?.status==='EXECUTED_RESEARCH_ONLY'){
+      result.evidence={...result.evidence,sourceRehydrated:true,
+        rehydrationChecks:refreshedInput.evidence?.checks?.map(
+          x=>({symbol:x.symbol,timeframe:x.timeframe,sha256:x.sha256,status:x.status})
+        )??[]};
+    }
     await record(db,agent.id,slot,result);
     completed.push({agent:agent.id,status:result.status,
       elapsedMs:result.evidence?.elapsedMs??null,
       totalChecks:Array.isArray(result.evidence?.checks)?result.evidence.checks.length:null,
       passedChecks:Array.isArray(result.evidence?.checks)
         ?result.evidence.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length:null,
-      reason:result.evidence?.assessment?.reason??result.evidence?.reason??null});
+      reason:result.evidence?.assessment?.reason??result.evidence?.reason??null,
+      sourceRehydrated:result.evidence?.sourceRehydrated??false,
+      totalCases:result.evidence?.summary?.cases??null,
+      passedCases:result.evidence?.summary?.passed??null});
   }
   return {slot,completed};
 }
