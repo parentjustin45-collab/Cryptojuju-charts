@@ -88,8 +88,11 @@ export async function archiveAgentArtifacts(db,agent,slot,opts={}){
     const check=await client.query(
       'SELECT path,trim(sha256) AS sha256 FROM cj_archive_manifest WHERE agent=$1 AND slot=$2 ORDER BY path',
       [agent,slot]);
-    if(check.rows.length!==files.length||
-      check.rows.some((x,i)=>x.path!==files[i].path||x.sha256!==files[i].sha256))
+    // PostgreSQL path collation need not match JavaScript's default .sort().
+    // Verify the exact content-addressed set, independently of row ordering.
+    const readback=new Map(check.rows.map(x=>[x.path,String(x.sha256).trim()]));
+    if(check.rows.length!==files.length||readback.size!==files.length||
+      files.some(f=>readback.get(f.path)!==f.sha256))
       throw Error('ARCHIVE_DATABASE_READBACK_MISMATCH');
     await client.query('COMMIT');
   }catch(e){
