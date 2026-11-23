@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {gzipSync,gunzipSync} from 'node:zlib';
 import {readdir,readFile,lstat,mkdir,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join,relative,resolve,sep} from 'node:path';
+import {join,resolve,sep} from 'node:path';
 
 export const MAX_FILE_BYTES=16*1024*1024;
 export const MAX_RUN_BYTES=80*1024*1024;
@@ -29,12 +29,13 @@ export function shouldArchive(agent,name){
   if(agent==='cipher')return true;
   return false;
 }
-export async function listArchiveInputs(agent,slot,{root=baseFor(slot)}={}){
+export async function listArchiveInputs(agent,slot,{root=baseFor(slot),requireSummary=true}={}){
   const sub=agentRoots[agent];
   if(!sub)throw Error('No file archive for agent '+agent);
   const folder=join(root,sub);
   const names=(await readdir(folder)).filter(name=>shouldArchive(agent,name)).sort();
-  if(!names.includes(summaryFiles[agent]))throw Error('MISSING_MANDATORY_ARCHIVE_SUMMARY');
+  if(requireSummary&&!names.includes(summaryFiles[agent]))
+    throw Error('MISSING_MANDATORY_ARCHIVE_SUMMARY');
   if(names.length>250)throw Error('ARCHIVE_FILE_COUNT_EXCEEDED');
   let total=0;
   const files=[];
@@ -80,7 +81,7 @@ export async function archiveAgentArtifacts(db,agent,slot,opts={}){
         [f.sha256,f.body.length,f.gzip.length,f.gzip]);
       await client.query(
         'INSERT INTO cj_archive_manifest(agent,slot,path,sha256) VALUES($1,$2,$3,$4) '+
-        'ON CONFLICT(agent,slot,path) DO UPDATE SET sha256=EXCLUDED.sha256',
+        'ON CONFLICT(agent,slot,path) DO NOTHING',
         [agent,slot,f.path,f.sha256]);
     }
     // Readback verifies one manifest row per file before accepting a completed run.
