@@ -101,7 +101,7 @@ function studySpeed(candles){
     colors,sampledPrefixChecks:cuts.length,
     caveat:'Descriptive color counts only, not profitability or prediction.'};
 }
-export async function researchSpecialist(kind,folder,{read=readFile}={}){
+export async function researchSpecialist(kind,folder,{read=readFile,writeDetails=null}={}){
   if(!Object.hasOwn(VALID_STATUSES,kind))
     throw Error('Unknown specialist');
   const cases=[];
@@ -112,6 +112,23 @@ export async function researchSpecialist(kind,folder,{read=readFile}={}){
       const readback=JSON.parse(await read(join(folder,id+'-repeatability.json'),'utf8'));
       const candles=requireVerifiedInput(source,readback,{symbol,timeframe});
       const evidence=kind==='momentum'?studyMomentum(candles):studySpeed(candles);
+      // Retain the *complete* per-closed-bar research outputs so future
+      // diagnostics do not need to rerun an old indicator implementation.
+      // The source candles are archived separately by the Bitunix agent.
+      if(writeDetails){
+        const bars=kind==='momentum'
+          ?calculateMomentumFusion(candles):classifySpeedCandleV3(candles);
+        if(bars.length!==480)throw Error('PARTIAL_PER_BAR_RESEARCH_OUTPUT');
+        const details={
+          protocol:'CJ_RENDER_'+kind.toUpperCase()+'_CLOSED_BAR_TIMELINE_V1',
+          kind,symbol,timeframe,exchange:'Bitunix',priceType:'LAST_PRICE',
+          sourceSha256:source.provenance.rawSha256,
+          historyWindow:source.historyWindow,bars,
+          causalOnly:true,tradingEnabled:false,autoPromotion:false
+        };
+        await writeDetails(join(folder,kind+'-'+id+'-detail.json'),
+          JSON.stringify(details)+'\n');
+      }
       cases.push({symbol,timeframe,status:'VALIDATED_RESEARCH_ONLY',
         sourceSha256:source.provenance.rawSha256,
         closingEndTime:source.historyWindow.endTime,evidence});
@@ -128,7 +145,7 @@ export async function researchSpecialist(kind,folder,{read=readFile}={}){
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   const kind=process.argv[2],dir=resolve(process.argv[3]??'');
-  const report=await researchSpecialist(kind,dir);
+  const report=await researchSpecialist(kind,dir,{writeDetails:writeFile});
   await writeFile(join(dir,kind+'-render-summary.json'),JSON.stringify(report,null,2)+'\n');
   console.log('CJ_RENDER_'+String(kind).toUpperCase()+' '+JSON.stringify({
     status:report.status,passed:report.passed,blocked:report.blocked}));
