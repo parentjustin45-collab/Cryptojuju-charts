@@ -29,6 +29,13 @@ try {
   await write('data','BTCUSDT-1h-vector-v11.json',JSON.stringify({test:'vector'}));
   await write('data','momentum-render-summary.json',JSON.stringify({agent:'momentum',ci:true}));
   await write('data','speed-render-summary.json',JSON.stringify({agent:'speed',ci:true}));
+  for(const kind of ['momentum','speed'])
+    for(const symbol of ['BTCUSDT','ETHUSDT','SOLUSDT'])
+      for(const tf of ['15m','1h','4h'])
+        await write('data',kind+'-'+symbol+'-'+tf+'-detail.json',
+          JSON.stringify({kind,symbol,timeframe:tf,sourceSha256:'a'.repeat(64),
+            bars:Array.from({length:480},(_,i)=>({time:i,indicator:Math.sin(i/6)}))}));
+
   await write('cipher','cj-cipher-pilot-summary.json',JSON.stringify({agent:'cipher',ci:true}));
   await write('cipher','HYPEUSDT-source-first.json',source);
   const executor=async agent=>({
