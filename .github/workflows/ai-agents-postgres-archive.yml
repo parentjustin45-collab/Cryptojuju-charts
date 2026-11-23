@@ -1,0 +1,42 @@
+name: DEV CryptoJuju archive PostgreSQL 18 integration
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/**'
+      - 'backtest/agents/render-archive.test.mjs'
+      - '.github/workflows/ai-agents-postgres-archive.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive-against-real-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: cj_dev
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: cj_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cj_dev -d cj_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+      - name: Install research dependencies
+        run: npm install --prefix backtest/agents/render --no-audit --no-fund
+      - name: Offline unit and archive restoration gates
+        run: node --test backtest/agents/render-runtime.test.mjs backtest/agents/render-archive.test.mjs
+      - name: Real PostgreSQL 18 persistent archive + SHA256 restore
+        run: node backtest/agents/render/postgres-smoke.mjs
+        env:
+          DATABASE_URL: postgres://cj_dev:ci_only_password@localhost:5432/cj_dev
