@@ -11,6 +11,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostics} from './plan.mjs';
 import {initializeSpecialistMemory} from './knowledge.mjs';
+import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const OUTPUT_LIMIT=12000;
@@ -153,6 +154,7 @@ export async function initializeDb(){
     "finished_at timestamptz, evidence jsonb, "+
     "PRIMARY KEY(agent, slot))");
   await initializeSpecialistMemory(db);
+  await initializeArchive(db);
   return db;
 }
 
@@ -198,7 +200,8 @@ export function parseAllowedSpecialists(raw){
 }
 
 export async function runDueCycle(db,now=new Date(),{
-  executor=executeResearchProcess,allowedIds=[],sourceFilesReady=hasVectorSourceFiles
+  executor=executeResearchProcess,allowedIds=[],sourceFilesReady=hasVectorSourceFiles,
+  archiveRun=archiveAgentArtifacts,capacityReader=archiveCapacity
 }={}){
   if(!Array.isArray(allowedIds)||allowedIds.some(id=>!SPECIALISTS.some(a=>a.id===id)))
     throw Error('Invalid explicit specialist allowlist');
@@ -206,7 +209,7 @@ export async function runDueCycle(db,now=new Date(),{
   const slot=utcSlot(now),completed=[];
   for(const agent of dueSpecialists(now).filter(a=>allow.has(a.id))){
     if(!(await claim(db,agent.id,slot)))continue;
-    let result,refreshedInput=null;
+    let result,refreshedInput=null,didExecute=false;
     try{
       if(['vector','momentum','speed'].includes(agent.id)){
         const data=await db.query(
@@ -228,14 +231,29 @@ export async function runDueCycle(db,now=new Date(),{
         }
       }
       if(!result && agent.id==='diagnostics'){
-        result={status:'EXECUTED_RESEARCH_ONLY',
-          evidence:summarizeDiagnostics(await priorReports(db,slot))};
+        const audit=summarizeDiagnostics(await priorReports(db,slot));
+        result={status:'EXECUTED_RESEARCH_ONLY',evidence:{
+          ...audit,storage:await capacityReader(db)}};
       }else if(!result){
+        didExecute=true;
         result=await executor(agent,slot);
       }
     }catch(error){
       result={status:'BLOCKED',evidence:{reason:'UNHANDLED_RESEARCH_ERROR',
         message:String(error?.message??error)}};
+    }
+    // The process finishing is not a success until every emitted report is
+    // archived in PostgreSQL and its manifest read back inside a transaction.
+    if(didExecute){
+      try {
+        const receipt=await archiveRun(db,agent.id,slot);
+        result.evidence={...result.evidence,archive:receipt};
+      }catch(e){
+        result={status:'BLOCKED',evidence:{...result?.evidence,
+          preArchiveStatus:result?.status??null,
+          reason:'ARCHIVE_PERSISTENCE_FAILED',
+          archiveError:String(e?.message??e).slice(0,220)}};
+      }
     }
     if(refreshedInput&&result?.status==='EXECUTED_RESEARCH_ONLY'){
       result.evidence={...result.evidence,sourceRehydrated:true,
@@ -252,7 +270,10 @@ export async function runDueCycle(db,now=new Date(),{
       reason:result.evidence?.assessment?.reason??result.evidence?.reason??null,
       sourceRehydrated:result.evidence?.sourceRehydrated??false,
       totalCases:result.evidence?.summary?.cases??null,
-      passedCases:result.evidence?.summary?.passed??null});
+      passedCases:result.evidence?.summary?.passed??null,
+      archiveFiles:result.evidence?.archive?.files??null,
+      databaseBytes:result.evidence?.storage?.dbBytes??null,
+      databaseWarning:result.evidence?.storage?.warning??null});
   }
   return {slot,completed};
 }
@@ -272,7 +293,12 @@ export async function main(){
     try {
       const r=await runDueCycle(db,new Date(),{allowedIds});
       lastCycle=r.slot;lastError=null;
-      for(const outcome of r.completed)console.log('CJ_AGENT '+JSON.stringify(outcome));
+      for(const outcome of r.completed){
+        console.log('CJ_AGENT '+JSON.stringify(outcome));
+        if(outcome.databaseBytes!==null)
+          console.log('CJ_ARCHIVE_CAPACITY '+JSON.stringify({
+            usedBytes:outcome.databaseBytes,warning:outcome.databaseWarning}));
+      }
     }catch(e){
       lastError=String(e?.message??e);
       console.error('CJ_AGENT_CYCLE_ERROR '+lastError);
