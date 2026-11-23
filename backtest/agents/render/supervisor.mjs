@@ -24,9 +24,10 @@ function commandFor(agent,slot){
       args:[join(folder,'data')],env:{CJ_DATA_PILOT_BARS:'480'}};
     case 'vector': return {file:'backtest/agents/run-vector-v11-pilot.mjs',
       args:[join(folder,'data')],env:{}};
-    case 'momentum': return {file:'backtest/momentum-fusion-extended-bitunix.mjs',args:[],env:{}};
-    case 'speed': return {file:'backtest/speed-bitunix-live.mjs',
-      args:[],env:{SPEED_HISTORY_DAYS:'30'}};
+    case 'momentum': return {file:'backtest/agents/run-render-indicator-pilot.mjs',
+      args:['momentum',join(folder,'data')],env:{}};
+    case 'speed': return {file:'backtest/agents/run-render-indicator-pilot.mjs',
+      args:['speed',join(folder,'data')],env:{}};
     case 'cipher': return {file:'backtest/agents/run-cj-cipher-pilot.mjs',
       args:[join(folder,'cipher')],env:{}};
     default: throw Error('No subprocess for '+agent.id);
@@ -76,6 +77,34 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
       })),assessment};
     }catch(err){
       status='BLOCKED';evidence={...evidence,assessment:{reason:String(err?.message??err)}};
+    }
+  }
+  if(agent.id==='momentum'||agent.id==='speed'){
+    try{
+      const summary=JSON.parse(await readFile(
+        join(outFolder(slot),'data',agent.id+'-render-summary.json'),'utf8'));
+      const expected=agent.id==='momentum'
+        ?'MOMENTUM_FUSION_9_DOUBLE_READ_CASES_READY'
+        :'SPEED_V3_9_DOUBLE_READ_CASES_READY';
+      const ok=summary.kind===agent.id&&summary.status===expected &&
+        summary.passed===9&&summary.blocked===0&&summary.cases?.length===9 &&
+        summary.cases.every(c=>c.status==='VALIDATED_RESEARCH_ONLY'&&
+          /^[a-f0-9]{64}$/i.test(c.sourceSha256??'')&&
+          Number.isSafeInteger(c.closingEndTime)&&
+          c.evidence?.sampledPrefixChecks===3);
+      status=(status==='EXECUTED_RESEARCH_ONLY'&&ok)
+        ?status:'BLOCKED';
+      evidence={...evidence,summary:{protocol:summary.protocol,
+        status:summary.status,cases:summary.cases?.length??0,
+        passed:summary.passed,blocked:summary.blocked,
+        descriptiveResults:summary.cases.map(c=>({
+          symbol:c.symbol,timeframe:c.timeframe,status:c.status,
+          evidence:c.evidence,sourceSha256:c.sourceSha256
+        }))}};
+    }catch(err){
+      status='BLOCKED';evidence={...evidence,
+        reason:'MISSING_OR_INVALID_SPECIALIST_SUMMARY',
+        message:String(err?.message??err)};
     }
   }
   if(agent.id==='vector' || agent.id==='cipher'){
@@ -179,7 +208,7 @@ export async function runDueCycle(db,now=new Date(),{
     if(!(await claim(db,agent.id,slot)))continue;
     let result,refreshedInput=null;
     try{
-      if(agent.id==='vector'){
+      if(['vector','momentum','speed'].includes(agent.id)){
         const data=await db.query(
           "SELECT status FROM cj_agent_runs WHERE agent='bitunix-data' AND slot=$1",[slot]);
         if(data.rows[0]?.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
@@ -193,7 +222,7 @@ export async function runDueCycle(db,now=new Date(),{
           refreshedInput=await executor(dataAgent,slot);
           if(refreshedInput.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
             result={status:'BLOCKED',
-              evidence:{reason:'VECTOR_INPUT_REHYDRATION_FAILED',
+              evidence:{reason:'RESEARCH_INPUT_REHYDRATION_FAILED',
                 rehydrationStatus:refreshedInput.status}};
           }
         }
