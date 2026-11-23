@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runDueCycle} from './render/supervisor.mjs';
+import {runDueCycle,parseAllowedSpecialists} from './render/supervisor.mjs';
 function fakeLedger(){
   const rows=new Map();
   return {rows,async query(sql,parameters){
@@ -35,17 +35,19 @@ test('all six are recorded once in PostgreSQL ledger without subprocesses in tes
       evidence:{testFixture:true}};
   };
   const now=new Date('2026-11-22T15:58:00Z');
-  const first=await runDueCycle(db,now,{executor});
+  const allowedIds=['bitunix-data','vector','momentum','speed','cipher','diagnostics'];
+  const first=await runDueCycle(db,now,{executor,allowedIds});
   assert.equal(first.completed.length,6);
   assert.equal(calls.length,5);
   assert.equal(db.rows.get('diagnostics|'+first.slot).evidence.automaticCodeChanges,false);
-  const second=await runDueCycle(db,now,{executor});
+  const second=await runDueCycle(db,now,{executor,allowedIds});
   assert.equal(second.completed.length,0);
   assert.equal(db.rows.size,6);
 });
 test('Vector refuses to run without passing exact current-hour Bitunix gate',async()=>{
   const db=fakeLedger(),calls=[];
   const result=await runDueCycle(db,new Date('2026-11-22T15:15:00Z'),{
+    allowedIds:['bitunix-data','vector'],
     executor:async a=>{
       calls.push(a.id);
       return {status:'BLOCKED',evidence:{reason:'MOCK_DATA_FAILED'}};
@@ -55,4 +57,22 @@ test('Vector refuses to run without passing exact current-hour Bitunix gate',asy
   const vector=db.rows.get('vector|'+result.slot);
   assert.equal(vector.status,'BLOCKED');
   assert.equal(vector.evidence.reason,'DEPENDENCY_BITUNIX_DATA_NOT_READY');
+});
+
+test('runtime defaults to no research and refuses unrecognized allowlist values',async()=>{
+ const db=fakeLedger();
+ const calls=[];
+ const executor=async a=>{calls.push(a.id);return {status:'EXECUTED_RESEARCH_ONLY',evidence:{}}};
+ const result=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{executor});
+ assert.deepEqual(result.completed,[]);
+ assert.deepEqual(calls,[]);
+ assert.deepEqual(parseAllowedSpecialists('bitunix-data'),['bitunix-data']);
+ assert.deepEqual(parseAllowedSpecialists(''),[]);
+ assert.throws(()=>parseAllowedSpecialists('bitunix-data,invalid'));
+ assert.throws(()=>parseAllowedSpecialists('bitunix-data,bitunix-data'));
+ const gated=await runDueCycle(db,new Date('2026-11-22T15:58:00Z'),{
+  executor,allowedIds:['bitunix-data']});
+ assert.deepEqual(gated.completed.map(x=>x.agent),['bitunix-data']);
+ assert.deepEqual(calls,['bitunix-data']);
+ assert.equal(db.rows.size,1);
 });
