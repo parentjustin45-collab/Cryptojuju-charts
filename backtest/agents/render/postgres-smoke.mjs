@@ -14,7 +14,7 @@ try {
     evidence:{testFixture:true,automaticPromotion:false}
   });
   const allowedIds=['bitunix-data','vector','momentum','speed','cipher','diagnostics'];
-  const first=await runDueCycle(db,slot,{executor,allowedIds});
+  const first=await runDueCycle(db,slot,{executor,allowedIds,sourceFilesReady:async()=>true});
   assert.equal(first.completed.length,6);
   assert.deepEqual(first.completed.map(x=>x.agent),
     ['bitunix-data','vector','momentum','speed','cipher','diagnostics']);
