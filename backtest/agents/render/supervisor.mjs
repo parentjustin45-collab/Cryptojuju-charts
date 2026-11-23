@@ -5,7 +5,7 @@
  */
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
-import {mkdir,readFile,access} from 'node:fs/promises';
+import {mkdir,readFile,access,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -185,7 +185,7 @@ export async function hasVectorSourceFiles(slot,{accessImpl=access}={}){
 
 async function priorReports(db,slot) {
   const r=await db.query(
-    "SELECT agent,status,exit_code FROM cj_agent_runs "+
+    "SELECT agent,status,exit_code,evidence FROM cj_agent_runs "+
     "WHERE slot=$1 AND agent <> 'diagnostics' ORDER BY agent",[slot]);
   return r.rows;
 }
@@ -231,9 +231,13 @@ export async function runDueCycle(db,now=new Date(),{
         }
       }
       if(!result && agent.id==='diagnostics'){
-        const audit=summarizeDiagnostics(await priorReports(db,slot));
+        const reports=await priorReports(db,slot);
+        const audit=summarizeDiagnostics(reports);
+        const cleanupAllowed=reports.length===5 &&
+          reports.every(r=>r.status!=='RUNNING' &&
+            r.evidence?.reason!=='ARCHIVE_PERSISTENCE_FAILED');
         result={status:'EXECUTED_RESEARCH_ONLY',evidence:{
-          ...audit,storage:await capacityReader(db)}};
+          ...audit,storage:await capacityReader(db),cleanupAllowed}};
       }else if(!result){
         didExecute=true;
         result=await executor(agent,slot);
@@ -246,7 +250,9 @@ export async function runDueCycle(db,now=new Date(),{
     // archived in PostgreSQL and its manifest read back inside a transaction.
     if(didExecute){
       try {
-        const receipt=await archiveRun(db,agent.id,slot);
+        const successful=['EXECUTED_RESEARCH_ONLY','DATA_READY_FOR_RESEARCH_ONLY']
+          .includes(result.status);
+        const receipt=await archiveRun(db,agent.id,slot,{requireSummary:successful});
         result.evidence={...result.evidence,archive:receipt};
       }catch(e){
         result={status:'BLOCKED',evidence:{...result?.evidence,
@@ -262,6 +268,15 @@ export async function runDueCycle(db,now=new Date(),{
         )??[]};
     }
     await record(db,agent.id,slot,result);
+    // Postgres now holds the complete per-hour research output. Avoid slowly
+    // filling the ephemeral Render filesystem with yesterday's scratch files.
+    // Never clear scratch when any archival failure remains unresolved.
+    if(agent.id==='diagnostics' && result.status==='EXECUTED_RESEARCH_ONLY'&&
+       result.evidence?.cleanupAllowed){
+      try{await rm(outFolder(slot),{recursive:true,force:true});}
+      catch(err){console.error('CJ_ARCHIVE_SCRATCH_CLEANUP_FAILED '+
+        String(err?.message??err).slice(0,180));}
+    }
     completed.push({agent:agent.id,status:result.status,
       elapsedMs:result.evidence?.elapsedMs??null,
       totalChecks:Array.isArray(result.evidence?.checks)?result.evidence.checks.length:null,
