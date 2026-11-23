@@ -4,7 +4,7 @@
  * This is a deterministic runner, NOT yet autonomous LLM research.
  */
 import {createServer} from 'node:http';
-import {spawn} from 'node:child_process';
+import {spawn,execFileSync} from 'node:child_process';
 import {mkdir,readFile,access,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -14,6 +14,14 @@ import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
+const RESEARCH_SOURCE_COMMIT=(()=>{
+  try{
+    const commit=execFileSync('git',['rev-parse','HEAD'],{
+      cwd:ROOT,encoding:'utf8',timeout:2000,stdio:['ignore','pipe','ignore']
+    }).trim();
+    return /^[a-f0-9]{40}$/i.test(commit)?commit:null;
+  }catch{return null;}
+})();
 const OUTPUT_LIMIT=12000;
 const outFolder=slot=>join(tmpdir(),'cryptojuju-agent-research',slot.slice(0,13).replaceAll(':','-'));
 const truncated=(s,max=OUTPUT_LIMIT)=>String(s??'').slice(-max);
@@ -267,6 +275,7 @@ export async function runDueCycle(db,now=new Date(),{
           x=>({symbol:x.symbol,timeframe:x.timeframe,sha256:x.sha256,status:x.status})
         )??[]};
     }
+    result.evidence={...result.evidence,researchSourceCommit:RESEARCH_SOURCE_COMMIT};
     await record(db,agent.id,slot,result);
     // Postgres now holds the complete per-hour research output. Avoid slowly
     // filling the ephemeral Render filesystem with yesterday's scratch files.
