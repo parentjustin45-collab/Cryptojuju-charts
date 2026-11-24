@@ -10,6 +10,7 @@ import {classifyHistory} from '../quality-gate.mjs';
 import {normalizeBitunixOpenEnvelope} from '../ohlc-bitunix-open-envelope.mjs';
 import {auditData} from './roles/01-bitunix-data.mjs';
 import {VERIFIED_INTERVALS} from './research-batch.mjs';
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES} from './render/five-by-five.mjs';
 
 export const PILOT_SYMBOLS=Object.freeze(['BTCUSDT','ETHUSDT','SOLUSDT']);
 export const PILOT_TIMEFRAMES=Object.freeze(['15m','1h','4h']);
@@ -42,11 +43,12 @@ export async function fetchBitunixDataPilot({
   nowMs=Date.now(),anchorBars=3,pageBars=150,
   fetchPage=makeBitunixFetchPage(),retries=2
 }={}) {
-  const intraday=(PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe))
+  const expanded=FIVE_CRYPTO_SYMBOLS.includes(symbol)&&FIVE_TIMEFRAMES.includes(timeframe);
+  const intraday=expanded||(PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe))
     ||(PILOT_TIMEFRAMES.includes(timeframe)&&DAILY_INTRADAY_RESEARCH_SYMBOLS.includes(symbol));
   const daily=timeframe==='1d'&&DAILY_RESEARCH_SYMBOLS.includes(symbol);
   if(!intraday&&!daily)
-    throw Error('Pilot restricted to 9 original intraday cases, five 15m/1h/4h cohort cases and five Daily cases');
+    throw Error('Pilot restricted to accepted crypto and existing Daily research markets');
   const intervalMs=VERIFIED_INTERVALS[timeframe];
   if(!Number.isSafeInteger(nowMs)||nowMs<1_000_000_000_000)
     throw Error('UTC nowMs must be realistic Unix milliseconds');
