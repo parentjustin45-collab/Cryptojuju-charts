@@ -3,6 +3,7 @@
  * Describes matched research simulations, never elects a winner.
  * Bitunix remains the source. TradingView is not a required test gate.
  */
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES} from './render/five-by-five.mjs';
 const MODES=Object.freeze(['baseline_v11','follow_close_1','break_extreme_2']);
 const FIELDS=['tradeCount','returnPct','maxDrawdownPct','signalCount'];
 const numeric=(n)=>typeof n==='number'&&Number.isFinite(n);
@@ -30,8 +31,8 @@ export function summarizeVectorV12Comparison(report,{minimumHoldoutTrades=20}={}
    ||report?.checks?.independentTradingViewParity!==false
    ||report?.modes?.length!==MODES.length
    ||report.modes.some((x,i)=>x.mode!==MODES[i])
-   ||!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(report.market?.symbol)
-   ||!['15m','1h','4h'].includes(report.market?.timeframe))
+   ||!FIVE_CRYPTO_SYMBOLS.includes(report.market?.symbol)
+   ||!FIVE_TIMEFRAMES.includes(report.market?.timeframe))
    throw Error('Unverified, promoted or mismatched Vector experiment');
   const baseline=phase(report.results?.holdout,'baseline_v11');
   const variants=MODES.map(mode=>{
@@ -62,12 +63,12 @@ export function summarizeVectorV12Comparison(report,{minimumHoldoutTrades=20}={}
   };
 }
 export function renderVectorV12ScoreboardMarkdown(items) {
-  if(!Array.isArray(items)||items.length!==9 ||
-     items.some(x=>!x||!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(x.symbol)||
-       !['15m','1h','4h'].includes(x.timeframe)||![
+  if(!Array.isArray(items)||![9,25].includes(items.length) ||
+     items.some(x=>!x||!FIVE_CRYPTO_SYMBOLS.includes(x.symbol)||
+       !FIVE_TIMEFRAMES.includes(x.timeframe)||![
          'CJ_VECTOR_V12_NATIVE_SCOREBOARD_V1','BLOCKED'
        ].includes(x.protocol)))
-    throw Error('Nine market/timeframe scores or explicit blocked cases required');
+    throw Error('Nine or 25 market/timeframe scores or explicit blocked cases required');
   const lines=[
     '# CryptoJuju — Tableau comparatif Vector V1.1 / V1.2',
     '',
