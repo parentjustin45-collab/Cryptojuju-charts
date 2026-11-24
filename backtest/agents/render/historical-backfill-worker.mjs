@@ -40,12 +40,16 @@ async function ensureBackfillSchema(db){
 }
 export async function runHistoricalBackfillBatch(db,{
   limit=3,fetchPage=currentFetch(),pause=sleep,now=()=>Date.now(),
-  fetchWindow=fetchBitunixDataPilot
+  fetchWindow=fetchBitunixDataPilot,elapsedBudgetMs=120000
 }={}){
-  if(!Number.isInteger(limit)||limit<1||limit>25)throw Error('INVALID_BACKFILL_LIMIT');
+  if(!Number.isInteger(limit)||limit<1||limit>25||
+    !Number.isInteger(elapsedBudgetMs)||elapsedBudgetMs<10000||elapsedBudgetMs>180000)
+    throw Error('INVALID_BACKFILL_LIMIT_OR_BUDGET');
+  const launchedAt=Date.now();
   await ensureBackfillSchema(db);
   const results=[];
   for(let iteration=0;iteration<limit;iteration++){
+    if(iteration>0&&Date.now()-launchedAt>=elapsedBudgetMs)break;
     const pending=await db.query(
       "SELECT symbol,timeframe,next_ms FROM cj_historical_backfill_cursor "+
       "WHERE next_ms<$1 ORDER BY last_attempt_at ASC NULLS FIRST,symbol,timeframe LIMIT 1",
@@ -67,7 +71,7 @@ export async function runHistoricalBackfillBatch(db,{
         status='ALREADY_PRESENT';checkedBars=n;
       }else{
         const selector={symbol,timeframe,closedBars:n,anchorBars:3,
-          historicalEndExclusiveMs:endMs,nowMs:now(),fetchPage};
+          historicalEndExclusiveMs:endMs,nowMs:now(),fetchPage,retries:1};
         const first=await fetchWindow(selector);
         if(first.status!=='DATA_READY_FOR_RESEARCH_ONLY')
           throw Error('BITUNIX_SOURCE_'+String(first.reason??'NOT_READY'));
