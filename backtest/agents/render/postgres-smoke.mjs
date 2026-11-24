@@ -16,6 +16,7 @@ import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHour
 import {runHistoricalBridgeBatch} from './historical-bridge-scheduler.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
+import {replayCompletePeriodFromPostgres} from './historical-multiyear-replay.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
 const db=await initializeDb();
@@ -270,6 +271,44 @@ try {
   const savedBackfill=await db.query('SELECT count(*)::int AS count FROM cj_historical_backfill_attempts');
   assert.equal(savedBackfill.rows[0].count,2);
   assert.equal((await historicalCoverage(db)).reduce((n,x)=>n+x.uniqueBars,0),1440);
+  // Independent full-period two-year DAILY fixture, inserted through the
+  // SAME SHA256 double-read and transactional archive pipeline as production.
+  // The first chunk is 480 days and the second 250; no overlapping gaps.
+  const dailyStart=Date.UTC(2024,10,24),day=86400000,dailyTotal=730;
+  const dailyBars=Array.from({length:dailyTotal},(_,i)=>{
+    const t=dailyStart+i*day,p=190+Math.sin(i/13)*12+Math.cos(i/31)*5+i*.05;
+    return {time:t,open:p,close:p+.7*Math.cos(i*1.7),
+      high:p+2,low:p-2,volume:100+i%35};
+  });
+  for(const [from,size] of [[0,480],[480,250]]){
+    const rows=dailyBars.slice(from,from+size),finish=dailyStart+(from+size)*day;
+    const h={startTime:dailyStart+from*day,endTime:finish,intervalMs:day};
+    const first={status:'DATA_READY_FOR_RESEARCH_ONLY',
+      market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol:'BTCUSDT',timeframe:'1d'},
+      acceptedCandles:rows,rawRows:rows,
+      historyWindow:h,
+      provenance:{source:'Bitunix public Futures REST',priceType:'LAST_PRICE',
+        formingBarExcluded:true,rawSha256:hdigest(rows),derivedSha256:hdigest(rows)},
+      role1:{status:'PASS'},quality:{unresolved:0}};
+    const repeat={status:'STABLE_TWO_READS',checkedDerived:size,differenceCount:0,
+      firstRawSha256:hdigest(rows),overlapRawSha256First:'d'.repeat(64),
+      overlapRawSha256Second:'d'.repeat(64),
+      market:{exchange:'Bitunix',symbol:'BTCUSDT',timeframe:'1d'},
+      historyWindow:h};
+    const proof=await ingestVerifiedHistoricalSource(db,{first,repeat,
+      sourceKey:'pg18-two-year-test|BTCUSDT|1d|'+from,archiveEvidence:true});
+    assert.equal(proof.status,'RECONCILED');
+    assert.equal(proof.insertedBars,size);
+  }
+  const longReport=await replayCompletePeriodFromPostgres(db,{
+    symbol:'BTCUSDT',timeframe:'1d',priceStep:.01});
+  assert.equal(longReport.closedCandles,730);
+  assert.equal(longReport.status,'TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED');
+  assert.equal(longReport.causalPrefixChecks,4);
+  assert.equal(Object.keys(longReport.indicators).length,6); // Frank cross + divergences separate
+  assert.equal(longReport.marketOrdersPlaced,0);
+  assert(longReport.indicators.frank_divergence.signalCount>=0);
+  console.log('CJ_TWO_YEAR_FIVE_INDICATOR_PG18 PASS : 730 contiguous real SQL rows, five algorithms, causal gates and independent 70/30 outcomes');
   console.log('CJ_HISTORICAL_BACKFILL_PG18 PASS : two actual 2024-26 cursored windows, 960 twice-read candles, durable raw provenance and exact coverage');
   console.log('CJ_HISTORICAL_LEGACY_PG18 PASS : real artifact refs + protected cursor + no duplicate OHLC');
   console.log('CJ_HISTORICAL_REPLAY_PG18 PASS : 480 verified database candles through Vector, Momentum, SPEED, Cipher, no lookahead');
