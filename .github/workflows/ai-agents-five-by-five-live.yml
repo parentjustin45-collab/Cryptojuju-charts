@@ -1,0 +1,33 @@
+name: DEV five-crypto five-timeframe Bitunix live admission
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - '.github/workflows/ai-agents-five-by-five-live.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-25-double-read-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify deterministic 5x5 data and archive safety
+        run: node --test backtest/agents/render-five-by-five.test.mjs backtest/agents/bitunix-data-pilot.test.mjs
+      - name: Fetch Bitunix 5 crypto x 5 UT x 480 completed candles with full double read
+        env:
+          CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
+          CJ_DATA_PILOT_BARS: '480'
+        run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-five-by-five-validation"
+      - name: Preserve complete input windows, failures and SHA for 7 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-FIVE-CRYPTO-FIVE-TIMEFRAMES-BITUNIX-REAL-20261124
+          path: ${{ runner.temp }}/cj-five-by-five-validation/
+          retention-days: 7
+          if-no-files-found: warn
