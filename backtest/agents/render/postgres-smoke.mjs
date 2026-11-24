@@ -17,6 +17,7 @@ import {runHistoricalBridgeBatch} from './historical-bridge-scheduler.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
 import {replayCompletePeriodFromPostgres} from './historical-multiyear-replay.mjs';
+import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
 const db=await initializeDb();
@@ -308,6 +309,27 @@ try {
   assert.equal(Object.keys(longReport.indicators).length,6); // Frank cross + divergences separate
   assert.equal(longReport.marketOrdersPlaced,0);
   assert(longReport.indicators.frank_divergence.signalCount>=0);
+  const officialPrice=async({symbols})=>({contracts: [{
+    symbol:symbols[0],source:'BITUNIX_PUBLIC_TRADING_PAIRS',
+    stepStatus:'RESEARCH_PRICE_PRECISION_NOT_TV_MINTICK',
+    quotePrecision:2,priceStep:0.01
+  }]});
+  const archivedLong=await runEligibleMultiYearReplay(db,{
+    maxPairs:1,precisionReader:officialPrice
+  });
+  assert.equal(archivedLong.status,'MULTIYEAR_HISTORICAL_INDICATOR_REPLAY_ARCHIVED');
+  assert.equal(archivedLong.completed[0].status,'REPLAY_PERSISTED');
+  assert.equal(archivedLong.completed[0].symbol,'BTCUSDT');
+  assert.equal(archivedLong.completed[0].timeframe,'1d');
+  const countReports=await db.query('SELECT count(*)::int AS n FROM cj_multiyear_replay_reports');
+  assert.equal(countReports.rows[0].n,1);
+  const repeatLong=await runEligibleMultiYearReplay(db,{
+    maxPairs:1,precisionReader:officialPrice
+  });
+  assert.equal(repeatLong.alreadyArchived,1);
+  assert.equal(repeatLong.status,'AWAITING_COMPLETE_HISTORICAL_COHORT');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM cj_multiyear_replay_reports')).rows[0].n,1);
+  console.log('CJ_TWO_YEAR_FIVE_INDICATOR_ARCHIVE_PG18 PASS : auto eligibility, official price-step contract, immutable gzip report, one replay per pair');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_PG18 PASS : 730 contiguous real SQL rows, five algorithms, causal gates and independent 70/30 outcomes');
   console.log('CJ_HISTORICAL_BACKFILL_PG18 PASS : two actual 2024-26 cursored windows, 960 twice-read candles, durable raw provenance and exact coverage');
   console.log('CJ_HISTORICAL_LEGACY_PG18 PASS : real artifact refs + protected cursor + no duplicate OHLC');
