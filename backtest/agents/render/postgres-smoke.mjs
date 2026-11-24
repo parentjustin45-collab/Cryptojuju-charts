@@ -12,7 +12,8 @@ import {restoreArchivedRun,archiveAgentArtifacts} from './archive.mjs';
 import {FIVE_CASES} from './five-by-five.mjs';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
-import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,historicalCoverage} from './historical-library.mjs';
+import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,historicalCoverage,loadContiguousHistoricalWindow} from './historical-library.mjs';
+import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
 const db=await initializeDb();
@@ -205,6 +206,14 @@ try {
   assert.equal(after.rows[0].c,480);
   const coverage=await historicalCoverage(db);
   assert.equal(coverage.find(x=>x.symbol==='BTCUSDT'&&x.timeframe==='15m').uniqueBars,480);
+  const loaded=await loadContiguousHistoricalWindow(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd,bars:480});
+  assert.equal(loaded.candles.length,480);
+  const fourReplay=await replayFourFromHistoricalLibrary(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd,bars:480,priceStep:.01});
+  assert.equal(fourReplay.status,'CAUSAL_480_BAR_POSTGRES_REPLAY_COMPLETE');
+  assert.equal(fourReplay.evaluatedBars,480);
+  assert.equal(fourReplay.historicalTwoYearsComplete,false);
+  await assert.rejects(loadContiguousHistoricalWindow(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd+step,bars:480}),/GAPS/);
+  console.log('CJ_HISTORICAL_REPLAY_PG18 PASS : 480 verified database candles through Vector, Momentum, SPEED, Cipher, no lookahead');
   console.log('CJ_HISTORICAL_BRIDGE_PG18 PASS : SHA256 archive decompression, 480 candles, dry-run, idempotent ingest, collision rollback and coverage');
   console.log('CJ_PG18_SMOKE PASS : six runs, archive objects and manifests, SHA256 recovery, specialist memory');
 }finally{
