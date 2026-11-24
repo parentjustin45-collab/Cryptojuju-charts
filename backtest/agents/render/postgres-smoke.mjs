@@ -14,6 +14,7 @@ import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,reconcileLegacyArchives,historicalCoverage,loadContiguousHistoricalWindow} from './historical-library.mjs';
 import {runHistoricalBridgeBatch} from './historical-bridge-scheduler.mjs';
+import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
@@ -245,6 +246,31 @@ try {
   assert.equal(scheduled.status,'HISTORICAL_BRIDGE_BATCH_COMPLETED');
   assert.equal(scheduled.indexedUniqueBars,480);
   assert.ok(scheduled.legacy.validatedSources===1);
+  // Synthetic REST window exercising the exact bounded 2-year backfill code.
+  // No remote Bitunix calls and no production database; source is verified
+  // twice and raw evidence is compressed in SAME PostgreSQL transaction.
+  const syntheticPage=async({interval,startTime,endTime,limit})=>{
+    const stepMs={'15m':900000,'30m':1800000,'1h':3600000,
+      '4h':14400000,'1d':86400000}[interval];
+    const out=[];
+    for(let t=startTime;t<endTime;t+=stepMs)
+      out.push({time:t,open:100,high:101,low:99,close:100.5,volume:50});
+    assert.equal(out.length,limit);
+    return out;
+  };
+  const hBackfill=await runHistoricalBackfillBatch(db,{
+    limit:2,fetchPage:syntheticPage,pause:async()=>{},
+    now:()=>Date.UTC(2026,10,24,18,32)
+  });
+  assert.equal(hBackfill.attempted,2);
+  assert.equal(hBackfill.verified,2,JSON.stringify(hBackfill.samples));
+  assert.equal(hBackfill.insertedBars,960);
+  const historicEvidence=await db.query('SELECT count(*)::int AS count FROM cj_historical_backfill_evidence');
+  assert.equal(historicEvidence.rows[0].count,2);
+  const savedBackfill=await db.query('SELECT count(*)::int AS count FROM cj_historical_backfill_attempts');
+  assert.equal(savedBackfill.rows[0].count,2);
+  assert.equal((await historicalCoverage(db)).reduce((n,x)=>n+x.uniqueBars,0),1440);
+  console.log('CJ_HISTORICAL_BACKFILL_PG18 PASS : two actual 2024-26 cursored windows, 960 twice-read candles, durable raw provenance and exact coverage');
   console.log('CJ_HISTORICAL_LEGACY_PG18 PASS : real artifact refs + protected cursor + no duplicate OHLC');
   console.log('CJ_HISTORICAL_REPLAY_PG18 PASS : 480 verified database candles through Vector, Momentum, SPEED, Cipher, no lookahead');
   console.log('CJ_HISTORICAL_BRIDGE_PG18 PASS : SHA256 archive decompression, 480 candles, dry-run, idempotent ingest, collision rollback and coverage');
