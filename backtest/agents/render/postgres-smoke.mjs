@@ -206,8 +206,8 @@ try {
   assert.equal(after.rows[0].c,480);
   const coverage=await historicalCoverage(db);
   assert.equal(coverage.find(x=>x.symbol==='BTCUSDT'&&x.timeframe==='15m').uniqueBars,480);
-  const loaded=await loadContiguousHistoricalWindow(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd,bars:480});
-  assert.equal(loaded.candles.length,480);
+  const loadedHist=await loadContiguousHistoricalWindow(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd,bars:480});
+  assert.equal(loadedHist.candles.length,480);
   const fourReplay=await replayFourFromHistoricalLibrary(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd,bars:480,priceStep:.01});
   assert.equal(fourReplay.status,'CAUSAL_480_BAR_POSTGRES_REPLAY_COMPLETE');
   assert.equal(fourReplay.evaluatedBars,480);
