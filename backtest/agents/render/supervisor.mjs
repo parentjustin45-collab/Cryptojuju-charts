@@ -364,6 +364,18 @@ export async function main(){
   const timer=setInterval(()=>{void tick();},60000);
   timer.unref();
   await tick();
+  // Optional ONE guarded bootstrap pass on redeploy, for initial validation.
+  // Independent of hourly agent status; never blocks the public API listener.
+  if(process.env.CJ_HISTORICAL_BRIDGE_ENABLED==='1' &&
+    process.env.CJ_HISTORICAL_BRIDGE_BOOTSTRAP_ON_START==='1'){
+    try{
+      const report=await runHistoricalBridgeIfEnabled(db);
+      console.log('CJ_HISTORICAL_BRIDGE_BOOTSTRAP '+JSON.stringify(report));
+    }catch(err){
+      console.error('CJ_HISTORICAL_BRIDGE_BOOTSTRAP_ERROR '+
+        String(err?.message??err).slice(0,220));
+    }
+  }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
   process.once('SIGTERM',()=>{void stop();});
   process.once('SIGINT',()=>{void stop();});
