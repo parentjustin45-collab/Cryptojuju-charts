@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {calculateMomentumFusion} from '../momentum-fusion-v1.mjs';
 import {classifySpeedCandleV3} from '../speed-candle-v3.mjs';
 import {speedClassificationsToColorEvents} from '../speed-color-scenarios.mjs';
+import {FIVE_CASES,isFiveByFive} from './render/five-by-five.mjs';
 
 export const CASES=Object.freeze(['BTCUSDT','ETHUSDT','SOLUSDT']
   .flatMap(symbol=>['15m','1h','4h'].map(timeframe=>({symbol,timeframe}))));
@@ -101,11 +102,12 @@ function studySpeed(candles){
     colors,sampledPrefixChecks:cuts.length,
     caveat:'Descriptive color counts only, not profitability or prediction.'};
 }
-export async function researchSpecialist(kind,folder,{read=readFile,writeDetails=null}={}){
+export async function researchSpecialist(kind,folder,{read=readFile,writeDetails=null,
+  cases=CASES}={}){
   if(!Object.hasOwn(VALID_STATUSES,kind))
     throw Error('Unknown specialist');
-  const cases=[];
-  for(const {symbol,timeframe} of CASES){
+  const caseResults=[];
+  for(const {symbol,timeframe} of cases){
     const id=symbol+'-'+timeframe;
     try{
       const source=JSON.parse(await read(join(folder,id+'.json'),'utf8'));
@@ -129,23 +131,28 @@ export async function researchSpecialist(kind,folder,{read=readFile,writeDetails
         await writeDetails(join(folder,kind+'-'+id+'-detail.json'),
           JSON.stringify(details)+'\n');
       }
-      cases.push({symbol,timeframe,status:'VALIDATED_RESEARCH_ONLY',
+      caseResults.push({symbol,timeframe,status:'VALIDATED_RESEARCH_ONLY',
         sourceSha256:source.provenance.rawSha256,
         closingEndTime:source.historyWindow.endTime,evidence});
     }catch(error){
-      cases.push({symbol,timeframe,status:'BLOCKED',code:'SOURCE_OR_RESEARCH_CHECK_FAILED'});
+      caseResults.push({symbol,timeframe,status:'BLOCKED',code:'SOURCE_OR_RESEARCH_CHECK_FAILED'});
     }
   }
-  const passed=cases.filter(x=>x.status==='VALIDATED_RESEARCH_ONLY').length;
+  const passed=caseResults.filter(x=>x.status==='VALIDATED_RESEARCH_ONLY').length;
+  const expected=cases.length;
+  const status=expected===9?VALID_STATUSES[kind]:
+    (kind==='momentum'?'MOMENTUM_FUSION_':'SPEED_V3_')+expected+'_DOUBLE_READ_CASES_READY';
   return {protocol:'CJ_RENDER_'+kind.toUpperCase()+'_VALIDATED_SOURCE_V1',
-    kind,status:passed===9?VALID_STATUSES[kind]:'BLOCKED',passed,blocked:9-passed,
-    cases,tradingEnabled:false,autoPromotion:false,
+    kind,status:passed===expected?status:'BLOCKED',passed,blocked:expected-passed,
+    expectedCases:expected,cohort:expected===25?'FIVE_BY_FIVE':'LEGACY_3X3',
+    cases:caseResults,tradingEnabled:false,autoPromotion:false,
     performanceVerified:false,liveOrders:false,
     caveat:'Local JavaScript port; no TradingView parity or indicator profitability claims.'};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   const kind=process.argv[2],dir=resolve(process.argv[3]??'');
-  const report=await researchSpecialist(kind,dir,{writeDetails:writeFile});
+  const report=await researchSpecialist(kind,dir,{writeDetails:writeFile,
+    cases:isFiveByFive()?FIVE_CASES:CASES});
   await writeFile(join(dir,kind+'-render-summary.json'),JSON.stringify(report,null,2)+'\n');
   console.log('CJ_RENDER_'+String(kind).toUpperCase()+' '+JSON.stringify({
     status:report.status,passed:report.passed,blocked:report.blocked}));
