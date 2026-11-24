@@ -13,6 +13,7 @@ import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostic
 import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
 import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
+import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
@@ -345,6 +346,19 @@ export async function main(){
             String(err?.message??err).slice(0,220));
         }
       }
+      // Historical backfill remains OFF unless explicitly enabled. Its
+      // own bounded workload never authorizes indicator code promotion.
+      if(r.completed.some(x=>x.agent==='diagnostics') &&
+        process.env.CJ_HISTORICAL_BACKFILL_ENABLED==='1'){
+        try{
+          const count=Number(process.env.CJ_HISTORICAL_BACKFILL_BATCH??3);
+          const report=await runHistoricalBackfillBatch(db,{limit:count});
+          console.log('CJ_HISTORICAL_BACKFILL '+JSON.stringify(report));
+        }catch(err){
+          console.error('CJ_HISTORICAL_BACKFILL_ERROR '+
+            String(err?.message??err).slice(0,220));
+        }
+      }
     }catch(e){
       lastError=String(e?.message??e);
       console.error('CJ_AGENT_CYCLE_ERROR '+lastError);
@@ -373,6 +387,17 @@ export async function main(){
       console.log('CJ_HISTORICAL_BRIDGE_BOOTSTRAP '+JSON.stringify(report));
     }catch(err){
       console.error('CJ_HISTORICAL_BRIDGE_BOOTSTRAP_ERROR '+
+        String(err?.message??err).slice(0,220));
+    }
+  }
+  if(process.env.CJ_HISTORICAL_BACKFILL_ENABLED==='1' &&
+    process.env.CJ_HISTORICAL_BACKFILL_BOOTSTRAP_ON_START==='1'){
+    try{
+      const count=Number(process.env.CJ_HISTORICAL_BACKFILL_BATCH??3);
+      const report=await runHistoricalBackfillBatch(db,{limit:count});
+      console.log('CJ_HISTORICAL_BACKFILL_BOOTSTRAP '+JSON.stringify(report));
+    }catch(err){
+      console.error('CJ_HISTORICAL_BACKFILL_BOOTSTRAP_ERROR '+
         String(err?.message??err).slice(0,220));
     }
   }
