@@ -189,6 +189,94 @@ export async function reconcileHourlyArchives(db,{limit=2,commit=false}={}){
   return {status:'CJ_HISTORICAL_BRIDGE_BATCH',scanned:r.rows.length,
     dryRun:!commit,results};
 }
+/*
+ * Legacy 13-artifact bridge. It does NOT treat summary labels or signal
+ * research payloads as OHLC. Only a source JSON with an independently
+ * archived, same-artifact readback JSON can qualify for canonical ingest.
+ * Bounded offset lets review continue past permanently blocked old sources.
+ */
+const LEGACY_FILE=/(?:^|\/)(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(?:-first)?[.]json$/;
+export async function reconcileLegacyArchives(db,{limit=5,offset=0,commit=false}={}){
+  if(!Number.isInteger(limit)||limit<1||limit>50||
+    !Number.isInteger(offset)||offset<0||offset>5000)
+    throw Error('INVALID_LEGACY_BRIDGE_CURSOR');
+  const sql="SELECT l.dataset,l.artifact_id,l.original_path,"+
+    "trim(l.sha256) AS sha256,o.raw_bytes,o.content,"+
+    "trim(r.sha256) AS repeat_sha256,ro.raw_bytes AS repeat_raw_bytes,"+
+    "ro.content AS repeat_content,r.original_path AS repeat_path "+
+    "FROM cj_legacy_file_refs l "+
+    "JOIN cj_archive_objects o ON o.sha256=l.sha256 "+
+    "LEFT JOIN LATERAL (SELECT x.sha256,x.original_path FROM cj_legacy_file_refs x "+
+    "WHERE x.dataset=l.dataset AND x.artifact_id=l.artifact_id AND "+
+    "x.original_path <> l.original_path AND x.original_path IN ("+
+      "regexp_replace(l.original_path,'-first[.]json
+  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
+}={}){
+  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
+    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
+    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
+    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
+  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
+    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
+    lastOpenMs:Number(x.last_open_ms)}));
+}
+,'-readback.json'),"+
+      "regexp_replace(l.original_path,'[.]json
+  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
+}={}){
+  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
+    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
+    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
+    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
+  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
+    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
+    lastOpenMs:Number(x.last_open_ms)}));
+}
+,'-repeatability.json')) "+
+    "ORDER BY x.original_path LIMIT 1) r ON true "+
+    "LEFT JOIN cj_archive_objects ro ON ro.sha256=r.sha256 "+
+    "LEFT JOIN cj_historical_source_receipts h ON h.source_key=("+
+      "'legacy-bitunix|'||l.artifact_id::text||'|'||"+
+      "regexp_replace(l.original_path,'^.*/','')) "+
+    "WHERE l.original_path ~ '(^|/)(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(-first)?[.]json
+  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
+}={}){
+  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
+    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
+    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
+    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
+  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
+    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
+    lastOpenMs:Number(x.last_open_ms)}));
+}
+ "+
+    "AND h.source_key IS NULL ORDER BY l.artifact_id DESC,l.original_path LIMIT $1 OFFSET $2";
+  const query=await db.query(sql,[limit,offset]);
+  const results=[];
+  for(const row of query.rows){
+    const match=LEGACY_FILE.exec(row.original_path);
+    if(!match)continue;
+    const sourceKey='legacy-bitunix|'+row.artifact_id+'|'+
+      row.original_path.split('/').at(-1);
+    try{
+      if(!row.repeat_content)throw Error('LEGACY_DOUBLE_READ_NOT_ARCHIVED');
+      const first=unpack(row),repeat=unpack(row,'repeat_');
+      const verified=validateHistoricalSource(first,repeat);
+      if(verified.symbol!==match[1]||verified.timeframe!==match[2])
+        throw Error('LEGACY_SOURCE_FILENAME_CONFLICT');
+      const result=commit
+        ?await ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey})
+        :{status:'DRY_RUN_VERIFIED',checkedBars:verified.rows.length,
+          insertedBars:0};
+      results.push({sourceKey,...result});
+    }catch(e){
+      results.push({sourceKey,status:'BLOCKED',
+        reason:String(e?.message??e).slice(0,160)});
+    }
+  }
+  return {status:'CJ_LEGACY_HISTORICAL_RECONCILIATION_BATCH',
+    scanned:query.rows.length,offset,limit,dryRun:!commit,results};
+}
 export async function historicalCoverage(db,{
   startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
 }={}){
