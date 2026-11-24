@@ -40,7 +40,8 @@ function fail(reason,base,rawRows=[],normalization=null,extra={}) {
  */
 export async function fetchBitunixDataPilot({
   symbol='BTCUSDT',timeframe='15m',closedBars=96,
-  nowMs=Date.now(),anchorBars=3,pageBars=150,
+  nowMs=Date.now(),historicalEndExclusiveMs=null,
+  anchorBars=3,pageBars=150,
   fetchPage=makeBitunixFetchPage(),retries=2
 }={}) {
   const expanded=FIVE_CRYPTO_SYMBOLS.includes(symbol)&&FIVE_TIMEFRAMES.includes(timeframe);
@@ -57,7 +58,16 @@ export async function fetchBitunixDataPilot({
     !Number.isInteger(pageBars)||pageBars<1||pageBars>200||
     !Number.isInteger(retries)||retries<0||retries>3||
     typeof fetchPage!=='function')throw Error('Unsafe pilot sizing or page client');
-  const endTime=Math.floor(nowMs/intervalMs)*intervalMs;
+  const latestClosedEnd=Math.floor(nowMs/intervalMs)*intervalMs;
+  // Historical window selection NEVER falsifies the actual fetch timestamp.
+  // Unlike manipulating nowMs, this leaves fetchedAtUtc as the true clock.
+  if(historicalEndExclusiveMs!==null&&
+    (!Number.isSafeInteger(historicalEndExclusiveMs)||
+      historicalEndExclusiveMs<1_000_000_000_000||
+      historicalEndExclusiveMs%intervalMs!==0||
+      historicalEndExclusiveMs>latestClosedEnd))
+    throw Error('Invalid or future historical closed-window boundary');
+  const endTime=historicalEndExclusiveMs??latestClosedEnd;
   const startTime=endTime-closedBars*intervalMs;
   const anchorStart=startTime-anchorBars*intervalMs;
   const market={exchange:'Bitunix',priceType:'LAST_PRICE',symbol,timeframe};
@@ -70,6 +80,7 @@ export async function fetchBitunixDataPilot({
     historyStartUtc:new Date(startTime).toISOString(),
     historyEndExclusiveUtc:new Date(endTime).toISOString(),
     closedBarsRequested:closedBars,anchorBars,
+    historyWindowMode:historicalEndExclusiveMs===null?'LATEST_CLOSED_WINDOW':'EXPLICIT_HISTORICAL_CLOSED_WINDOW',
     endTimeExclusive:true,formingBarExcluded:true
   };
   const base={market,historyWindow:window,provenance};
