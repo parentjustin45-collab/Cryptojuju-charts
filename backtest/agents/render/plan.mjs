@@ -1,3 +1,4 @@
+import {checkFiveByFiveComplete} from './five-by-five.mjs';
 /*
  * CryptoJuju Render research schedule: six specialists, ONE process at a time.
  * Each entry is deterministic research, not a persistent LLM agent.
@@ -20,9 +21,13 @@ export function dueSpecialists(now) {
   return SPECIALISTS.filter(r=>now.getUTCMinutes()>=r.minute);
 }
 export function assessBitunixData(summary) {
-  if (!summary || !Array.isArray(summary.checks) || summary.checks.length!==9 ||
+  const expanded=summary?.cohort==='FIVE_BY_FIVE';
+  const expected=expanded?25:9;
+  if (!summary || !Array.isArray(summary.checks) || summary.checks.length!==expected ||
+    (expanded&&!checkFiveByFiveComplete(summary.checks)) ||
+    (expanded&&summary.expectedCases!==25) ||
       summary.status!=='PASS_PUBLIC_BITUNIX_DATA_WINDOWS' ||
-      summary.passed!==9 || summary.blocked!==0 ||
+      summary.passed!==expected || summary.blocked!==0 ||
       summary.checks.some(c=>c.status!=='DATA_READY_FOR_RESEARCH_ONLY' ||
         c.consistencyStatus!=='STABLE_TWO_READS' ||
         c.acceptedBars!==c.requestedBars ||
