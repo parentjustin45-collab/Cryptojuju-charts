@@ -1,0 +1,23 @@
+name: DEV CryptoJuju one-time verified historical import
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/cj-legacy-import-trigger.txt'
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: cj-legacy-import-once
+  cancel-in-progress: false
+jobs:
+  historical-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover 13 historical Action artifacts, verify exact 408/491 SHA256 set, import and readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 backtest/agents/cj-legacy-import.py
