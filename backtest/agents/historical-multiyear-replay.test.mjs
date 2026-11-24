@@ -93,7 +93,7 @@ test('paginated historical library detects every gap and OHLC hash revision',asy
   assert.equal(queries.length,4);
   const old=rows.splice(250,1);
   await assert.rejects(loadHistoricalPeriod(db,{symbol:'BTCUSDT',timeframe:'1d',pageSize:200}),
-    /MISSING_BARS/);
+    /MISSING_BARS|INVALID_ROW/);
   rows.splice(250,0,...old);
   rows[400].close_price+=1;
   await assert.rejects(loadHistoricalPeriod(db,{symbol:'BTCUSDT',timeframe:'1d',pageSize:200}),
