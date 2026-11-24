@@ -34,7 +34,7 @@ const timingReports=[];
 const regimeReports=[];
 let contracts;
 try {
- const metadata=await readBitunixContractPrecision();
+ const metadata=await readBitunixContractPrecision({symbols});
  contracts=metadata.contracts;
  await writeFile(resolve(folder,'vector-v11-contract-precision.json'),
   JSON.stringify(metadata,null,2)+'\n');
