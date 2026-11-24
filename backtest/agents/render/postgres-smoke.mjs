@@ -12,7 +12,8 @@ import {restoreArchivedRun,archiveAgentArtifacts} from './archive.mjs';
 import {FIVE_CASES} from './five-by-five.mjs';
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
-import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,historicalCoverage,loadContiguousHistoricalWindow} from './historical-library.mjs';
+import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,reconcileLegacyArchives,historicalCoverage,loadContiguousHistoricalWindow} from './historical-library.mjs';
+import {runHistoricalBridgeBatch} from './historical-bridge-scheduler.mjs';
 import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
@@ -174,6 +175,7 @@ try {
       [hash,raw.length,gzipSync(raw).length,gzipSync(raw)]);
     await db.query('INSERT INTO cj_archive_manifest(agent,slot,path,sha256) VALUES($1,$2,$3,$4)',
       ['bitunix-data',hSlot,path,hash]);
+    return hash;
   };
   await toArchive('data/BTCUSDT-15m.json',hSource);
   await toArchive('data/BTCUSDT-15m-repeatability.json',hRepeat);
@@ -213,6 +215,37 @@ try {
   assert.equal(fourReplay.evaluatedBars,480);
   assert.equal(fourReplay.historicalTwoYearsComplete,false);
   await assert.rejects(loadContiguousHistoricalWindow(db,{symbol:'BTCUSDT',timeframe:'15m',endMs:histEnd+step,bars:480}),/GAPS/);
+  // Legacy references migrated from GitHub artifacts use different original
+  // path naming: -first.json + -readback.json. Verify the SAME 480 candles
+  // without duplicate insertion, and run the cursor-backed scheduler.
+  await db.query("CREATE TABLE IF NOT EXISTS cj_legacy_file_refs ("+
+    "dataset text NOT NULL,artifact_id bigint NOT NULL,original_path text NOT NULL,"+
+    "sha256 char(64) NOT NULL REFERENCES cj_archive_objects(sha256),"+
+    "source_run_url text NOT NULL,source_archive text NOT NULL,"+
+    "original_expiry_utc timestamptz,created_at timestamptz NOT NULL DEFAULT now(),"+
+    "PRIMARY KEY(dataset,artifact_id,original_path))");
+  const legacyHashes=await db.query("SELECT path,trim(sha256) AS sha256 FROM cj_archive_manifest "+
+    "WHERE agent='bitunix-data' AND slot=$1 AND path IN ($2,$3)",[hSlot,
+      'data/BTCUSDT-15m.json','data/BTCUSDT-15m-repeatability.json']);
+  assert.equal(legacyHashes.rowCount,2);
+  for(const entry of legacyHashes.rows){
+    const name=entry.path.endsWith('-repeatability.json')
+      ?'BTCUSDT-15m-readback.json':'BTCUSDT-15m-first.json';
+    await db.query("INSERT INTO cj_legacy_file_refs ("+
+      "dataset,artifact_id,original_path,sha256,source_run_url,source_archive) "+
+      "VALUES($1,$2,$3,$4,$5,$6)",['CJ-HISTORICAL-DEDUP-V1-20261124',
+        14553812202,name,entry.sha256,'https://github.com/example/actions/runs/1','fixture.zip']);
+  }
+  const legacyDry=await reconcileLegacyArchives(db,{limit:1,offset:0,commit:false});
+  assert.equal(legacyDry.results[0].status,'DRY_RUN_VERIFIED',JSON.stringify(legacyDry));
+  const legacyImported=await reconcileLegacyArchives(db,{limit:1,offset:0,commit:true});
+  assert.equal(legacyImported.results[0].status,'RECONCILED',JSON.stringify(legacyImported));
+  assert.equal(legacyImported.results[0].insertedBars,0);
+  const scheduled=await runHistoricalBridgeBatch(db,{hourlyLimit:1,legacyLimit:1});
+  assert.equal(scheduled.status,'HISTORICAL_BRIDGE_BATCH_COMPLETED');
+  assert.equal(scheduled.indexedUniqueBars,480);
+  assert.ok(scheduled.legacy.validatedSources===1);
+  console.log('CJ_HISTORICAL_LEGACY_PG18 PASS : real artifact refs + protected cursor + no duplicate OHLC');
   console.log('CJ_HISTORICAL_REPLAY_PG18 PASS : 480 verified database candles through Vector, Momentum, SPEED, Cipher, no lookahead');
   console.log('CJ_HISTORICAL_BRIDGE_PG18 PASS : SHA256 archive decompression, 480 candles, dry-run, idempotent ingest, collision rollback and coverage');
   console.log('CJ_PG18_SMOKE PASS : six runs, archive objects and manifests, SHA256 recovery, specialist memory');
