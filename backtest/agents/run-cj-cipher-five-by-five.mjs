@@ -7,7 +7,7 @@
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {FIVE_CASES} from './render/five-by-five.mjs';
+import {FIVE_CASES,FIVE_CRYPTO_SYMBOLS} from './render/five-by-five.mjs';
 import {requireVerifiedInput} from './run-render-indicator-pilot.mjs';
 import {readBitunixContractPrecision} from './bitunix-contract-precision.mjs';
 import {buildCjCipherComparison,CIPHER_COMPARISON_LOCK} from './cj-cipher-comparison.mjs';
@@ -21,7 +21,7 @@ export async function researchCipherFiveByFive(dataFolder,outputFolder,{
   read=readFile,write=writeFile,contracts=null
 }={}){
   await mkdir(outputFolder,{recursive:true});
-  const marketContracts=contracts??(await readBitunixContractPrecision()).contracts;
+  const marketContracts=contracts??(await readBitunixContractPrecision({symbols:FIVE_CRYPTO_SYMBOLS})).contracts;
   const report={
     protocol:'CJ_CIPHER_25_PROVENANCED_BITUNIX_RESEARCH_V1',
     cohort:'FIVE_BY_FIVE',expectedCases:25,source:'Bitunix LAST_PRICE',
