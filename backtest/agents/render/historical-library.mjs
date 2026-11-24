@@ -237,6 +237,41 @@ export async function reconcileLegacyArchives(db,{limit=5,offset=0,commit=false}
   return {status:'CJ_LEGACY_HISTORY_BRIDGE',scanned:q.rows.length,
     offset,limit,dryRun:!commit,results};
 }
+/*
+ * Indexed source for four-indicator replay: fully contiguous and individually
+ * SHA-256 verified bars. Missing windows and modified candles fail closed.
+ */
+export async function loadContiguousHistoricalWindow(db,{symbol,timeframe,
+  endMs,bars=480}={}){
+  if(!valid(symbol,timeframe)||!Number.isInteger(bars)||bars<160||
+    bars>960||!Number.isSafeInteger(endMs))
+    throw Error('INVALID_HISTORICAL_REPLAY_REQUEST');
+  const step=VERIFIED_INTERVALS[timeframe];
+  if(endMs%step!==0||endMs>Math.floor(Date.now()/step)*step)
+    throw Error('HISTORICAL_REPLAY_WINDOW_NOT_CLOSED');
+  const startMs=endMs-bars*step;
+  const q=await db.query(
+    'SELECT open_ms,open_price,high_price,low_price,close_price,volume,'+
+    'trim(candle_sha256) AS fingerprint FROM cj_historical_candles '+
+    'WHERE symbol=$1 AND timeframe=$2 AND open_ms>=$3 AND open_ms<$4 '+
+    'ORDER BY open_ms',[symbol,timeframe,startMs,endMs]);
+  if(q.rows.length!==bars)throw Error('HISTORICAL_REPLAY_WINDOW_HAS_GAPS');
+  const candles=[];
+  for(let i=0;i<bars;i++){
+    const r=q.rows[i],time=Number(r.open_ms);
+    const c={time,open:Number(r.open_price),high:Number(r.high_price),
+      low:Number(r.low_price),close:Number(r.close_price),volume:Number(r.volume)};
+    const proof=sha(Buffer.from(JSON.stringify([symbol,timeframe,time,
+      c.open,c.high,c.low,c.close,c.volume])));
+    if(time!==startMs+i*step||r.fingerprint!==proof)
+      throw Error('HISTORICAL_REPLAY_HASH_OR_CHRONOLOGY_MISMATCH');
+    candles.push(c);
+  }
+  return {source:'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1',
+    market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol,timeframe},
+    historyWindow:{startTime:startMs,endTime:endMs,intervalMs:step},
+    candles,tradingEnabled:false};
+}
 export async function historicalCoverage(db,{
   startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
 }={}){
