@@ -6,6 +6,7 @@
  * are respected. Bitunix source already passed the upstream V1.2 quality gate.
  */
 import {vectorAIT} from '../vector-ait-v1.mjs';
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES} from './render/five-by-five.mjs';
 import {applyVectorConfirmation,VECTOR_CONFIRMATION_MODES} from '../vector-antiwhipsaw-v12.mjs';
 
 const MODES=VECTOR_CONFIRMATION_MODES.map(x=>x.id);
@@ -118,7 +119,7 @@ export function diagnoseVectorV12Timing({
   };
 }
 export function renderVectorTimingDiagnosticsMarkdown(items){
-  if(!Array.isArray(items)||items.length!==9)throw Error('Expected nine market/timeframe diagnostics');
+  if(!Array.isArray(items)||![9,25].includes(items.length))throw Error('Expected nine or 25 market/timeframe diagnostics');
   const lines=[
     '# CryptoJuju — Retournements rapides et retards Vector',
     '',
@@ -137,8 +138,8 @@ export function renderVectorTimingDiagnosticsMarkdown(items){
     }
     if(item?.protocol!=='CJ_NATIVE_VECTOR_V12_TIMING_DIAGNOSTIC_V1'||
        item?.status!=='RESEARCH_DIAGNOSTIC_ONLY'||
-       !['BTCUSDT','ETHUSDT','SOLUSDT'].includes(item.market?.symbol)||
-       !['15m','1h','4h'].includes(item.market?.timeframe))
+       !FIVE_CRYPTO_SYMBOLS.includes(item.market?.symbol)||
+       !FIVE_TIMEFRAMES.includes(item.market?.timeframe))
       throw Error('Invalid Vector diagnostic report');
     for(const mode of MODES){
       const stats=item.modes?.[mode]?.phases;
