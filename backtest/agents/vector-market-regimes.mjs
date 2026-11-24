@@ -4,6 +4,7 @@
  * No TradingView dependency, no selection/optimization, no trades/deployments.
  */
 import {createHash} from 'node:crypto';
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES} from './render/five-by-five.mjs';
 import {vectorAIT} from '../vector-ait-v1.mjs';
 import {vectorRegimeFeatures} from '../vector-v13-regime.mjs';
 import {applyVectorConfirmation,VECTOR_CONFIRMATION_MODES} from '../vector-antiwhipsaw-v12.mjs';
@@ -147,8 +148,8 @@ export function diagnoseVectorMarketRegimes({
  };
 }
 export function formatVectorRegimesMarkdown(reports){
- if(!Array.isArray(reports)||reports.length!==9)
-   throw Error('Nine case reports required');
+ if(!Array.isArray(reports)||![9,25].includes(reports.length))
+   throw Error('Nine or 25 case reports required');
  const lines=[
  '# CryptoJuju — Vector : tendances, range probable et périodes chronologiques',
  '',
@@ -167,8 +168,8 @@ export function formatVectorRegimesMarkdown(reports){
    }
    if(report?.protocol!=='CJ_VECTOR_MARKET_REGIMES_RESEARCH_V1'||
       report.status!=='DESCRIPTIVE_ONLY_NO_WINNER'||
-      !['BTCUSDT','ETHUSDT','SOLUSDT'].includes(report.market?.symbol)||
-      !['15m','1h','4h'].includes(report.market?.timeframe)||
+      !FIVE_CRYPTO_SYMBOLS.includes(report.market?.symbol)||
+      !FIVE_TIMEFRAMES.includes(report.market?.timeframe)||
       report.promotedVariant!==null)
      throw Error('Invalid or promoted regime report');
    for(const mode of MODES)for(const r of REGIMES){
