@@ -277,6 +277,44 @@ export async function reconcileLegacyArchives(db,{limit=5,offset=0,commit=false}
   return {status:'CJ_LEGACY_HISTORICAL_RECONCILIATION_BATCH',
     scanned:query.rows.length,offset,limit,dryRun:!commit,results};
 }
+/*
+ * Indexed, fail-closed bridge FROM PostgreSQL TO indicator engines.
+ * Never concatenate unrelated short windows: require every UTC open, exact
+ * interval and a rechecked per-candle content digest.
+ */
+export async function loadContiguousHistoricalWindow(db,{
+  symbol,timeframe,endMs,bars=480
+}={}){
+  if(!valid(symbol,timeframe)||!Number.isInteger(bars)||bars<160||
+    bars>960||!Number.isSafeInteger(endMs))
+    throw Error('INVALID_HISTORICAL_REPLAY_REQUEST');
+  const step=VERIFIED_INTERVALS[timeframe];
+  if(endMs%step!==0||endMs>Math.floor(Date.now()/step)*step)
+    throw Error('HISTORICAL_REPLAY_WINDOW_NOT_CLOSED');
+  const startMs=endMs-bars*step;
+  const r=await db.query(
+    'SELECT open_ms,open_price,high_price,low_price,close_price,volume,'+
+    'trim(candle_sha256) AS fingerprint FROM cj_historical_candles '+
+    'WHERE symbol=$1 AND timeframe=$2 AND open_ms >=$3 AND open_ms<$4 '+
+    'ORDER BY open_ms',[symbol,timeframe,startMs,endMs]);
+  if(r.rows.length!==bars)throw Error('HISTORICAL_REPLAY_WINDOW_HAS_GAPS');
+  const candles=[];
+  for(let i=0;i<bars;i++){
+    const v=r.rows[i],time=Number(v.open_ms);
+    const c={time,open:Number(v.open_price),high:Number(v.high_price),
+      low:Number(v.low_price),close:Number(v.close_price),
+      volume:Number(v.volume)};
+    const fp=sha(Buffer.from(JSON.stringify([symbol,timeframe,time,
+      c.open,c.high,c.low,c.close,c.volume])));
+    if(time!==startMs+i*step||v.fingerprint!==fp)
+      throw Error('HISTORICAL_REPLAY_HASH_OR_CHRONOLOGY_MISMATCH');
+    candles.push(c);
+  }
+  return {source:'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1',
+    market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol,timeframe},
+    historyWindow:{startTime:startMs,endTime:endMs,intervalMs:step},
+    candles,signalParity:'NOT_INDEPENDENTLY_VERIFIED',tradingEnabled:false};
+}
 export async function historicalCoverage(db,{
   startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
 }={}){
