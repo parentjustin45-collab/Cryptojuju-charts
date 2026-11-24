@@ -54,14 +54,16 @@ export function studyFourIndicatorsOnHistoricalCandles(source,{priceStep}={}){
     priceStep,priceStepOrigin:'CALLER_MUST_VERIFY_BITUNIX_METADATA',
     vectorSignals:signals(vector,'vector'),
     momentumSignals:signals(momentum,'momentum'),
-    speedSignalChanges:speed.filter(x=>x.colorEvent||x.signal).length,
+    speedSignalChanges:speed.filter(x=>x.color).length,
     cipherSignals:signals(cipher,'cipher'),
     combinedSignals:combined.signalCounts,
     eventTimeline:{
       vector:vector.filter(x=>x.signal).map(x=>({time:x.time,side:x.signal})),
       momentum:momentum.filter(x=>x.bullSignal||x.bearSignal)
         .map(x=>({time:x.time,side:x.bullSignal?'long':'short'})),
-      cipher:cipher.filter(x=>x.signal).map(x=>({time:x.time,side:x.signal}))
+      cipher:cipher.filter(x=>x.signal).map(x=>({time:x.time,side:x.signal})),
+      speed:speed.filter(x=>x.color).map(x=>({time:x.time,
+        color:x.color,side:x.color.startsWith('bull')?'long':'short'}))
     },
     historicalTwoYearsComplete:false,trainingOptimizationPerformed:false,
     independentTradingViewParity:false,tradingEnabled:false,ordersPlaced:0,
