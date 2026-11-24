@@ -39,7 +39,8 @@ export function planMissingWindows({symbol,timeframe,existingOpenTimes=[],
     if(count>=1){windows.push(Object.freeze({
       symbol,timeframe,startTime:start,endTime:start+count*step,
       closedBars:count,intervalMs:step,hasExistingOverlap:false,
-      needsPreWindowAnchors:true,reason:'VERIFIED_CLOSED_BARS_ABSENT'}));}
+      needsPreWindowAnchors:true,autoFetchEligible:count>=4,
+      reason:count>=4?'VERIFIED_CLOSED_BARS_ABSENT':'NARROW_GAP_REQUIRES_BOUNDED_REQUERY'}));}
     start=null;count=0;
   }
   for(let n=0;n<expected;n++){
@@ -70,7 +71,8 @@ export function planFiveByFive(verifiedTimesByPair=new Map(),options={}){
     expectedBars:items.reduce((n,x)=>n+x.expectedBars,0),
     verifiedExistingBars:items.reduce((n,x)=>n+x.existingUniqueBars,0),
     missingBars:items.reduce((n,x)=>n+x.missingBars,0),
-    windows:items.reduce((n,x)=>n+x.windows.length,0)
+    windows:items.reduce((n,x)=>n+x.windows.length,0),
+    narrowGapWindows:items.reduce((n,x)=>n+x.windows.filter(w=>!w.autoFetchEligible).length,0)
   };
   return {protocol:'CJ_2Y_HISTORICAL_BACKFILL_PLAN_V1',
     target:HISTORICAL_TARGET,totals,items,
