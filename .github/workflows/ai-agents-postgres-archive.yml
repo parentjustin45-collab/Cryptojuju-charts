@@ -7,6 +7,8 @@ on:
       - 'backtest/agents/render-archive.test.mjs'
       - 'backtest/agents/run-render-indicator-pilot.mjs'
       - 'backtest/agents/render-indicator-pilot.test.mjs'
+      - 'backtest/agents/render-five-by-five.test.mjs'
+      - 'backtest/agents/run-cj-cipher-five-by-five.mjs'
       - '.github/workflows/ai-agents-postgres-archive.yml'
   workflow_dispatch:
 permissions:
@@ -37,7 +39,7 @@ jobs:
       - name: Install research dependencies
         run: npm install --prefix backtest/agents/render --no-audit --no-fund
       - name: Offline unit and archive restoration gates
-        run: node --test backtest/agents/render-runtime.test.mjs backtest/agents/render-archive.test.mjs
+        run: node --test backtest/agents/render-runtime.test.mjs backtest/agents/render-archive.test.mjs backtest/agents/render-five-by-five.test.mjs
       - name: Real PostgreSQL 18 persistent archive + SHA256 restore
         run: node backtest/agents/render/postgres-smoke.mjs
         env:
