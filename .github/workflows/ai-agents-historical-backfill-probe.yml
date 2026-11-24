@@ -1,0 +1,33 @@
+name: DEV CryptoJuju historical 2y backfill readiness and oldest-source probe
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - '.github/workflows/ai-agents-historical-backfill-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cj-historical-backfill-readonly-probe
+  cancel-in-progress: false
+jobs:
+  verify-oldest-historical-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify 25-pair 2y historical gap planner and preserved real fetchedAt provenance
+        run: node --test backtest/agents/historical-backfill-plan.test.mjs backtest/agents/bitunix-data-pilot.test.mjs
+      - name: Probe five oldest historical Bitunix windows (read-only, 480 closed bars each, twice)
+        run: node backtest/agents/run-historical-backfill-probe.mjs "${{ runner.temp }}/cj-historical-probe"
+      - name: Save actual source/quality diagnostics for next import planning
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cj-HISTORICAL-TWO-YEAR-OLDEST-WINDOW-READONLY-PROBE
+          path: ${{ runner.temp }}/cj-historical-probe/
+          retention-days: 7
+          if-no-files-found: warn
