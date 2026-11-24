@@ -9,15 +9,17 @@ export function makeValidatedFixture({symbol='BTCUSDT',timeframe='15m',
   count=480,closeDelta=0}={}){
   const span={ '15m':900000,'30m':1800000,'1h':3600000,
     '4h':14400000,'1d':86400000}[timeframe];
-  const start=end-count*span;
+  const windowEnd=Math.floor(end/span)*span;
+  const start=windowEnd-count*span;
   const bars=Array.from({length:count},(_,i)=>{
     const open=100+i*.01;
     return {time:start+i*span,open,high:open+1,
       low:open-1,close:open+.1+(i===5?closeDelta:0),volume:100+i};
   });
-  const rawRows=[...bars.slice(0,3).map((c,i)=>({...c,time:start-(3-i)*span})),...bars];
+  const rawRows=[...bars.slice(0,3).map((c,i)=>({...c,time:start-(3-i)*span})),
+    ...bars.map(c=>({...c}))];
   const rawSha=sha(rawRows),derivedSha=sha(bars),fingerprint='b'.repeat(64);
-  const historyWindow={startTime:start,endTime:end,intervalMs:span};
+  const historyWindow={startTime:start,endTime:windowEnd,intervalMs:span};
   return {
     first:{
       status:'DATA_READY_FOR_RESEARCH_ONLY',
