@@ -4,13 +4,14 @@ on:
     branches: [dev/ai-agents-phase1]
     paths:
       - '.github/workflows/ai-agents-five-by-five-live.yml'
+      - 'backtest/agents/bitunix-data-center-view.mjs'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   verify-25-double-read-sources:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,6 +24,27 @@ jobs:
           CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
           CJ_DATA_PILOT_BARS: '480'
         run: node backtest/agents/run-bitunix-data-pilot.mjs "${{ runner.temp }}/cj-five-by-five-validation"
+      - name: Run real Vector V1.1/V1.2 on the 25 verified source windows
+        env:
+          CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
+        run: node backtest/agents/run-vector-v11-pilot.mjs "${{ runner.temp }}/cj-five-by-five-validation"
+      - name: Run real Momentum 25-case per-bar research
+        env:
+          CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
+        run: node backtest/agents/run-render-indicator-pilot.mjs momentum "${{ runner.temp }}/cj-five-by-five-validation"
+      - name: Run real SPEED 25-case per-bar research
+        env:
+          CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
+        run: node backtest/agents/run-render-indicator-pilot.mjs speed "${{ runner.temp }}/cj-five-by-five-validation"
+      - name: Run real Cipher 25-case comparisons on the same sources
+        env:
+          CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
+        run: node backtest/agents/run-cj-cipher-five-by-five.mjs "${{ runner.temp }}/cj-five-by-five-validation" "${{ runner.temp }}/cj-five-by-five-cipher"
+      - name: Preserve Cipher reports in cohort artifact
+        if: always()
+        run: |
+          mkdir -p "${{ runner.temp }}/cj-five-by-five-validation/cipher-copy"
+          if [ -d "${{ runner.temp }}/cj-five-by-five-cipher" ]; then cp -a "${{ runner.temp }}/cj-five-by-five-cipher/." "${{ runner.temp }}/cj-five-by-five-validation/cipher-copy/"; fi
       - name: Preserve complete input windows, failures and SHA for 7 days
         if: always()
         uses: actions/upload-artifact@v4
