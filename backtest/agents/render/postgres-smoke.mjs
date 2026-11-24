@@ -10,6 +10,9 @@ import {join} from 'node:path';
 import {initializeDb,runDueCycle} from './supervisor.mjs';
 import {restoreArchivedRun,archiveAgentArtifacts} from './archive.mjs';
 import {FIVE_CASES} from './five-by-five.mjs';
+import {createHash} from 'node:crypto';
+import {gzipSync} from 'node:zlib';
+import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource,reconcileHourlyArchives,historicalCoverage} from './historical-library.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
 const db=await initializeDb();
@@ -138,6 +141,71 @@ try {
     await rm(scratch25,{recursive:true,force:true});
     await rm(restored25,{recursive:true,force:true});
   }
+  // End-to-end canonical candle library from actual PostgreSQL archive
+  // object bytes and a matching independently signed two-read report.
+  await initializeHistoricalLibrary(db);
+  const hSlot='2026-11-22T17:00:00.000Z';
+  await db.query("INSERT INTO cj_agent_runs(agent,slot,status) VALUES('bitunix-data',$1,'DATA_READY_FOR_RESEARCH_ONLY')",[hSlot]);
+  const histEnd=Date.UTC(2026,10,21),step=900000,begin=histEnd-480*step;
+  const validCandles=Array.from({length:480},(_,i)=>{
+    const p=110+i*.01;return {time:begin+i*step,open:p,high:p+1,low:p-1,
+      close:p+.2,volume:10+i};
+  });
+  const hdigest=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
+  const hRaw=hdigest(validCandles);
+  const hWindow={startTime:begin,endTime:histEnd,intervalMs:step};
+  const hSource={status:'DATA_READY_FOR_RESEARCH_ONLY',
+    market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol:'BTCUSDT',timeframe:'15m'},
+    historyWindow:hWindow,acceptedCandles:validCandles,rawRows:validCandles,
+    provenance:{source:'Bitunix public Futures REST',priceType:'LAST_PRICE',
+      formingBarExcluded:true,rawSha256:hRaw,derivedSha256:hdigest(validCandles)},
+    role1:{status:'PASS'},quality:{unresolved:0}};
+  const hRepeat={status:'STABLE_TWO_READS',checkedDerived:480,differenceCount:0,
+    firstRawSha256:hRaw,overlapRawSha256First:'f'.repeat(64),
+    overlapRawSha256Second:'f'.repeat(64),
+    market:{symbol:'BTCUSDT',timeframe:'15m',exchange:'Bitunix'},
+    historyWindow:hWindow};
+  const toArchive=async(path,body)=>{
+    const raw=Buffer.from(JSON.stringify(body)+'\n');
+    const hash=createHash('sha256').update(raw).digest('hex');
+    await db.query("INSERT INTO cj_archive_objects(sha256,raw_bytes,compressed_bytes,encoding,content) "+
+      "VALUES($1,$2,$3,'gzip',$4) ON CONFLICT(sha256) DO NOTHING",
+      [hash,raw.length,gzipSync(raw).length,gzipSync(raw)]);
+    await db.query('INSERT INTO cj_archive_manifest(agent,slot,path,sha256) VALUES($1,$2,$3,$4)',
+      ['bitunix-data',hSlot,path,hash]);
+  };
+  await toArchive('data/BTCUSDT-15m.json',hSource);
+  await toArchive('data/BTCUSDT-15m-repeatability.json',hRepeat);
+  const dry=await reconcileHourlyArchives(db,{limit:1,commit:false});
+  assert.equal(dry.results[0].status,'DRY_RUN_VERIFIED',JSON.stringify(dry));
+  const imported=await reconcileHourlyArchives(db,{limit:1,commit:true});
+  assert.equal(imported.results[0].status,'RECONCILED',JSON.stringify(imported));
+  assert.equal(imported.results[0].insertedBars,480);
+  const count=await db.query("SELECT count(*)::int AS c FROM cj_historical_candles WHERE symbol='BTCUSDT' AND timeframe='15m'");
+  assert.equal(count.rows[0].c,480);
+  const replay=await ingestVerifiedHistoricalSource(db,{first:hSource,repeat:hRepeat,
+    sourceKey:'hourly-bitunix|other-slot|data/BTCUSDT-15m.json'});
+  assert.equal(replay.insertedBars,0);
+  assert.equal(replay.reusedBars,480);
+  const again=await ingestVerifiedHistoricalSource(db,{first:hSource,repeat:hRepeat,
+    sourceKey:imported.results[0].sourceKey});
+  assert.equal(again.status,'ALREADY_RECONCILED');
+  // Changed historical OHLC must NEVER overwrite the original, even when
+  // supplied with a fresh internally consistent source hash.
+  const changed=structuredClone(hSource);
+  changed.acceptedCandles[0].close+=.05;
+  changed.rawRows[0].close+=.05;
+  changed.provenance.rawSha256=hdigest(changed.rawRows);
+  changed.provenance.derivedSha256=hdigest(changed.acceptedCandles);
+  const changedRepeat={...hRepeat,firstRawSha256:changed.provenance.rawSha256};
+  await assert.rejects(ingestVerifiedHistoricalSource(db,{first:changed,repeat:changedRepeat,
+    sourceKey:'hourly-bitunix|conflict-slot|data/BTCUSDT-15m.json'}),
+    /HISTORICAL_OHLC_CONFLICT/);
+  const after=await db.query("SELECT count(*)::int AS c FROM cj_historical_candles WHERE symbol='BTCUSDT' AND timeframe='15m'");
+  assert.equal(after.rows[0].c,480);
+  const coverage=await historicalCoverage(db);
+  assert.equal(coverage.find(x=>x.symbol==='BTCUSDT'&&x.timeframe==='15m').uniqueBars,480);
+  console.log('CJ_HISTORICAL_BRIDGE_PG18 PASS : SHA256 archive decompression, 480 candles, dry-run, idempotent ingest, collision rollback and coverage');
   console.log('CJ_PG18_SMOKE PASS : six runs, archive objects and manifests, SHA256 recovery, specialist memory');
 }finally{
   await rm(folder,{recursive:true,force:true});
