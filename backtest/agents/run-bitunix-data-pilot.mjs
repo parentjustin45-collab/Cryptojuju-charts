@@ -1,5 +1,5 @@
 /*
- * Nine read-only Bitunix REST checks: BTC ETH SOL x 15m 1h 4h.
+ * Configurable closed-candle Bitunix REST checks: default BTC ETH SOL x 15m 1h 4h; optional 5x5 cohort.
  * GitHub Actions only; no orders, no API keys, no background daemon.
  * Saves raw/derived OHLC and provenance as a transient CI artifact.
  */
@@ -7,11 +7,15 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {makeBitunixFetchPage} from '../bitunix-adapter.mjs';
 import {PILOT_SYMBOLS,PILOT_TIMEFRAMES,fetchBitunixDataPilot} from './bitunix-data-pilot.mjs';
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES,isFiveByFive} from './render/five-by-five.mjs';
 import {renderBitunixDataCenterHtml} from './bitunix-data-center-view.mjs';
 import {compareBitunixReadbacks} from './bitunix-readback-consistency.mjs';
 
 const destination=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const closedBars=Number(process.env.CJ_DATA_PILOT_BARS??96);
+const expanded=isFiveByFive();
+const symbols=expanded?FIVE_CRYPTO_SYMBOLS:PILOT_SYMBOLS;
+const timeframes=expanded?FIVE_TIMEFRAMES:PILOT_TIMEFRAMES;
 if(!Number.isInteger(closedBars)||closedBars<4||closedBars>960)
   throw Error('CJ_DATA_PILOT_BARS must be 4..960');
 const anchorTime=Date.now();
@@ -30,10 +34,12 @@ const summary={
   realIndicatorSignals:false,
   tradingEnabled:false,
   branch:'dev/ai-agents-phase1',
+  cohort:expanded?'FIVE_BY_FIVE':'LEGACY_3X3',
+  expectedCases:symbols.length*timeframes.length,
   checks:[]
 };
-for(const symbol of PILOT_SYMBOLS){
-  for(const timeframe of PILOT_TIMEFRAMES){
+for(const symbol of symbols){
+  for(const timeframe of timeframes){
     let out;
     try{
       out=await fetchBitunixDataPilot({
