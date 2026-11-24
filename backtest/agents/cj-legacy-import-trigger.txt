@@ -1,0 +1,6 @@
+CryptoJuju legacy import authorization — one time
+Authorized historical dataset: CJ-HISTORICAL-DEDUP-V1-20261124
+Expected: 13 GitHub Actions archives / 408 SHA256 content objects / 491 file references
+Expected reference SHA256: ab76d0f162c8f836b9d21586e594a457b6b9667b10548be3eccf3f8cdd2a7a3b
+Expected object-set SHA256: d8578e4e2c084d5908e708760426a680bde6655d457832d3f20a248a42d4d889
+No changes to main; no trading, no strategy parameter updates.
