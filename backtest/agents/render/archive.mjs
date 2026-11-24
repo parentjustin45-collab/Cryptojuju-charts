@@ -27,7 +27,10 @@ export function shouldArchive(agent,name){
   if(agent==='vector')return /vector|regime|scoreboard|timing/i.test(name);
   if(agent==='momentum'||agent==='speed'){
     if(name===agent+'-render-summary.json')return true;
-    const re=new RegExp('^'+agent+'-([A-Z0-9]+)-(15m|30m|1h|4h|1d)-detail\\.json
+    const m=name.match(/^(momentum|speed)-([A-Z0-9]+)-(15m|30m|1h|4h|1d)-detail[.]json$/);
+    return !!m&&m[1]===agent&&FIVE_CRYPTO_SYMBOLS.includes(m[2])&&
+      FIVE_TIMEFRAMES.includes(m[3]);
+  }
   if(agent==='cipher')return true;
   return false;
 }
