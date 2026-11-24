@@ -5,7 +5,7 @@
  * No trading, LLM modification, purge, public endpoints or network access.
  */
 import {createHash} from 'node:crypto';
-import {gunzipSync} from 'node:zlib';
+import {gunzipSync,gzipSync} from 'node:zlib';
 import {FIVE_CASES} from './five-by-five.mjs';
 import {VERIFIED_INTERVALS} from '../research-batch.mjs';
 
@@ -78,9 +78,15 @@ export async function initializeHistoricalLibrary(db){
     "checked_bars integer NOT NULL,inserted_bars integer NOT NULL,"+
     "verified_at timestamptz NOT NULL DEFAULT now(),"+
     "status text NOT NULL DEFAULT 'VERIFIED_TWO_READS')");
+  await db.query("CREATE TABLE IF NOT EXISTS cj_historical_backfill_evidence ("+
+    "source_key text PRIMARY KEY REFERENCES cj_historical_source_receipts(source_key),"+
+    "first_sha256 char(64) NOT NULL,repeat_sha256 char(64) NOT NULL,"+
+    "first_gzip bytea NOT NULL,repeat_gzip bytea NOT NULL,"+
+    "first_raw_bytes integer NOT NULL,repeat_raw_bytes integer NOT NULL,"+
+    "created_at timestamptz NOT NULL DEFAULT now())");
 }
 export async function ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey,
-  diskBudgetBytes=STORAGE_BUDGET}={}){
+  diskBudgetBytes=STORAGE_BUDGET,archiveEvidence=false}={}){
   if(typeof sourceKey!=='string'||sourceKey.length>220||sourceKey.length<10||
     !/^[A-Za-z0-9|:._/-]+$/.test(sourceKey))throw Error('INVALID_HISTORICAL_SOURCE_KEY');
   const v=validateHistoricalSource(first,repeat);
@@ -132,6 +138,18 @@ export async function ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey,
       "checked_bars,inserted_bars) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
       [sourceKey,v.symbol,v.timeframe,v.startMs,v.endMs,v.rawSha,v.derivedSha,
         rows.length,ins.rowCount]);
+    if(archiveEvidence){
+      const body1=Buffer.from(JSON.stringify(first));
+      const body2=Buffer.from(JSON.stringify(repeat));
+      if(body1.length>16*1024*1024||body2.length>16*1024*1024)
+        throw Error('HISTORICAL_BACKFILL_EVIDENCE_TOO_LARGE');
+      const zipped1=gzipSync(body1,{level:6}),zipped2=gzipSync(body2,{level:6});
+      await client.query("INSERT INTO cj_historical_backfill_evidence ("+
+        "source_key,first_sha256,repeat_sha256,first_gzip,repeat_gzip,"+
+        "first_raw_bytes,repeat_raw_bytes) VALUES($1,$2,$3,$4,$5,$6,$7)",
+        [sourceKey,sha(body1),sha(body2),zipped1,zipped2,
+          body1.length,body2.length]);
+    }
     await client.query('COMMIT');
     return {status:'RECONCILED',sourceKey,symbol:v.symbol,timeframe:v.timeframe,
       checkedBars:rows.length,insertedBars:ins.rowCount,
