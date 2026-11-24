@@ -35,8 +35,12 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
     target:'2024-11-24_to_2026-11-24_UTC',completed:[],
     awaitingHistoricalCoverage:[],noOrders:true
   };
-  for(const {symbol,timeframe} of FIVE_CASES){
-    if(report.completed.length>=maxPairs)break;
+  let processed=0;
+  const prioritized=[...FIVE_CASES].sort((a,b)=>
+    ['1d','4h','1h','30m','15m'].indexOf(a.timeframe)-
+    ['1d','4h','1h','30m','15m'].indexOf(b.timeframe));
+  for(const {symbol,timeframe} of prioritized){
+    if(processed>=maxPairs)break;
     const expected=expectedHistoricalBars({timeframe,
       startMs:TWO_YEAR_RANGE.startMs,endMs:TWO_YEAR_RANGE.endMs});
     const q=await db.query('SELECT count(*)::int AS bars,min(open_ms)::bigint AS first,'+
@@ -56,8 +60,7 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
       "AND engine_version=$5 LIMIT 1",[symbol,timeframe,
         TWO_YEAR_RANGE.startMs,TWO_YEAR_RANGE.endMs,VERSION]);
     if(exists.rowCount){
-      report.completed.push({symbol,timeframe,status:'ALREADY_REPLAYED',
-        sourceSequenceSha256:String(exists.rows[0].source_sequence_sha256).trim()});
+      report.alreadyArchived=(report.alreadyArchived??0)+1;
       continue;
     }
     if(process.memoryUsage().rss>memoryBudgetBytes){
@@ -97,6 +100,7 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
         closedBars:research.closedCandles,
         sourceSequenceSha256:research.sourceSequenceSha256,
         reportSha256:hash(raw),compressedBytes:gzip.length});
+      processed++;
     }catch(err){try{await client.query('ROLLBACK');}catch{}throw err;}
     finally{client.release();}
   }
