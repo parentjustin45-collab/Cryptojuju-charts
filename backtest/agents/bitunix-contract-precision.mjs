@@ -3,6 +3,7 @@
  * of a Bitunix contract, NOT independently verified TradingView syminfo.mintick.
  * No authentication, write APIs or secret keys.
  */
+import {FIVE_CRYPTO_SYMBOLS} from './render/five-by-five.mjs';
 const ENDPOINT='https://fapi.bitunix.com/api/v1/futures/market/trading_pairs';
 export const PILOT_CONTRACTS=Object.freeze(['BTCUSDT','ETHUSDT','SOLUSDT']);
 
@@ -10,7 +11,7 @@ export async function readBitunixContractPrecision({
   fetchImpl=globalThis.fetch, symbols=PILOT_CONTRACTS
 }={}){
   if(typeof fetchImpl!=='function' || !Array.isArray(symbols) || !symbols.length ||
-    symbols.some(x=>!PILOT_CONTRACTS.includes(x)) || new Set(symbols).size!==symbols.length)
+    symbols.some(x=>!FIVE_CRYPTO_SYMBOLS.includes(x)) || new Set(symbols).size!==symbols.length)
     throw Error('Unsupported official Bitunix metadata request');
   const url=new URL(ENDPOINT);
   url.searchParams.set('symbols',symbols.join(','));
