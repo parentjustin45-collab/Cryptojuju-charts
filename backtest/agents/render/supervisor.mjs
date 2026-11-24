@@ -12,6 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostics} from './plan.mjs';
 import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
+import {isFiveByFive} from './five-by-five.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const RESEARCH_SOURCE_COMMIT=(()=>{
@@ -37,8 +38,11 @@ function commandFor(agent,slot){
       args:['momentum',join(folder,'data')],env:{}};
     case 'speed': return {file:'backtest/agents/run-render-indicator-pilot.mjs',
       args:['speed',join(folder,'data')],env:{}};
-    case 'cipher': return {file:'backtest/agents/run-cj-cipher-pilot.mjs',
-      args:[join(folder,'cipher')],env:{}};
+    case 'cipher': return isFiveByFive()
+      ? {file:'backtest/agents/run-cj-cipher-five-by-five.mjs',
+        args:[join(folder,'data'),join(folder,'cipher')],env:{}}
+      : {file:'backtest/agents/run-cj-cipher-pilot.mjs',
+        args:[join(folder,'cipher')],env:{}};
     default: throw Error('No subprocess for '+agent.id);
   }
 }
@@ -92,11 +96,12 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
     try{
       const summary=JSON.parse(await readFile(
         join(outFolder(slot),'data',agent.id+'-render-summary.json'),'utf8'));
+      const count=isFiveByFive()?25:9;
       const expected=agent.id==='momentum'
-        ?'MOMENTUM_FUSION_9_DOUBLE_READ_CASES_READY'
-        :'SPEED_V3_9_DOUBLE_READ_CASES_READY';
+        ?'MOMENTUM_FUSION_'+count+'_DOUBLE_READ_CASES_READY'
+        :'SPEED_V3_'+count+'_DOUBLE_READ_CASES_READY';
       const ok=summary.kind===agent.id&&summary.status===expected &&
-        summary.passed===9&&summary.blocked===0&&summary.cases?.length===9 &&
+        summary.passed===count&&summary.blocked===0&&summary.cases?.length===count &&
         summary.cases.every(c=>c.status==='VALIDATED_RESEARCH_ONLY'&&
           /^[a-f0-9]{64}$/i.test(c.sourceSha256??'')&&
           Number.isSafeInteger(c.closingEndTime)&&
@@ -123,12 +128,16 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
         : join(outFolder(slot),'cipher','cj-cipher-pilot-summary.json');
       const summary=JSON.parse(await readFile(file,'utf8'));
       const cases=Array.isArray(summary.cases)?summary.cases:[];
+      const expectedCount=isFiveByFive()?25:9;
       const accepted=agent.id==='vector'
         ? summary.status==='RESEARCH_SIGNAL_REPLAY_COMPLETE' &&
-          cases.length===9 && summary.passed===9 && summary.blocked===0 &&
-          summary.candidateComparisonsPassed===9 && summary.candidateComparisonsBlocked===0
-        : summary.status==='CIPHER_3_MARKETS_FIRST_PILOT_COMPLETE' &&
-          cases.length===3 && summary.validated===3 && summary.blocked===0;
+          cases.length===expectedCount && summary.passed===expectedCount && summary.blocked===0 &&
+          summary.candidateComparisonsPassed===expectedCount && summary.candidateComparisonsBlocked===0
+        : isFiveByFive()
+          ? summary.status==='CIPHER_25_MARKETS_MTF_PILOT_COMPLETE' &&
+            cases.length===25 && summary.validated===25 && summary.blocked===0
+          : summary.status==='CIPHER_3_MARKETS_FIRST_PILOT_COMPLETE' &&
+            cases.length===3 && summary.validated===3 && summary.blocked===0;
       status=(status==='EXECUTED_RESEARCH_ONLY' && accepted)?status:'BLOCKED';
       evidence={...evidence,summary:{protocol:summary.protocol,status:summary.status,
         cases:cases.length,passed:summary.passed??summary.validated,
