@@ -6,12 +6,14 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[c]));
 const fmt=x=>Number.isSafeInteger(x)?x.toLocaleString('fr-CA'):esc(x);
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES,checkFiveByFiveComplete} from './render/five-by-five.mjs';
 export function renderBitunixDataCenterHtml(summary) {
  if(summary?.protocol!=='CRYPTOJUJU_REAL_BITUNIX_DATA_INGEST_V1' ||
    !['PASS_PUBLIC_BITUNIX_DATA_WINDOWS','BLOCKED_OR_PARTIAL'].includes(summary.status) ||
-   !Array.isArray(summary.checks)||summary.checks.length!==9 ||
-   summary.checks.some(x=>!['BTCUSDT','ETHUSDT','SOLUSDT'].includes(x.symbol) ||
-     !['15m','1h','4h'].includes(x.timeframe) ||
+   !Array.isArray(summary.checks)||![9,25].includes(summary.checks.length) ||
+   (summary.cohort==='FIVE_BY_FIVE'&&!checkFiveByFiveComplete(summary.checks)) ||
+   summary.checks.some(x=>!FIVE_CRYPTO_SYMBOLS.includes(x.symbol) ||
+     !FIVE_TIMEFRAMES.includes(x.timeframe) ||
      !['DATA_READY_FOR_RESEARCH_ONLY','BLOCKED'].includes(x.status)))
    throw Error('Unknown/unverified Bitunix report');
  const rows=summary.checks.map(x=>{
@@ -47,11 +49,11 @@ footer{color:#b5c9bb;font-size:.82rem;line-height:1.6}
 <div class="notice">PHOTOGRAPHIE D'UN TEST RÉEL — pas un flux en continu. Aucune comparaison indépendante exhaustive avec TradingView.</div>
 </header>
 <section class="panel"><h2>État des historiques vérifiés</h2><div class="cards">
-<div class="metric"><small>Fenêtres acceptées</small><strong>${fmt(summary.passed)} / 9</strong></div>
+<div class="metric"><small>Fenêtres acceptées</small><strong>${fmt(summary.passed)} / ${fmt(summary.checks.length)}</strong></div>
 <div class="metric"><small>Chandelles fermées</small><strong>${fmt(accepted)}</strong></div>
 <div class="metric"><small>Corrections documentées</small><strong>${fmt(corrected)}</strong></div>
 </div></section>
-<section class="panel"><h2>BTC / ETH / SOL — 15M / 1H / 4H</h2>
+<section class="panel"><h2>${summary.cohort==='FIVE_BY_FIVE'?'5 cryptos × 5 timeframes':'BTC / ETH / SOL — 15M / 1H / 4H'}</h2>
 <div class="scroll"><table><thead><tr><th>Symbole</th><th>UT</th><th>Chandelles</th><th>Corrections</th><th>Validation</th></tr></thead>
 <tbody>${rows}</tbody></table></div></section>
 <section class="panel"><h2>Statut technique</h2>
