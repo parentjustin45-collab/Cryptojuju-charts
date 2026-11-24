@@ -8,7 +8,8 @@ import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {initializeDb,runDueCycle} from './supervisor.mjs';
-import {restoreArchivedRun} from './archive.mjs';
+import {restoreArchivedRun,archiveAgentArtifacts} from './archive.mjs';
+import {FIVE_CASES} from './five-by-five.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
 const db=await initializeDb();
@@ -85,6 +86,58 @@ try {
   assert(loaded.every(x=>x.canPlaceOrders===false));
   const others=await recallFindings(db,'speed');
   assert.equal(others.length,0);
+  // Secondary fixture: verify the ENTIRE 5×5 per-indicator archive can be
+  // committed and restored against real PostgreSQL. Never touches Render prod.
+  const scratch25=await mkdtemp(join(tmpdir(),'cj-postgres25-'));
+  const restored25=await mkdtemp(join(tmpdir(),'cj-postgres25-restore-'));
+  const oldCohort=process.env.CJ_RENDER_RESEARCH_COHORT;
+  try{
+    process.env.CJ_RENDER_RESEARCH_COHORT='FIVE_BY_FIVE';
+    await mkdir(join(scratch25,'data'));
+    await mkdir(join(scratch25,'cipher'));
+    const testSlot='2026-11-22T16:00:00.000Z';
+    for(const agent of ['bitunix-data','vector','momentum','speed','cipher'])
+      await db.query("INSERT INTO cj_agent_runs(agent,slot,status) VALUES($1,$2,'RUNNING')",[agent,testSlot]);
+    await writeFile(join(scratch25,'data','summary.json'),'{"status":"PASS_SYNTHETIC_CI"}');
+    await writeFile(join(scratch25,'data','vector-v11-summary.json'),'{"status":"PASS_SYNTHETIC_CI"}');
+    await writeFile(join(scratch25,'data','momentum-render-summary.json'),'{"status":"PASS_SYNTHETIC_CI"}');
+    await writeFile(join(scratch25,'data','speed-render-summary.json'),'{"status":"PASS_SYNTHETIC_CI"}');
+    await writeFile(join(scratch25,'cipher','cj-cipher-pilot-summary.json'),'{"status":"PASS_SYNTHETIC_CI"}');
+    for(const item of FIVE_CASES){
+      const key=item.symbol+'-'+item.timeframe;
+      await writeFile(join(scratch25,'data',key+'.json'),
+        JSON.stringify({source:'SYNTHETIC_POSTGRES_25',key,bars:[{time:1,close:2}]}));
+      await writeFile(join(scratch25,'data',key+'-vector-v11.json'),
+        JSON.stringify({status:'SYNTHETIC_ONLY',key}));
+      for(const kind of ['momentum','speed'])
+        await writeFile(join(scratch25,'data',kind+'-'+key+'-detail.json'),
+          JSON.stringify({kind,key,sourceSha256:'b'.repeat(64),
+            bars:Array.from({length:480},(_,i)=>({time:i,signal:i%2===0}))}));
+      await writeFile(join(scratch25,'cipher',key+'-cipher-mtf-detail.json'),
+        JSON.stringify({kind:'cipher',key,actions:Array.from({length:480},(_,i)=>i%2)}));
+    }
+    for(const agent of ['bitunix-data','vector','momentum','speed','cipher']){
+      const proof=await archiveAgentArtifacts(db,agent,testSlot,{root:scratch25});
+      assert.equal(proof.status,'ARCHIVED_DURABLY');
+      const expectedFiles={'momentum':26,'speed':26,'cipher':26}[agent];
+      if(expectedFiles)assert.equal(proof.files,expectedFiles);
+      assert.ok(proof.manifestSha256.length===64);
+    }
+    const audit25=await db.query(
+      'SELECT agent,count(*)::int AS files FROM cj_archive_manifest WHERE slot=$1 GROUP BY agent',
+      [testSlot]);
+    assert.equal(audit25.rowCount,5);
+    assert.equal(audit25.rows.find(x=>x.agent==='momentum').files,26);
+    assert.equal(audit25.rows.find(x=>x.agent==='cipher').files,26);
+    const receipt=await restoreArchivedRun(db,{agent:'cipher',slot:testSlot,destination:restored25});
+    assert.equal(receipt.restored,26);
+    console.log('CJ_PG18_25_CASE_ARCHIVE PASS : Bitunix, Vector, Momentum, SPEED, Cipher 25-case archive SHA256 restoration');
+  }finally{
+    if(oldCohort===undefined)delete process.env.CJ_RENDER_RESEARCH_COHORT;
+    else process.env.CJ_RENDER_RESEARCH_COHORT=oldCohort;
+    await rm(scratch25,{recursive:true,force:true});
+    await rm(restored25,{recursive:true,force:true});
+  }
   console.log('CJ_PG18_SMOKE PASS : six runs, archive objects and manifests, SHA256 recovery, specialist memory');
 }finally{
   await rm(folder,{recursive:true,force:true});
