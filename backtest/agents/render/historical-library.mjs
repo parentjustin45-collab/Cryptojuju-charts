@@ -190,130 +190,52 @@ export async function reconcileHourlyArchives(db,{limit=2,commit=false}={}){
     dryRun:!commit,results};
 }
 /*
- * Legacy 13-artifact bridge. It does NOT treat summary labels or signal
- * research payloads as OHLC. Only a source JSON with an independently
- * archived, same-artifact readback JSON can qualify for canonical ingest.
- * Bounded offset lets review continue past permanently blocked old sources.
+ * Legacy 13-artifact bridge, bounded and optional.
+ * Each source must carry a second independent readback within SAME artifact.
+ * Never confuse stored summaries with verified raw/normalized OHLC.
  */
-const LEGACY_FILE=/(?:^|\/)(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(?:-first)?[.]json$/;
+const LEGACY_PAIR=/^(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(-first)?[.]json$/;
 export async function reconcileLegacyArchives(db,{limit=5,offset=0,commit=false}={}){
   if(!Number.isInteger(limit)||limit<1||limit>50||
     !Number.isInteger(offset)||offset<0||offset>5000)
     throw Error('INVALID_LEGACY_BRIDGE_CURSOR');
-  const sql="SELECT l.dataset,l.artifact_id,l.original_path,"+
-    "trim(l.sha256) AS sha256,o.raw_bytes,o.content,"+
-    "trim(r.sha256) AS repeat_sha256,ro.raw_bytes AS repeat_raw_bytes,"+
-    "ro.content AS repeat_content,r.original_path AS repeat_path "+
+  const sourceSql="SELECT l.dataset,l.artifact_id,l.original_path,"+
+    "trim(l.sha256) AS sha256,o.raw_bytes,o.content "+
     "FROM cj_legacy_file_refs l "+
     "JOIN cj_archive_objects o ON o.sha256=l.sha256 "+
-    "LEFT JOIN LATERAL (SELECT x.sha256,x.original_path FROM cj_legacy_file_refs x "+
-    "WHERE x.dataset=l.dataset AND x.artifact_id=l.artifact_id AND "+
-    "x.original_path <> l.original_path AND x.original_path IN ("+
-      "regexp_replace(l.original_path,'-first[.]json
-  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
-}={}){
-  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
-    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
-    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
-    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
-  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
-    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
-    lastOpenMs:Number(x.last_open_ms)}));
-}
-,'-readback.json'),"+
-      "regexp_replace(l.original_path,'[.]json
-  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
-}={}){
-  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
-    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
-    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
-    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
-  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
-    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
-    lastOpenMs:Number(x.last_open_ms)}));
-}
-,'-repeatability.json')) "+
-    "ORDER BY x.original_path LIMIT 1) r ON true "+
-    "LEFT JOIN cj_archive_objects ro ON ro.sha256=r.sha256 "+
-    "LEFT JOIN cj_historical_source_receipts h ON h.source_key=("+
-      "'legacy-bitunix|'||l.artifact_id::text||'|'||"+
-      "regexp_replace(l.original_path,'^.*/','')) "+
-    "WHERE l.original_path ~ '(^|/)(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(-first)?[.]json
-  startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
-}={}){
-  const r=await db.query('SELECT symbol,timeframe,count(*)::int AS unique_bars,'+
-    'min(open_ms)::bigint AS first_open_ms,max(open_ms)::bigint AS last_open_ms '+
-    'FROM cj_historical_candles WHERE open_ms>=$1 AND open_ms<$2 '+
-    'GROUP BY symbol,timeframe ORDER BY symbol,timeframe',[startMs,endMs]);
-  return r.rows.map(x=>({symbol:x.symbol,timeframe:x.timeframe,
-    uniqueBars:Number(x.unique_bars),firstOpenMs:Number(x.first_open_ms),
-    lastOpenMs:Number(x.last_open_ms)}));
-}
- "+
-    "AND h.source_key IS NULL ORDER BY l.artifact_id DESC,l.original_path LIMIT $1 OFFSET $2";
-  const query=await db.query(sql,[limit,offset]);
+    "WHERE l.original_path ~ '(^|/)(BTCUSDT|ETHUSDT|SOLUSDT|HYPEUSDT|1000PEPEUSDT)-(15m|30m|1h|4h|1d)(-first)?[.]json$' "+
+    "ORDER BY l.artifact_id DESC,l.original_path LIMIT $1 OFFSET $2";
+  const q=await db.query(sourceSql,[limit,offset]);
   const results=[];
-  for(const row of query.rows){
-    const match=LEGACY_FILE.exec(row.original_path);
+  for(const row of q.rows){
+    const basename=row.original_path.split('/').at(-1);
+    const match=LEGACY_PAIR.exec(basename);
     if(!match)continue;
-    const sourceKey='legacy-bitunix|'+row.artifact_id+'|'+
-      row.original_path.split('/').at(-1);
+    const sourceKey='legacy-bitunix|'+row.artifact_id+'|'+basename;
+    const secondPath=row.original_path.endsWith('-first.json')
+      ?row.original_path.replace(/-first[.]json$/,'-readback.json')
+      :row.original_path.replace(/[.]json$/,'-repeatability.json');
     try{
-      if(!row.repeat_content)throw Error('LEGACY_DOUBLE_READ_NOT_ARCHIVED');
-      const first=unpack(row),repeat=unpack(row,'repeat_');
-      const verified=validateHistoricalSource(first,repeat);
-      if(verified.symbol!==match[1]||verified.timeframe!==match[2])
-        throw Error('LEGACY_SOURCE_FILENAME_CONFLICT');
+      const pair=await db.query("SELECT trim(l.sha256) AS sha256,o.raw_bytes,o.content "+
+        "FROM cj_legacy_file_refs l JOIN cj_archive_objects o ON o.sha256=l.sha256 "+
+        "WHERE l.dataset=$1 AND l.artifact_id=$2 AND l.original_path=$3 LIMIT 1",
+        [row.dataset,row.artifact_id,secondPath]);
+      if(pair.rowCount!==1)throw Error('LEGACY_DOUBLE_READ_NOT_ARCHIVED');
+      const first=unpack(row),repeat=unpack(pair.rows[0]);
+      const v=validateHistoricalSource(first,repeat);
+      if(v.symbol!==match[1]||v.timeframe!==match[2])
+        throw Error('LEGACY_FILENAME_MARKET_MISMATCH');
       const result=commit
         ?await ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey})
-        :{status:'DRY_RUN_VERIFIED',checkedBars:verified.rows.length,
-          insertedBars:0};
+        :{status:'DRY_RUN_VERIFIED',checkedBars:v.rows.length,insertedBars:0};
       results.push({sourceKey,...result});
     }catch(e){
       results.push({sourceKey,status:'BLOCKED',
-        reason:String(e?.message??e).slice(0,160)});
+        reason:String(e?.message??e).slice(0,150)});
     }
   }
-  return {status:'CJ_LEGACY_HISTORICAL_RECONCILIATION_BATCH',
-    scanned:query.rows.length,offset,limit,dryRun:!commit,results};
-}
-/*
- * Indexed, fail-closed bridge FROM PostgreSQL TO indicator engines.
- * Never concatenate unrelated short windows: require every UTC open, exact
- * interval and a rechecked per-candle content digest.
- */
-export async function loadContiguousHistoricalWindow(db,{
-  symbol,timeframe,endMs,bars=480
-}={}){
-  if(!valid(symbol,timeframe)||!Number.isInteger(bars)||bars<160||
-    bars>960||!Number.isSafeInteger(endMs))
-    throw Error('INVALID_HISTORICAL_REPLAY_REQUEST');
-  const step=VERIFIED_INTERVALS[timeframe];
-  if(endMs%step!==0||endMs>Math.floor(Date.now()/step)*step)
-    throw Error('HISTORICAL_REPLAY_WINDOW_NOT_CLOSED');
-  const startMs=endMs-bars*step;
-  const r=await db.query(
-    'SELECT open_ms,open_price,high_price,low_price,close_price,volume,'+
-    'trim(candle_sha256) AS fingerprint FROM cj_historical_candles '+
-    'WHERE symbol=$1 AND timeframe=$2 AND open_ms >=$3 AND open_ms<$4 '+
-    'ORDER BY open_ms',[symbol,timeframe,startMs,endMs]);
-  if(r.rows.length!==bars)throw Error('HISTORICAL_REPLAY_WINDOW_HAS_GAPS');
-  const candles=[];
-  for(let i=0;i<bars;i++){
-    const v=r.rows[i],time=Number(v.open_ms);
-    const c={time,open:Number(v.open_price),high:Number(v.high_price),
-      low:Number(v.low_price),close:Number(v.close_price),
-      volume:Number(v.volume)};
-    const fp=sha(Buffer.from(JSON.stringify([symbol,timeframe,time,
-      c.open,c.high,c.low,c.close,c.volume])));
-    if(time!==startMs+i*step||v.fingerprint!==fp)
-      throw Error('HISTORICAL_REPLAY_HASH_OR_CHRONOLOGY_MISMATCH');
-    candles.push(c);
-  }
-  return {source:'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1',
-    market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol,timeframe},
-    historyWindow:{startTime:startMs,endTime:endMs,intervalMs:step},
-    candles,signalParity:'NOT_INDEPENDENTLY_VERIFIED',tradingEnabled:false};
+  return {status:'CJ_LEGACY_HISTORY_BRIDGE',scanned:q.rows.length,
+    offset,limit,dryRun:!commit,results};
 }
 export async function historicalCoverage(db,{
   startMs=Date.UTC(2024,10,24),endMs=Date.UTC(2026,10,24)
