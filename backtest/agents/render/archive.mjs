@@ -40,7 +40,7 @@ export async function listArchiveInputs(agent,slot,{root=baseFor(slot),requireSu
     throw Error('MISSING_MANDATORY_ARCHIVE_SUMMARY');
   if(requireSummary&&['momentum','speed'].includes(agent)&&
       names.filter(name=>name.startsWith(agent+'-')&&name.endsWith('-detail.json')).length!==(isFiveByFive()?25:9))
-    throw Error('MISSING_PER_BAR_RESEARCH_ARCHIVES');
+    throw Error(isFiveByFive()?'MISSING_25_PER_BAR_RESEARCH_ARCHIVES':'MISSING_NINE_PER_BAR_RESEARCH_ARCHIVES');
   if(requireSummary&&agent==='cipher'&&isFiveByFive()&&
       names.filter(name=>name.endsWith('-cipher-mtf-detail.json')).length!==25)
     throw Error('MISSING_25_CIPHER_RESEARCH_ARCHIVES');
