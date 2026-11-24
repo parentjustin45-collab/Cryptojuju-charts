@@ -6,6 +6,7 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {PILOT_SYMBOLS,PILOT_TIMEFRAMES} from './bitunix-data-pilot.mjs';
+import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES,isFiveByFive} from './render/five-by-five.mjs';
 import {readBitunixContractPrecision} from './bitunix-contract-precision.mjs';
 import {auditRealVectorV11} from './vector-v11-real-research.mjs';
 import {compareVectorV12Candidates} from './vector-v12-real-comparison.mjs';
@@ -14,9 +15,14 @@ import {diagnoseVectorV12Timing,renderVectorTimingDiagnosticsMarkdown} from './v
 import {diagnoseVectorMarketRegimes,formatVectorRegimesMarkdown} from './vector-market-regimes.mjs';
 
 const folder=resolve(process.argv[2]??'bitunix-data-pilot-report');
+const expanded=isFiveByFive();
+const symbols=expanded?FIVE_CRYPTO_SYMBOLS:PILOT_SYMBOLS;
+const timeframes=expanded?FIVE_TIMEFRAMES:PILOT_TIMEFRAMES;
 const summary={
  protocol:'CJ_REAL_BITUNIX_VECTOR_V11_UNVERIFIED_RESEARCH_V1',
  runUtc:new Date().toISOString(),
+ cohort:expanded?'FIVE_BY_FIVE':'LEGACY_3X3',
+ expectedCases:symbols.length*timeframes.length,
  officialExchangeMetadata:true,
  independentTradingViewParity:false,
  tradingEnabled:false,
@@ -36,8 +42,8 @@ try {
  summary.metadataError=String(e?.message??e);
  contracts=[];
 }
-for(const symbol of PILOT_SYMBOLS){
- for(const timeframe of PILOT_TIMEFRAMES){
+for(const symbol of symbols){
+ for(const timeframe of timeframes){
    const id=`${symbol}-${timeframe}`;
    let result;
    try{
