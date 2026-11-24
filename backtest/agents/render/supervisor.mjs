@@ -12,6 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostics} from './plan.mjs';
 import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
+import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
@@ -331,6 +332,18 @@ export async function main(){
         if(outcome.databaseBytes!==null)
           console.log('CJ_ARCHIVE_CAPACITY '+JSON.stringify({
             usedBytes:outcome.databaseBytes,warning:outcome.databaseWarning}));
+      }
+      // Run the historical bridge ONLY once after an actual diagnostics slot.
+      // Its failures cannot change prior agent statuses or the next hourly run.
+      if(r.completed.some(x=>x.agent==='diagnostics') &&
+        process.env.CJ_HISTORICAL_BRIDGE_ENABLED==='1'){
+        try{
+          const report=await runHistoricalBridgeIfEnabled(db);
+          console.log('CJ_HISTORICAL_BRIDGE '+JSON.stringify(report));
+        }catch(err){
+          console.error('CJ_HISTORICAL_BRIDGE_ERROR '+
+            String(err?.message??err).slice(0,220));
+        }
       }
     }catch(e){
       lastError=String(e?.message??e);
