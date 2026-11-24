@@ -6,6 +6,11 @@ on:
       - 'backtest/agents/render/**'
       - 'backtest/agents/render-*.test.mjs'
       - 'backtest/agents/run-render-indicator-pilot.mjs'
+      - 'backtest/agents/run-cj-cipher-five-by-five.mjs'
+      - 'backtest/agents/bitunix-data-pilot.mjs'
+      - 'backtest/agents/run-bitunix-data-pilot.mjs'
+      - 'backtest/agents/run-vector-v11-pilot.mjs'
+      - 'backtest/agents/research-batch.mjs'
       - '.github/workflows/ai-agents-render-api.yml'
   workflow_dispatch:
 permissions:
@@ -22,7 +27,7 @@ jobs:
       - name: Install exactly the staging API dependencies without tokens
         run: npm install --prefix backtest/agents/render --no-audit --no-fund
       - name: Unit gates, ledger idempotency and API route guards
-        run: node --test backtest/agents/render-plan.test.mjs backtest/agents/render-runtime.test.mjs backtest/agents/render-api.test.mjs backtest/agents/render-knowledge.test.mjs backtest/agents/render-db-readiness.test.mjs backtest/agents/render-indicator-pilot.test.mjs backtest/agents/render-archive.test.mjs
+        run: node --test backtest/agents/render-plan.test.mjs backtest/agents/render-runtime.test.mjs backtest/agents/render-api.test.mjs backtest/agents/render-knowledge.test.mjs backtest/agents/render-db-readiness.test.mjs backtest/agents/render-indicator-pilot.test.mjs backtest/agents/render-archive.test.mjs backtest/agents/render-five-by-five.test.mjs
       - name: Real HTTP smoke (synthetic upstream, agents disabled)
         run: node backtest/agents/render/integration-smoke.mjs
         env:
