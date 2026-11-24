@@ -14,6 +14,7 @@ import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
 import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
+import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
@@ -356,6 +357,19 @@ export async function main(){
           console.log('CJ_HISTORICAL_BACKFILL '+JSON.stringify(report));
         }catch(err){
           console.error('CJ_HISTORICAL_BACKFILL_ERROR '+
+            String(err?.message??err).slice(0,220));
+        }
+      }
+      // Five-indicator two-year replay is opt-in. A pair MUST have every
+      // closed bar, verified SHA and official Bitunix price precision.
+      // No automatic strategy optimization, trading or change to main.
+      if(r.completed.some(x=>x.agent==='diagnostics') &&
+        process.env.CJ_HISTORICAL_REPLAY_ENABLED==='1'){
+        try{
+          const report=await runEligibleMultiYearReplay(db,{maxPairs:1});
+          console.log('CJ_HISTORICAL_REPLAY '+JSON.stringify(report));
+        }catch(err){
+          console.error('CJ_HISTORICAL_REPLAY_ERROR '+
             String(err?.message??err).slice(0,220));
         }
       }
