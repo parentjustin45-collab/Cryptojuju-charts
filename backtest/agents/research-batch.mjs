@@ -7,13 +7,13 @@
 import {classifyHistory, requireCleanHistory} from '../quality-gate.mjs';
 import {runBacktest} from '../engine.mjs';
 
-export const VERIFIED_INTERVALS = Object.freeze({'15m':900000,'1h':3600000,'4h':14400000,'1d':86400000});
+export const VERIFIED_INTERVALS = Object.freeze({'15m':900000,'30m':1800000,'1h':3600000,'4h':14400000,'1d':86400000});
 
 function checkMarket(market, window) {
   if (!market || market.exchange!=='Bitunix' || market.priceType!=='LAST_PRICE'
       || !/^[A-Z0-9_]{3,40}$/.test(market.symbol??'')
       || !Object.hasOwn(VERIFIED_INTERVALS,market.timeframe)) {
-    throw Error('Only Bitunix LAST_PRICE 15m/1h/4h/1d markets are supported by this research pilot');
+    throw Error('Only Bitunix LAST_PRICE 15m/30m/1h/4h/1d markets are supported by this research pilot');
   }
   if (!window || window.intervalMs!==VERIFIED_INTERVALS[market.timeframe])
     throw Error('Timeframe does not match historyWindow intervalMs');
