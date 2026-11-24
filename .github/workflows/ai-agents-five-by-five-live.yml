@@ -19,6 +19,15 @@ jobs:
           node-version: '22'
       - name: Verify deterministic 5x5 data and archive safety
         run: node --test backtest/agents/render-five-by-five.test.mjs backtest/agents/bitunix-data-pilot.test.mjs
+      - name: Confirm five Bitunix OPEN crypto contracts and precision
+        run: |
+          node --input-type=module -e "
+          import {readBitunixContractPrecision} from './backtest/agents/bitunix-contract-precision.mjs';
+          import {FIVE_CRYPTO_SYMBOLS} from './backtest/agents/render/five-by-five.mjs';
+          const r=await readBitunixContractPrecision({symbols:FIVE_CRYPTO_SYMBOLS});
+          if(r.contracts.length!==5)throw Error('Five OPEN contracts required');
+          console.log('CJ_FIVE_CRYPTO_CONTRACTS '+JSON.stringify(r.contracts.map(x=>({symbol:x.symbol,priceStep:x.priceStep}))));
+          "
       - name: Fetch Bitunix 5 crypto x 5 UT x 480 completed candles with full double read
         env:
           CJ_RENDER_RESEARCH_COHORT: FIVE_BY_FIVE
