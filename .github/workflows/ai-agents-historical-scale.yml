@@ -1,0 +1,99 @@
+name: DEV historical HYPE boundary and 730-day intraday scale
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - '.github/workflows/ai-agents-historical-scale.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hype-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read official futures metadata and bounded historic windows
+        run: |
+          node --input-type=module <<'NODE'
+          import {makeBitunixFetchPage} from './backtest/bitunix-adapter.mjs';
+          import {fetchBitunixDataPilot} from './backtest/agents/bitunix-data-pilot.mjs';
+          import {compareBitunixReadbacks} from './backtest/agents/bitunix-readback-consistency.mjs';
+          const get=async(url,opts={})=>fetch(url,{...opts,signal:AbortSignal.timeout(15000),cache:'no-store',credentials:'omit'});
+          let launch=null;
+          try{
+            const resp=await get('https://fapi.bitunix.com/api/v1/futures/market/trading_pairs?symbols=HYPEUSDT');
+            const json=await resp.json();
+            if(!resp.ok||json.code!==0||!Array.isArray(json.data))throw Error('metadata unavailable');
+            const p=json.data.find(x=>x.symbol==='HYPEUSDT');
+            if(!p)throw Error('HYPEUSDT contract missing');
+            const t=Number(p.launchTime);
+            launch=Number.isSafeInteger(t)&&t>1e12&&t<Date.now()?t:null;
+            console.log('CJ_HYPE_METADATA '+JSON.stringify({symbol:p.symbol,launchTime:p.launchTime??null,launchUtc:launch?new Date(launch).toISOString():null,symbolStatus:p.symbolStatus}));
+          }catch(e){console.log('CJ_HYPE_METADATA_ERROR '+String(e.message).slice(0,150));}
+          const page=makeBitunixFetchPage({fetchImpl:get});
+          const dates=new Set([Date.UTC(2024,10,24),Date.UTC(2024,10,29),Date.UTC(2024,11,15),Date.UTC(2025,0,1),Date.UTC(2025,1,1),Date.UTC(2025,2,1),Date.UTC(2025,4,1)]);
+          if(launch){const d=Math.ceil(launch/86400000)*86400000;dates.add(d-86400000);dates.add(d);dates.add(d+4*86400000);}
+          for(const start of [...dates].sort((a,b)=>a-b)){
+            for(const [tf,step] of [['1d',86400000],['15m',900000]]){
+              try{
+                const selector={symbol:'HYPEUSDT',timeframe:tf,closedBars:4,anchorBars:3,historicalEndExclusiveMs:start+4*step,fetchPage:page,retries:0};
+                const first=await fetchBitunixDataPilot(selector);
+                let readback=null;
+                if(first.status==='DATA_READY_FOR_RESEARCH_ONLY')readback=compareBitunixReadbacks(first,await fetchBitunixDataPilot(selector)).status;
+                const times=(first.rawRows??[]).map(x=>Number(x.time)).filter(Number.isFinite);
+                console.log('CJ_HYPE_BOUNDARY '+JSON.stringify({tf,start:new Date(start).toISOString(),status:first.status,reason:first.reason??null,received:times.length,first:times.length?new Date(Math.min(...times)).toISOString():null,last:times.length?new Date(Math.max(...times)).toISOString():null,quality:first.quality??null,readback}));
+              }catch(e){console.log('CJ_HYPE_PROBE_ERROR '+JSON.stringify({tf,start:new Date(start).toISOString(),error:String(e.message).slice(0,150)}));}
+              await new Promise(r=>setTimeout(r,350));
+            }
+          }
+          NODE
+  replay-scale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {tf: '4h', step: 14400000, bars: 4380}
+          - {tf: '1h', step: 3600000, bars: 17520}
+          - {tf: '30m', step: 1800000, bars: 35040}
+          - {tf: '15m', step: 900000, bars: 70080}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run full two-year algorithms with synthetic CI-only data and bounded heap
+        env:
+          TF: ${{ matrix.tf }}
+          STEP: ${{ matrix.step }}
+          BARS: ${{ matrix.bars }}
+        run: |
+          node --max-old-space-size=320 --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {createHash} from 'node:crypto';
+          import {gzipSync} from 'node:zlib';
+          import {studyContinuousHistoricalPeriod} from './backtest/agents/render/historical-multiyear-replay.mjs';
+          import {TWO_YEAR_RANGE} from './backtest/agents/render/historical-period.mjs';
+          const tf=process.env.TF,step=Number(process.env.STEP),n=Number(process.env.BARS);
+          const candles=Array.from({length:n},(_,i)=>{
+            const p=190+Math.sin(i/13)*12+Math.cos(i/31)*5+i*.0005;
+            return {time:TWO_YEAR_RANGE.startMs+i*step,open:p,close:p+.7*Math.cos(i*1.7),high:p+2,low:p-2,volume:100+i%35};
+          });
+          const source={source:'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1',status:'CONTIGUOUS_SHA256_VERIFIED_UTC',market:{exchange:'Bitunix',priceType:'LAST_PRICE',symbol:'BTCUSDT',timeframe:tf},historyWindow:{startTime:TWO_YEAR_RANGE.startMs,endTime:TWO_YEAR_RANGE.endMs,intervalMs:step},sequenceSha256:createHash('sha256').update(JSON.stringify(candles)).digest('hex'),candles};
+          const t=performance.now(),result=studyContinuousHistoricalPeriod(source,{priceStep:.01});
+          assert.equal(result.closedCandles,n);
+          assert.equal(result.noLookaheadTestsPassed,true);
+          assert.equal(result.causalPrefixChecks,4);
+          assert.equal(Object.keys(result.indicators).length,6);
+          assert.equal(result.marketOrdersPlaced,0);
+          const raw=Buffer.from(JSON.stringify(result)),compressed=gzipSync(raw);
+          const peakMiB=process.resourceUsage().maxRSS/1024;
+          console.log('CJ_INTRADAY_SCALE '+JSON.stringify({tf,bars:n,elapsedMs:Math.round(performance.now()-t),peakMiB:Math.round(peakMiB*10)/10,rawBytes:raw.length,compressedBytes:compressed.length,causalChecks:result.causalPrefixChecks,syntheticCIOnly:true}));
+          assert.ok(raw.length<=16*1024*1024,'report size limit');
+          assert.ok(peakMiB<400,'replay process exceeds 400 MiB safety budget');
+          NODE
