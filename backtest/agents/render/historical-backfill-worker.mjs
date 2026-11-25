@@ -3,7 +3,7 @@
  * is independently fetched twice from Bitunix LAST_PRICE, SHA verified,
  * inserted and archived atomically with its raw + readback evidence.
  * Persistent cursor resumes after restarts; unavailable HYPE history is
- * reported as UNAVAILABLE, never padded with synthetic candles.
+ * kept as unresolved gaps, never padded with synthetic candles.
  */
 import {FIVE_CASES} from './five-by-five.mjs';
 import {HISTORICAL_TARGET} from '../historical-backfill-plan.mjs';
@@ -13,6 +13,7 @@ import {compareBitunixReadbacks} from '../bitunix-readback-consistency.mjs';
 import {makeBitunixFetchPage} from '../../bitunix-adapter.mjs';
 import {initializeHistoricalLibrary,ingestVerifiedHistoricalSource}
   from './historical-library.mjs';
+export const MAX_WINDOW_ATTEMPTS=5;
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const currentFetch=()=>makeBitunixFetchPage({
   fetchImpl:(url,options)=>fetch(url,{...options,
@@ -48,18 +49,38 @@ export async function runHistoricalBackfillBatch(db,{
   const launchedAt=Date.now();
   await ensureBackfillSchema(db);
   const results=[];
+  // Retry at most 20% of a batch (one slot minimum). Old BLOCKED rows
+  // are the durable queue; no destructive migration or cursor rewind.
+  const retryQuota=Math.max(1,Math.floor(limit/5));
+  let retriesUsed=0;
   for(let iteration=0;iteration<limit;iteration++){
     if(iteration>0&&Date.now()-launchedAt>=elapsedBudgetMs)break;
-    const pending=await db.query(
-      "SELECT symbol,timeframe,next_ms FROM cj_historical_backfill_cursor "+
-      "WHERE next_ms<$1 ORDER BY last_attempt_at ASC NULLS FIRST,symbol,timeframe LIMIT 1",
-      [HISTORICAL_TARGET.endTime]);
-    if(!pending.rowCount)break;
-    const {symbol,timeframe}=pending.rows[0],startMs=Number(pending.rows[0].next_ms);
+    let retry=null;
+    if(retriesUsed<retryQuota){
+      const due=await db.query(
+        "SELECT symbol,timeframe,start_ms,end_ms,attempts FROM cj_historical_backfill_attempts "+
+        "WHERE status='BLOCKED' AND attempts<$1 AND "+
+        "updated_at <= now() - interval '1 hour' * power(2,LEAST(attempts-1,4)) "+
+        "ORDER BY updated_at,symbol,timeframe,start_ms LIMIT 1",[MAX_WINDOW_ATTEMPTS]);
+      retry=due.rows[0]??null;
+    }
+    let pending;
+    if(!retry){
+      pending=await db.query(
+        "SELECT symbol,timeframe,next_ms FROM cj_historical_backfill_cursor "+
+        "WHERE next_ms<$1 ORDER BY last_attempt_at ASC NULLS FIRST,symbol,timeframe LIMIT 1",
+        [HISTORICAL_TARGET.endTime]);
+      if(!pending.rowCount)break;
+    }else retriesUsed++;
+    const {symbol,timeframe}=retry??pending.rows[0];
+    const startMs=Number(retry?retry.start_ms:pending.rows[0].next_ms);
     const step=VERIFIED_INTERVALS[timeframe];
-    const n=Math.min(480,(HISTORICAL_TARGET.endTime-startMs)/step);
+    const n=retry?(Number(retry.end_ms)-startMs)/step:
+      Math.min(480,(HISTORICAL_TARGET.endTime-startMs)/step);
     const endMs=startMs+n*step;
-    if(!Number.isSafeInteger(startMs)||startMs%step!==0||n<4||n>480)
+    if(!Number.isSafeInteger(startMs)||!step||startMs%step!==0||
+      !Number.isInteger(n)||n<4||n>480||startMs<HISTORICAL_TARGET.startTime||
+      endMs>HISTORICAL_TARGET.endTime)
       throw Error('INVALID_BACKFILL_CURSOR_OR_FINAL_CHUNK');
     let status='BLOCKED',reason=null,checkedBars=0,insertedBars=0,hash=null;
     let abort=false;
@@ -88,7 +109,8 @@ export async function runHistoricalBackfillBatch(db,{
       }
     }catch(e){
       reason=String(e?.message??e).slice(0,170);
-      if(/CAPACITY_GUARD|STORAGE_BUDGET|database.*(connection|closed)/i.test(reason))
+      if(/CAPACITY_GUARD|STORAGE_BUDGET|database.*(connection|closed)/i.test(reason)||
+        /^(08|53|57P0)/.test(String(e?.code??'')))
         abort=true;
     }
     // Never advance if PostgreSQL capacity is exhausted: avoid falsely
@@ -103,14 +125,17 @@ export async function runHistoricalBackfillBatch(db,{
       "inserted_bars=excluded.inserted_bars,attempts=cj_historical_backfill_attempts.attempts+1,"+
       "updated_at=now()",
       [symbol,timeframe,startMs,endMs,status,reason,hash,checkedBars,insertedBars]);
-    await db.query("UPDATE cj_historical_backfill_cursor SET next_ms=$3,"+
+    if(!retry)await db.query("UPDATE cj_historical_backfill_cursor SET next_ms=$3,"+
       "windows_seen=windows_seen+1,last_attempt_at=now() "+
       "WHERE symbol=$1 AND timeframe=$2 AND next_ms=$4",
       [symbol,timeframe,endMs,startMs]);
     results.push({symbol,timeframe,startMs,endMs,status,
-      checkedBars,insertedBars,reason});
+      checkedBars,insertedBars,reason,retry:!!retry,attemptNumber:retry?Number(retry.attempts)+1:1});
     if(iteration<limit-1)await pause(250);
   }
+  const gaps=await db.query("SELECT count(*) FILTER (WHERE attempts<$1)::int AS queued,"+
+    "count(*) FILTER (WHERE attempts>=$1)::int AS exhausted "+
+    "FROM cj_historical_backfill_attempts WHERE status='BLOCKED'",[MAX_WINDOW_ATTEMPTS]);
   return {status:'HISTORICAL_TWO_YEAR_BACKFILL_BATCH_COMPLETE',
     targetStartUtc:new Date(HISTORICAL_TARGET.startTime).toISOString(),
     targetEndUtc:new Date(HISTORICAL_TARGET.endTime).toISOString(),
@@ -120,6 +145,10 @@ export async function runHistoricalBackfillBatch(db,{
     blocked:results.filter(r=>r.status==='BLOCKED').length,
     checkedBars:results.reduce((n,r)=>n+r.checkedBars,0),
     insertedBars:results.reduce((n,r)=>n+r.insertedBars,0),
+    retryAttempts:retriesUsed,
+    recovered:results.filter(r=>r.retry&&r.status!=='BLOCKED').length,
+    queuedGaps:Number(gaps.rows[0]?.queued??0),
+    exhaustedGaps:Number(gaps.rows[0]?.exhausted??0),
     samples:results.slice(0,25),noTrading:true,
-    warning:'Blocked old windows stay missing; current run does not retry them or claim two-year coverage.'};
+    warning:'Unresolved gaps remain missing; after five attempts they require review. No synthetic bars or coverage claims.'};
 }
