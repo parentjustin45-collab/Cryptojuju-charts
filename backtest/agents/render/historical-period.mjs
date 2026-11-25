@@ -11,6 +11,20 @@ const sha=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
 export const TWO_YEAR_RANGE=Object.freeze({
   startMs:Date.UTC(2024,10,24),endMs:Date.UTC(2026,10,24)
 });
+// Bitunix public trading_pairs launchTime verified 2026-11-25 UTC (CI 45530824201).
+// The first three FULL aligned candles are reserved as independent normalization
+// anchors; the partial listing candle is not included in the research sequence.
+export const HYPE_LAUNCH_MS=Date.UTC(2025,2,27,8);
+export function historicalTargetFor(symbol,timeframe){
+  if(!accepted(symbol,timeframe))throw Error('INVALID_HISTORICAL_PAIR');
+  const step=VERIFIED_INTERVALS[timeframe];
+  const startMs=symbol==='HYPEUSDT'
+    ?Math.max(TWO_YEAR_RANGE.startMs,Math.ceil(HYPE_LAUNCH_MS/step)*step+3*step)
+    :TWO_YEAR_RANGE.startMs;
+  return {startMs,endMs:TWO_YEAR_RANGE.endMs,
+    coverageKind:symbol==='HYPEUSDT'?'LISTING_ADJUSTED_WITH_THREE_ANCHORS':'FULL_TWO_YEAR',
+    launchMs:symbol==='HYPEUSDT'?HYPE_LAUNCH_MS:null};
+}
 export function expectedHistoricalBars({timeframe,startMs,endMs}){
   const step=VERIFIED_INTERVALS[timeframe];
   if(!step||!Number.isSafeInteger(startMs)||!Number.isSafeInteger(endMs)||
@@ -21,7 +35,7 @@ export function expectedHistoricalBars({timeframe,startMs,endMs}){
   return n;
 }
 export async function loadHistoricalPeriod(db,{symbol,timeframe,
-  startMs=TWO_YEAR_RANGE.startMs,endMs=TWO_YEAR_RANGE.endMs,
+  startMs=historicalTargetFor(symbol,timeframe).startMs,endMs=TWO_YEAR_RANGE.endMs,
   pageSize=2000}={}){
   if(!accepted(symbol,timeframe)||!Number.isInteger(pageSize)||
     pageSize<100||pageSize>5000)throw Error('INVALID_HISTORICAL_PERIOD_REQUEST');
