@@ -136,7 +136,7 @@ export function studyContinuousHistoricalPeriod(source,{priceStep}={}){
       timeframe:source.market.timeframe,
       startMs:source.historyWindow.startTime,endMs:source.historyWindow.endTime
     }))
-    throw Error('REPLAY_REQUIRES_COMPLETE_AUTHORIZED_VERIFIED_SOURCE');
+    throw Error(target.coverageKind==='FULL_TWO_YEAR'?'REPLAY_REQUIRES_COMPLETE_TWO_YEAR_VERIFIED_SOURCE':'REPLAY_REQUIRES_COMPLETE_LISTING_ADJUSTED_VERIFIED_SOURCE');
   const bars=source.candles,n=bars.length;
   const results={
     vector:vectorAIT(bars,{minTick:priceStep}),
