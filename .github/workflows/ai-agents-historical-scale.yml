@@ -51,6 +51,30 @@ jobs:
             }
           }
           NODE
+      - name: Verify exact listing-adjusted starts with three real anchors for all five timeframes
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {historicalTargetFor} from './backtest/agents/render/historical-period.mjs';
+          import {makeBitunixFetchPage} from './backtest/bitunix-adapter.mjs';
+          import {fetchBitunixDataPilot} from './backtest/agents/bitunix-data-pilot.mjs';
+          import {compareBitunixReadbacks} from './backtest/agents/bitunix-readback-consistency.mjs';
+          const page=makeBitunixFetchPage({fetchImpl:(u,o)=>fetch(u,{...o,signal:AbortSignal.timeout(15000),cache:'no-store'})});
+          const intervals={'15m':900000,'30m':1800000,'1h':3600000,'4h':14400000,'1d':86400000};
+          let errors=0;
+          for(const [timeframe,step] of Object.entries(intervals)){
+            const target=historicalTargetFor('HYPEUSDT',timeframe);
+            const selector={symbol:'HYPEUSDT',timeframe,closedBars:4,anchorBars:3,historicalEndExclusiveMs:target.startMs+4*step,fetchPage:page,retries:1};
+            const first=await fetchBitunixDataPilot(selector);
+            const repeat=first.status==='DATA_READY_FOR_RESEARCH_ONLY'?compareBitunixReadbacks(first,await fetchBitunixDataPilot(selector)):null;
+            const pass=first.status==='DATA_READY_FOR_RESEARCH_ONLY'&&repeat?.status==='STABLE_TWO_READS';
+            console.log('CJ_HYPE_EXACT_TARGET '+JSON.stringify({timeframe,start:new Date(target.startMs).toISOString(),expectedBars:(target.endMs-target.startMs)/step,firstStatus:first.status,readback:repeat?.status??null,quality:first.quality,pass}));
+            if(!pass)errors++;
+          }
+          const firstDaily=await page({symbol:'HYPEUSDT',interval:'1d',startTime:Date.UTC(2025,2,27),endTime:Date.UTC(2025,2,28),limit:1});
+          console.log('CJ_HYPE_PARTIAL_DAILY_RAW '+JSON.stringify(firstDaily));
+          assert.equal(errors,0,'exact listing-adjusted boundary must be verified for all timeframes');
+          NODE
   replay-scale:
     runs-on: ubuntu-latest
     timeout-minutes: 10
