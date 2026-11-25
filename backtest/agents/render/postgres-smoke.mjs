@@ -411,6 +411,38 @@ try {
   const hr2=await runEligibleMultiYearReplay(db,{maxPairs:1,precisionReader:officialPrice});
   assert.equal(hr2.alreadyArchived,2);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM cj_multiyear_replay_reports')).rows[0].n,2);
+  // New method: the very first anchor has an open outside its range,
+  // but the previous genuine closed candle confirms the open.
+  const gapStart=dailyStart+480*1800000*10,gapEnd=gapStart+480*1800000;
+  const gapKey=['BTCUSDT','30m',gapStart,gapEnd];
+  await db.query("INSERT INTO cj_historical_backfill_attempts(symbol,timeframe,start_ms,end_ms,status,reason,attempts,anchor_repair_checked) VALUES($1,$2,$3,$4,'BLOCKED','BITUNIX_SOURCE_OHLC_PROVENANCE_OR_CONTINUITY_FAILED',5,false)",gapKey);
+  const btcGapCursor=await db.query("SELECT next_ms,windows_seen FROM cj_historical_backfill_cursor WHERE symbol='BTCUSDT' AND timeframe='30m'");
+  const anchorPage=async args=>{
+    const rows=await syntheticPage(args);
+    return rows.map(x=>x.time===gapStart-3*1800000?
+      {...x,open:100.5,high:100.4,close:100.1}:x);
+  };
+  const repair=await runHistoricalBackfillBatch(db,{...options,limit:10,repairOnly:true,fetchPage:anchorPage});
+  assert.equal(repair.attempted,1);
+  assert.equal(repair.recovered,1,JSON.stringify(repair.samples));
+  assert.equal(repair.samples[0].anchorBars,4);
+  assert.equal(repair.samples[0].attemptNumber,6);
+  assert.equal(repair.insertedBars,480);
+  assert.equal(repair.samples[0].startMs,gapStart);
+  assert.deepEqual((await db.query("SELECT next_ms,windows_seen FROM cj_historical_backfill_cursor WHERE symbol='BTCUSDT' AND timeframe='30m'")).rows,btcGapCursor.rows);
+  const repairedAttempt=(await db.query("SELECT status,attempts,anchor_repair_checked FROM cj_historical_backfill_attempts WHERE symbol=$1 AND timeframe=$2 AND start_ms=$3 AND end_ms=$4",gapKey)).rows[0];
+  assert.deepEqual(repairedAttempt,{status:'VERIFIED_TWO_READS_ARCHIVED',attempts:6,anchor_repair_checked:true});
+  const againRepair=await runHistoricalBackfillBatch(db,{...options,limit:10,repairOnly:true,fetchPage:anchorPage});
+  assert.equal(againRepair.attempted,0);
+  // A real missing row must never be manufactured or accepted by the new method.
+  const badStart=gapEnd,badEnd=badStart+480*1800000;
+  await db.query("INSERT INTO cj_historical_backfill_attempts(symbol,timeframe,start_ms,end_ms,status,reason,attempts,anchor_repair_checked) VALUES('BTCUSDT','30m',$1,$2,'BLOCKED','BITUNIX_SOURCE_OHLC_PROVENANCE_OR_CONTINUITY_FAILED',5,false)",[badStart,badEnd]);
+  const badPage=async args=>(await syntheticPage(args)).filter(x=>x.time!==badStart+1800000);
+  const refused=await runHistoricalBackfillBatch(db,{...options,limit:10,repairOnly:true,fetchPage:badPage});
+  assert.equal(refused.blocked,1);
+  assert.equal(refused.insertedBars,0);
+  assert.equal((await runHistoricalBackfillBatch(db,{...options,limit:10,repairOnly:true,fetchPage:badPage})).attempted,0);
+  console.log('CJ_HISTORICAL_ANCHOR_REPAIR_PG18 PASS : extended genuine predecessor, immutable 480-bar source, bounded migration, no missing-row fabrication');
   console.log('CJ_HYPE_LISTING_PG18 PASS : old gap evidence retained, rebase once, 603 verified bars, separate immutable report, no duplicate BTC');
   console.log('CJ_HISTORICAL_RETRY_PG18 PASS : cooldown, recovery, persistent cursor, bounded exhaustion, no synthetic data');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_ARCHIVE_PG18 PASS : auto eligibility, official price-step contract, immutable gzip report, one replay per pair');
