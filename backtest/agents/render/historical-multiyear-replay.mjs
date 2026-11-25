@@ -5,7 +5,7 @@
  * Metrics are descriptive forward outcomes, NOT optimized trading rules,
  * real fills, prospective performance, Pine parity or return forecasts.
  */
-import {loadHistoricalPeriod,TWO_YEAR_RANGE,expectedHistoricalBars}
+import {loadHistoricalPeriod,historicalTargetFor,expectedHistoricalBars}
   from './historical-period.mjs';
 import {vectorAIT} from '../../vector-ait-v1.mjs';
 import {calculateMomentumFusion} from '../../momentum-fusion-v1.mjs';
@@ -125,17 +125,18 @@ function causalChecks(bars,results,priceStep){
 }
 export function studyContinuousHistoricalPeriod(source,{priceStep}={}){
   requireStep(priceStep);
+  const target=historicalTargetFor(source?.market?.symbol,source?.market?.timeframe);
   if(source?.source!=='CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1'||
     source.status!=='CONTIGUOUS_SHA256_VERIFIED_UTC'||
     source.market?.priceType!=='LAST_PRICE'||
     !/^[a-f0-9]{64}$/.test(source.sequenceSha256??'')||
-    source.historyWindow?.startTime!==TWO_YEAR_RANGE.startMs||
-    source.historyWindow?.endTime!==TWO_YEAR_RANGE.endMs||
+    source.historyWindow?.startTime!==target.startMs||
+    source.historyWindow?.endTime!==target.endMs||
     source.candles?.length!==expectedHistoricalBars({
       timeframe:source.market.timeframe,
       startMs:source.historyWindow.startTime,endMs:source.historyWindow.endTime
     }))
-    throw Error('REPLAY_REQUIRES_COMPLETE_TWO_YEAR_VERIFIED_SOURCE');
+    throw Error('REPLAY_REQUIRES_COMPLETE_AUTHORIZED_VERIFIED_SOURCE');
   const bars=source.candles,n=bars.length;
   const results={
     vector:vectorAIT(bars,{minTick:priceStep}),
@@ -156,7 +157,8 @@ export function studyContinuousHistoricalPeriod(source,{priceStep}={}){
     }]));
   return {
     protocol:'CJ_CONTINUOUS_TWO_YEAR_FIVE_INDICATOR_REPLAY_V1',
-    status:'TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED',
+    status:target.coverageKind==='FULL_TWO_YEAR'?'TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED':'LISTING_ADJUSTED_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED',
+    coverageKind:target.coverageKind,launchMs:target.launchMs,
     symbol:source.market.symbol,timeframe:source.market.timeframe,
     startTime:source.historyWindow.startTime,endTime:source.historyWindow.endTime,
     sourceSequenceSha256:source.sequenceSha256,
