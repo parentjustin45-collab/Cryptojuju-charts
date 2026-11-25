@@ -329,6 +329,47 @@ try {
   assert.equal(repeatLong.alreadyArchived,1);
   assert.equal(repeatLong.status,'AWAITING_COMPLETE_HISTORICAL_COHORT');
   assert.equal((await db.query('SELECT count(*)::int AS n FROM cj_multiyear_replay_reports')).rows[0].n,1);
+  // Durable retry queue: transient source failure, cooldown, cursor independence,
+  // recovery, exhaustion and preservation of unresolved gaps.
+  const options={limit:1,fetchPage:syntheticPage,pause:async()=>{},
+    now:()=>Date.UTC(2026,10,24,18,32)};
+  const failWindow=async()=>({status:'BLOCKED',reason:'TEST_TRANSIENT'});
+  const failed=await runHistoricalBackfillBatch(db,{...options,fetchWindow:failWindow});
+  assert.equal(failed.blocked,1);
+  assert.equal(failed.queuedGaps,1);
+  const f=failed.samples[0];
+  const key=[f.symbol,f.timeframe,f.startMs,f.endMs];
+  const readAttempt=async()=> (await db.query(
+    'SELECT status,attempts FROM cj_historical_backfill_attempts WHERE symbol=$1 AND timeframe=$2 AND start_ms=$3 AND end_ms=$4',key)).rows[0];
+  const readCursor=async()=> (await db.query(
+    'SELECT next_ms,windows_seen FROM cj_historical_backfill_cursor WHERE symbol=$1 AND timeframe=$2',key.slice(0,2))).rows[0];
+  const cursor=await readCursor();
+  assert.equal(Number(cursor.next_ms),f.endMs);
+  const cooldown=await runHistoricalBackfillBatch(db,options);
+  assert.equal(cooldown.retryAttempts,0);
+  assert.equal((await readAttempt()).attempts,1);
+  await db.query("UPDATE cj_historical_backfill_attempts SET updated_at=now()-interval '2 hours' WHERE symbol=$1 AND timeframe=$2 AND start_ms=$3 AND end_ms=$4",key);
+  const recovered=await runHistoricalBackfillBatch(db,options);
+  assert.equal(recovered.retryAttempts,1);
+  assert.equal(recovered.recovered,1,JSON.stringify(recovered));
+  assert.equal(recovered.queuedGaps,0);
+  assert.equal((await readAttempt()).status,'VERIFIED_TWO_READS_ARCHIVED');
+  assert.equal((await readAttempt()).attempts,2);
+  assert.deepEqual(await readCursor(),cursor);
+  const terminal=await runHistoricalBackfillBatch(db,{...options,fetchWindow:failWindow});
+  assert.equal(terminal.blocked,1);
+  const t=terminal.samples[0],tk=[t.symbol,t.timeframe,t.startMs,t.endMs];
+  await db.query("UPDATE cj_historical_backfill_attempts SET attempts=4,updated_at=now()-interval '9 hours' WHERE symbol=$1 AND timeframe=$2 AND start_ms=$3 AND end_ms=$4",tk);
+  const exhausted=await runHistoricalBackfillBatch(db,{...options,fetchWindow:failWindow});
+  assert.equal(exhausted.retryAttempts,1);
+  assert.equal(exhausted.exhaustedGaps,1);
+  assert.equal(exhausted.samples[0].attemptNumber,5);
+  const afterExhaustion=await runHistoricalBackfillBatch(db,options);
+  assert.equal(afterExhaustion.retryAttempts,0);
+  assert.equal(afterExhaustion.exhaustedGaps,1);
+  const missing=await db.query('SELECT count(*)::int AS n FROM cj_historical_candles WHERE symbol=$1 AND timeframe=$2 AND open_ms>=$3 AND open_ms<$4',tk);
+  assert.equal(missing.rows[0].n,0);
+  console.log('CJ_HISTORICAL_RETRY_PG18 PASS : cooldown, recovery, persistent cursor, bounded exhaustion, no synthetic data');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_ARCHIVE_PG18 PASS : auto eligibility, official price-step contract, immutable gzip report, one replay per pair');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_PG18 PASS : 730 contiguous real SQL rows, five algorithms, causal gates and independent 70/30 outcomes');
   console.log('CJ_HISTORICAL_BACKFILL_PG18 PASS : two actual 2024-26 cursored windows, 960 twice-read candles, durable raw provenance and exact coverage');
