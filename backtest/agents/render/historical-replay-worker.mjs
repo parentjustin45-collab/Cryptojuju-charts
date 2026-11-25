@@ -7,7 +7,7 @@
 import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 import {FIVE_CASES} from './five-by-five.mjs';
-import {TWO_YEAR_RANGE,expectedHistoricalBars} from './historical-period.mjs';
+import {historicalTargetFor,expectedHistoricalBars} from './historical-period.mjs';
 import {replayCompletePeriodFromPostgres}
   from './historical-multiyear-replay.mjs';
 import {readBitunixContractPrecision} from '../bitunix-contract-precision.mjs';
@@ -32,7 +32,7 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
   await initializeMultiYearReplay(db);
   const report={
     protocol:'CJ_FIVE_INDICATOR_TWO_YEAR_REPLAY_SCHEDULER_V1',
-    target:'2024-11-24_to_2026-11-24_UTC',completed:[],
+    target:'2024-11-24_to_2026-11-24_UTC_or_verified_listing_adjusted',completed:[],
     awaitingHistoricalCoverage:[],noOrders:true
   };
   let processed=0;
@@ -41,24 +41,25 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
     ['1d','4h','1h','30m','15m'].indexOf(b.timeframe));
   for(const {symbol,timeframe} of prioritized){
     if(processed>=maxPairs)break;
+    const target=historicalTargetFor(symbol,timeframe);
     const expected=expectedHistoricalBars({timeframe,
-      startMs:TWO_YEAR_RANGE.startMs,endMs:TWO_YEAR_RANGE.endMs});
+      startMs:target.startMs,endMs:target.endMs});
     const q=await db.query('SELECT count(*)::int AS bars,min(open_ms)::bigint AS first,'+
       'max(open_ms)::bigint AS last FROM cj_historical_candles '+
       'WHERE symbol=$1 AND timeframe=$2 AND open_ms>=$3 AND open_ms<$4',
-      [symbol,timeframe,TWO_YEAR_RANGE.startMs,TWO_YEAR_RANGE.endMs]);
+      [symbol,timeframe,target.startMs,target.endMs]);
     const row=q.rows[0]??{},have=Number(row.bars),step=
-      (TWO_YEAR_RANGE.endMs-TWO_YEAR_RANGE.startMs)/expected;
-    if(have!==expected||Number(row.first)!==TWO_YEAR_RANGE.startMs||
-      Number(row.last)!==TWO_YEAR_RANGE.endMs-step){
+      (target.endMs-target.startMs)/expected;
+    if(have!==expected||Number(row.first)!==target.startMs||
+      Number(row.last)!==target.endMs-step){
       report.awaitingHistoricalCoverage.push({symbol,timeframe,
-        existingBars:have,expectedBars:expected});
+        existingBars:have,expectedBars:expected,coverageKind:target.coverageKind,startMs:target.startMs,endMs:target.endMs});
       continue;
     }
     const exists=await db.query("SELECT source_sequence_sha256 FROM cj_multiyear_replay_reports "+
       "WHERE symbol=$1 AND timeframe=$2 AND period_start_ms=$3 AND period_end_ms=$4 "+
       "AND engine_version=$5 LIMIT 1",[symbol,timeframe,
-        TWO_YEAR_RANGE.startMs,TWO_YEAR_RANGE.endMs,VERSION]);
+        target.startMs,target.endMs,VERSION]);
     if(exists.rowCount){
       report.alreadyArchived=(report.alreadyArchived??0)+1;
       continue;
@@ -75,7 +76,8 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
     if(!contract)throw Error('VERIFIED_BITUNIX_PRICE_PRECISION_MISSING');
     const research=await replay(db,{symbol,timeframe,priceStep:contract.priceStep});
     if(research.closedCandles!==expected||
-      research.status!=='TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED'||
+      research.status!==(target.coverageKind==='FULL_TWO_YEAR'?'TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED':'LISTING_ADJUSTED_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED')||
+      research.startTime!==target.startMs||research.endTime!==target.endMs||
       research.marketOrdersPlaced!==0)
       throw Error('HISTORICAL_FIVE_INDICATOR_REPLAY_NOT_COMPLETE');
     const raw=Buffer.from(JSON.stringify(research));
@@ -92,12 +94,12 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
         'source_sequence_sha256,report_sha256,report_gzip,raw_bytes) '+
         'VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) '+
         'ON CONFLICT DO NOTHING RETURNING report_sha256',
-        [symbol,timeframe,TWO_YEAR_RANGE.startMs,TWO_YEAR_RANGE.endMs,
+        [symbol,timeframe,target.startMs,target.endMs,
           VERSION,research.sourceSequenceSha256,hash(raw),gzip,raw.length]);
       await client.query('COMMIT');
       report.completed.push({symbol,timeframe,status:stored.rowCount?
         'REPLAY_PERSISTED':'ALREADY_REPLAYED_CONCURRENTLY',
-        closedBars:research.closedCandles,
+        closedBars:research.closedCandles,coverageKind:target.coverageKind,startMs:target.startMs,endMs:target.endMs,
         sourceSequenceSha256:research.sourceSequenceSha256,
         reportSha256:hash(raw),compressedBytes:gzip.length});
       processed++;
