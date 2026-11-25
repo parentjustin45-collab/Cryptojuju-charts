@@ -1,0 +1,58 @@
+name: DEV ten historical gap root cause diagnostics
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths: ['.github/workflows/ai-agents-gap-diagnostics.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Diagnose exact blocked windows without production writes
+        run: |
+          node --input-type=module <<'NODE'
+          import {makeBitunixFetchPage} from './backtest/bitunix-adapter.mjs';
+          import {fetchBitunixDataPilot} from './backtest/agents/bitunix-data-pilot.mjs';
+          import {compareBitunixReadbacks} from './backtest/agents/bitunix-readback-consistency.mjs';
+          const page=makeBitunixFetchPage({fetchImpl:(u,o)=>fetch(u,{...o,signal:AbortSignal.timeout(15000),cache:'no-store'})});
+          const cases=[
+            ['1000PEPEUSDT','30m',1735862400000,1736726400000],
+            ['SOLUSDT','30m',1735862400000,1736726400000],
+            ['SOLUSDT','15m',1734566400000,1734998400000],
+            ['HYPEUSDT','15m',1744361100000,1744793100000],
+            ['1000PEPEUSDT','30m',1739318400000,1740182400000],
+            ['BTCUSDT','30m',1739318400000,1740182400000],
+            ['SOLUSDT','30m',1739318400000,1740182400000],
+            ['1000PEPEUSDT','1h',1747958400000,1749686400000],
+            ['SOLUSDT','1h',1747958400000,1749686400000],
+            ['BTCUSDT','30m',1743638400000,1744502400000]
+          ];
+          for(const [symbol,timeframe,start,end] of cases){
+            const step=(end-start)/480;
+            const selector={symbol,timeframe,closedBars:480,anchorBars:3,historicalEndExclusiveMs:end,fetchPage:page,retries:1};
+            try{
+              const a=await fetchBitunixDataPilot(selector);
+              const have=new Set(a.rawRows.map(x=>Number(x.time)));
+              const missing=[];
+              for(let t=start-3*step;t<end;t+=step)if(!have.has(t))missing.push(new Date(t).toISOString());
+              let stable=null;
+              if(a.status==='DATA_READY_FOR_RESEARCH_ONLY')stable=compareBitunixReadbacks(a,await fetchBitunixDataPilot(selector)).status;
+              console.log('CJ_GAP_BASE '+JSON.stringify({symbol,timeframe,start:new Date(start).toISOString(),end:new Date(end).toISOString(),status:a.status,quality:a.quality,issues:a.normalizationIssues?.slice(0,8),missing:missing.slice(0,20),requests:a.requests?.filter(x=>x.error),stable}));
+              if(a.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
+                for(const pageBars of [100,50]){
+                  const b=await fetchBitunixDataPilot({...selector,pageBars});
+                  const readback=b.status==='DATA_READY_FOR_RESEARCH_ONLY'?compareBitunixReadbacks(b,await fetchBitunixDataPilot({...selector,pageBars})).status:null;
+                  console.log('CJ_GAP_ALTERNATE '+JSON.stringify({symbol,timeframe,start:new Date(start).toISOString(),pageBars,status:b.status,quality:b.quality,issues:b.normalizationIssues?.slice(0,4),requests:b.requests?.filter(x=>x.error),readback}));
+                  if(readback==='STABLE_TWO_READS')break;
+                }
+              }
+            }catch(e){console.log('CJ_GAP_EXCEPTION '+JSON.stringify({symbol,timeframe,start,error:String(e.message).slice(0,200)}))}
+          }
+          NODE
