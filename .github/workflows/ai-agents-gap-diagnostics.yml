@@ -46,6 +46,12 @@ jobs:
               if(a.status==='DATA_READY_FOR_RESEARCH_ONLY')stable=compareBitunixReadbacks(a,await fetchBitunixDataPilot(selector)).status;
               console.log('CJ_GAP_BASE '+JSON.stringify({symbol,timeframe,start:new Date(start).toISOString(),end:new Date(end).toISOString(),status:a.status,quality:a.quality,issues:a.normalizationIssues?.slice(0,8),missing:missing.slice(0,20),requests:a.requests?.filter(x=>x.error),stable}));
               if(a.status!=='DATA_READY_FOR_RESEARCH_ONLY'){
+                for(const anchorBars of [4,5,6,8,12]){
+                  const b=await fetchBitunixDataPilot({...selector,anchorBars});
+                  const readback=b.status==='DATA_READY_FOR_RESEARCH_ONLY'?compareBitunixReadbacks(b,await fetchBitunixDataPilot({...selector,anchorBars})).status:null;
+                  console.log('CJ_GAP_ANCHOR '+JSON.stringify({symbol,timeframe,start:new Date(start).toISOString(),anchorBars,status:b.status,quality:b.quality,readback}));
+                  if(readback==='STABLE_TWO_READS')break;
+                }
                 for(const pageBars of [100,50]){
                   const b=await fetchBitunixDataPilot({...selector,pageBars});
                   const readback=b.status==='DATA_READY_FOR_RESEARCH_ONLY'?compareBitunixReadbacks(b,await fetchBitunixDataPilot({...selector,pageBars})).status:null;
