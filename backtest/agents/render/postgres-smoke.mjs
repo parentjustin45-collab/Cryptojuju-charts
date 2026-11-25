@@ -17,6 +17,7 @@ import {runHistoricalBridgeBatch} from './historical-bridge-scheduler.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {replayFourFromHistoricalLibrary} from './historical-replay.mjs';
 import {replayCompletePeriodFromPostgres} from './historical-multiyear-replay.mjs';
+import {historicalTargetFor,HYPE_LAUNCH_MS} from './historical-period.mjs';
 import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {rememberFinding,recallFindings} from './knowledge.mjs';
 if(!process.env.DATABASE_URL)throw Error('DATABASE_URL required for PostgreSQL smoke');
@@ -369,6 +370,48 @@ try {
   assert.equal(afterExhaustion.exhaustedGaps,1);
   const missing=await db.query('SELECT count(*)::int AS n FROM cj_historical_candles WHERE symbol=$1 AND timeframe=$2 AND open_ms>=$3 AND open_ms<$4',tk);
   assert.equal(missing.rows[0].n,0);
+  // Existing deployment migration: rebase HYPE only, keep old failed rows
+  // (including overlapping windows), and prove listing-adjusted replay.
+  const hype=historicalTargetFor('HYPEUSDT','1d');
+  assert.equal(HYPE_LAUNCH_MS,Date.UTC(2025,2,27,8));
+  assert.equal(hype.startMs,Date.UTC(2025,2,31));
+  assert.equal((hype.endMs-hype.startMs)/day,603);
+  assert.equal(historicalTargetFor('BTCUSDT','1d').startMs,dailyStart);
+  const btcBefore=(await db.query("SELECT next_ms FROM cj_historical_backfill_cursor WHERE symbol='BTCUSDT' AND timeframe='1d'")).rows[0];
+  await db.query("UPDATE cj_historical_backfill_cursor SET last_attempt_at=now()");
+  await db.query("UPDATE cj_historical_backfill_cursor SET next_ms=$1,target_start_ms=NULL,last_attempt_at=NULL WHERE symbol='HYPEUSDT' AND timeframe='1d'",[dailyStart+480*day]);
+  for(const end of [dailyStart+4*day,dailyStart+480*day])
+    await db.query("INSERT INTO cj_historical_backfill_attempts(symbol,timeframe,start_ms,end_ms,status,reason,attempts) VALUES('HYPEUSDT','1d',$1,$2,'BLOCKED','OLD_PROVENANCE_FAILURE',2)",[dailyStart,end]);
+  const hypePage=async({interval,startTime,endTime,limit})=>{
+    assert.equal(interval,'1d');const rows=[];
+    assert.ok(startTime>=Date.UTC(2025,2,28));
+    for(let t=startTime;t<endTime;t+=day){
+      const i=(t-hype.startMs)/day,p=190+Math.sin(i/13)*12+Math.cos(i/31)*5+i*.05;
+      rows.push({time:t,open:p,close:p+.7*Math.cos(i*1.7),high:p+2,low:p-2,volume:100+Math.abs(i%35)});
+    }
+    assert.equal(rows.length,limit);return rows;
+  };
+  const h1=await runHistoricalBackfillBatch(db,{...options,fetchPage:hypePage});
+  assert.equal(h1.samples[0].symbol,'HYPEUSDT');
+  assert.equal(h1.samples[0].startMs,hype.startMs);
+  assert.equal(h1.verified,1,JSON.stringify(h1.samples));
+  const retired=await db.query("SELECT status,reason,attempts FROM cj_historical_backfill_attempts WHERE symbol='HYPEUSDT' AND timeframe='1d' AND start_ms=$1 ORDER BY end_ms",[dailyStart]);
+  assert.deepEqual(retired.rows.map(x=>x.status),['OUTSIDE_LISTING_ADJUSTED_TARGET','SUPERSEDED_LISTING_BOUNDARY']);
+  assert.ok(retired.rows.every(x=>x.reason==='OLD_PROVENANCE_FAILURE'&&x.attempts===2));
+  assert.deepEqual((await db.query("SELECT next_ms FROM cj_historical_backfill_cursor WHERE symbol='BTCUSDT' AND timeframe='1d'")).rows[0],btcBefore);
+  await db.query("UPDATE cj_historical_backfill_cursor SET last_attempt_at=NULL WHERE symbol='HYPEUSDT' AND timeframe='1d'");
+  const h2=await runHistoricalBackfillBatch(db,{...options,fetchPage:hypePage});
+  assert.equal(h2.samples[0].startMs,hype.startMs+480*day);
+  assert.equal(h2.insertedBars,123);
+  const hr=await runEligibleMultiYearReplay(db,{maxPairs:1,precisionReader:officialPrice});
+  assert.equal(hr.completed[0].symbol,'HYPEUSDT');
+  assert.equal(hr.completed[0].coverageKind,'LISTING_ADJUSTED_WITH_THREE_ANCHORS');
+  assert.equal(hr.completed[0].closedBars,603);
+  assert.equal(hr.completed[0].startMs,hype.startMs);
+  const hr2=await runEligibleMultiYearReplay(db,{maxPairs:1,precisionReader:officialPrice});
+  assert.equal(hr2.alreadyArchived,2);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM cj_multiyear_replay_reports')).rows[0].n,2);
+  console.log('CJ_HYPE_LISTING_PG18 PASS : old gap evidence retained, rebase once, 603 verified bars, separate immutable report, no duplicate BTC');
   console.log('CJ_HISTORICAL_RETRY_PG18 PASS : cooldown, recovery, persistent cursor, bounded exhaustion, no synthetic data');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_ARCHIVE_PG18 PASS : auto eligibility, official price-step contract, immutable gzip report, one replay per pair');
   console.log('CJ_TWO_YEAR_FIVE_INDICATOR_PG18 PASS : 730 contiguous real SQL rows, five algorithms, causal gates and independent 70/30 outcomes');
