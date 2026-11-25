@@ -6,6 +6,7 @@
  * kept as unresolved gaps, never padded with synthetic candles.
  */
 import {FIVE_CASES} from './five-by-five.mjs';
+import {historicalTargetFor} from './historical-period.mjs';
 import {HISTORICAL_TARGET} from '../historical-backfill-plan.mjs';
 import {VERIFIED_INTERVALS} from '../research-batch.mjs';
 import {fetchBitunixDataPilot} from '../bitunix-data-pilot.mjs';
@@ -33,11 +34,25 @@ async function ensureBackfillSchema(db){
     "attempts integer NOT NULL DEFAULT 1,"+
     "updated_at timestamptz NOT NULL DEFAULT now(),"+
     "PRIMARY KEY(symbol,timeframe,start_ms,end_ms))");
-  for(const {symbol,timeframe} of FIVE_CASES)
+  await db.query("ALTER TABLE cj_historical_backfill_cursor ADD COLUMN IF NOT EXISTS target_start_ms bigint");
+  for(const {symbol,timeframe} of FIVE_CASES){
+    const target=historicalTargetFor(symbol,timeframe);
+    // One-time rebase of HYPE only. Existing valid candles remain untouched;
+    // overlap is deduplicated by the existing verified ingestion pipeline.
     await db.query("INSERT INTO cj_historical_backfill_cursor("+
-      "symbol,timeframe,next_ms) VALUES($1,$2,$3) "+
-      "ON CONFLICT(symbol,timeframe) DO NOTHING",
-      [symbol,timeframe,HISTORICAL_TARGET.startTime]);
+      "symbol,timeframe,next_ms,target_start_ms) VALUES($1,$2,$3,$3) "+
+      "ON CONFLICT(symbol,timeframe) DO UPDATE SET "+
+      "next_ms=CASE WHEN $4 THEN excluded.next_ms ELSE cj_historical_backfill_cursor.next_ms END,"+
+      "target_start_ms=excluded.target_start_ms "+
+      "WHERE cj_historical_backfill_cursor.target_start_ms IS DISTINCT FROM excluded.target_start_ms",
+      [symbol,timeframe,target.startMs,symbol==='HYPEUSDT']);
+    if(symbol==='HYPEUSDT')
+      await db.query("UPDATE cj_historical_backfill_attempts SET status=CASE "+
+        "WHEN end_ms<=$3 THEN 'OUTSIDE_LISTING_ADJUSTED_TARGET' "+
+        "ELSE 'SUPERSEDED_LISTING_BOUNDARY' END "+
+        "WHERE symbol=$1 AND timeframe=$2 AND start_ms<$3 AND status='BLOCKED'",
+        [symbol,timeframe,target.startMs]);
+  }
 }
 export async function runHistoricalBackfillBatch(db,{
   limit=3,fetchPage=currentFetch(),pause=sleep,now=()=>Date.now(),
@@ -75,11 +90,12 @@ export async function runHistoricalBackfillBatch(db,{
     const {symbol,timeframe}=retry??pending.rows[0];
     const startMs=Number(retry?retry.start_ms:pending.rows[0].next_ms);
     const step=VERIFIED_INTERVALS[timeframe];
+    const target=historicalTargetFor(symbol,timeframe);
     const n=retry?(Number(retry.end_ms)-startMs)/step:
       Math.min(480,(HISTORICAL_TARGET.endTime-startMs)/step);
     const endMs=startMs+n*step;
     if(!Number.isSafeInteger(startMs)||!step||startMs%step!==0||
-      !Number.isInteger(n)||n<4||n>480||startMs<HISTORICAL_TARGET.startTime||
+      !Number.isInteger(n)||n<4||n>480||startMs<target.startMs||
       endMs>HISTORICAL_TARGET.endTime)
       throw Error('INVALID_BACKFILL_CURSOR_OR_FINAL_CHUNK');
     let status='BLOCKED',reason=null,checkedBars=0,insertedBars=0,hash=null;
@@ -149,6 +165,7 @@ export async function runHistoricalBackfillBatch(db,{
     recovered:results.filter(r=>r.retry&&r.status!=='BLOCKED').length,
     queuedGaps:Number(gaps.rows[0]?.queued??0),
     exhaustedGaps:Number(gaps.rows[0]?.exhausted??0),
+    listingAdjustedTargets:FIVE_CASES.filter(x=>x.symbol==='HYPEUSDT').map(x=>({...x,...historicalTargetFor(x.symbol,x.timeframe)})),
     samples:results.slice(0,25),noTrading:true,
     warning:'Unresolved gaps remain missing; after five attempts they require review. No synthetic bars or coverage claims.'};
 }
