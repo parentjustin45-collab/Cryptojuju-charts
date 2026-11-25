@@ -415,6 +415,18 @@ export async function main(){
         String(err?.message??err).slice(0,220));
     }
   }
+  // One bounded pass for legacy provenance failures after the new anchor
+  // method is deployed. Persisted per-window marker makes restarts idempotent.
+  // No normal backfill work here; keep the hourly schedule and quota intact.
+  if(process.env.CJ_HISTORICAL_BACKFILL_ENABLED==='1'&&!busy){
+    busy=true;
+    try{
+      const report=await runHistoricalBackfillBatch(db,{limit:10,repairOnly:true});
+      console.log('CJ_HISTORICAL_BACKFILL_ANCHOR_REPAIR '+JSON.stringify(report));
+    }catch(err){
+      console.error('CJ_HISTORICAL_BACKFILL_ANCHOR_REPAIR_ERROR '+String(err?.message??err).slice(0,220));
+    }finally{busy=false;}
+  }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
   process.once('SIGTERM',()=>{void stop();});
   process.once('SIGINT',()=>{void stop();});
