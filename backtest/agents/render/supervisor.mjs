@@ -15,6 +15,7 @@ import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive
 import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
 import {runBinanceBatch} from './binance-library.mjs';
 import {runOlderHistoryBatch} from './older-history-worker.mjs';
+import {runAdaptiveResearch} from './adaptive-research.mjs';
 import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
@@ -388,6 +389,10 @@ export async function main(){
         try{console.log('CJ_AUTONOMOUS_EXPERIMENT '+JSON.stringify(await runAutonomousExperiment(db)));}
         catch(e){console.error('CJ_AUTONOMOUS_EXPERIMENT_ERROR '+String(e?.message??e).slice(0,180));}
       }
+      if(process.env.CJ_ADAPTIVE_RESEARCH_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===1){
+        try{console.log('CJ_ADAPTIVE_RESEARCH '+JSON.stringify(await runAdaptiveResearch(db)));}
+        catch(e){console.error('CJ_ADAPTIVE_RESEARCH_ERROR '+String(e?.message??e).slice(0,180));}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
@@ -463,6 +468,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_BINANCE_ARCHIVES_BOOTSTRAP '+JSON.stringify(await runBinanceBatch(db,{limit:3})));}
     catch(e){console.error('CJ_BINANCE_ARCHIVES_ERROR '+String(e?.message??e).slice(0,180));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_ADAPTIVE_RESEARCH_ENABLED==='1'&&!busy){
+    busy=true;
+    try{console.log('CJ_ADAPTIVE_RESEARCH_BOOTSTRAP '+JSON.stringify(await runAdaptiveResearch(db)));}
+    catch(e){console.error('CJ_ADAPTIVE_RESEARCH_ERROR '+String(e?.message??e).slice(0,180));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};

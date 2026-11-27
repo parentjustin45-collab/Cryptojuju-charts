@@ -1,0 +1,20 @@
+name: DEV adaptive evidence-driven research
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/adaptive-research*'
+      - 'backtest/agents/render/autonomous-rule-candidates.mjs'
+      - '.github/workflows/ai-agents-adaptive-research.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/supervisor.mjs
+      - run: node --test backtest/agents/render/adaptive-research.test.mjs backtest/agents/render/autonomous-experiment-worker.test.mjs backtest/agents/render/streaming-frozen.test.mjs

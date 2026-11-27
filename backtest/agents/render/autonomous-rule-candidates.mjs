@@ -21,7 +21,7 @@ const insist=(x,m)=>{if(!x)throw Error(m)};
 function compress(g,i,s){
  return i>=2&&[g[i],g[i-1],g[i-2]].every(valid)&&s*g[i]<=0&&s*g[i]>s*g[i-1]&&s*g[i-1]>s*g[i-2];
 }
-function frankWarning(bars,a){
+function frankWarning(bars,a,threshold=.5){
  const lows=[],highs=[],signals=[],confirms=new Map();
  for(const d of a.divergences)confirms.set(d.pivotIndex+'|'+d.type,true);
  let tested=0,confirmed=0,unresolved=0;
@@ -39,7 +39,7 @@ function frankWarning(bars,a){
   }
   if(!type)return;
   const next=bars[j+1];
-  if(!(s*(next.close-bars[j].close)>0&&s*(next.close-next.open)>=.5*(next.high-next.low)&&next.high>next.low))return;
+  if(!(s*(next.close-bars[j].close)>0&&s*(next.close-next.open)>=threshold*(next.high-next.low)&&next.high>next.low))return;
   signals.push(ev(bars[j+1].time,s===1?'long':'short','prealert_'+type));
   // Retrospective measurement only, no feedback into signal generation.
   if(j+2<bars.length){tested++;confirmed+=Number(confirms.has(j+'|'+type));}else unresolved++;
@@ -50,10 +50,12 @@ function frankWarning(bars,a){
  }
  return {signals,warningStats:{tested,confirmed,unresolved}};
 }
-export function generate(ch,bars,priceStep,candidate=false){
+export const RULES=Object.freeze({vector:{anchor:1.2,grid:[.9,1.05,1.5,1.8],strict:1},momentum:{anchor:1,grid:[.75,1.25,1.5,2],strict:-1},speed:{anchor:50,grid:[35,40,65,75],strict:1},cipher:{anchor:.35,grid:[.25,.3,.4,.45],strict:-1},frank_cross:{anchor:.25,grid:[.1,.15,.35,.4],strict:-1},frank_divergence:{anchor:.5,grid:[.25,.35,.65,.75],strict:1}});
+export function generate(ch,bars,priceStep,candidate=false,threshold=RULES[ch]?.anchor){
+ insist(RULES[ch]&&[RULES[ch].anchor,...RULES[ch].grid].includes(threshold),'UNREGISTERED_THRESHOLD');
  if(ch==='frank_divergence'){
   const a=traceFrank(bars);
-  if(candidate)return frankWarning(bars,a);
+  if(candidate)return frankWarning(bars,a,threshold);
   return {signals:a.divergences.map(x=>ev(x.confirmationTime,x.type.endsWith('+')?'long':'short',x.type)).sort((a,b)=>a.time-b.time)};
  }
  if(!candidate)return original(ch,bars,priceStep,false);
@@ -62,19 +64,19 @@ export function generate(ch,bars,priceStep,candidate=false){
   for(let i=0;i<rows.length;i++){
    const x=rows[i],t=x.trace,s=Math.sign(bars[i].close-bars[i].open);
    const strength=s===1?t.bullStrength:t.bearStrength;
-   const selective=s!==0&&t.common+Number(strength>=.7)===3&&t.rangeAtr!==null&&t.rangeAtr>=1.2&&strength>=.7&&(t.volumeRatio>=1.5||t.spreadRatio>=1.5);
+   const selective=s!==0&&t.common+Number(strength>=.7)===3&&t.rangeAtr!==null&&t.rangeAtr>=threshold&&strength>=.7&&(t.volumeRatio>=1.5||t.spreadRatio>=1.5);
    if(s&&s!==dir&&(selective||(s===1?x.bullishVector:x.bearishVector))){dir=s;signals.push(ev(x.time,s===1?'long':'short','vector_v11'));}
    direction.push(dir);
   }return {signals,direction};
  }
  if(ch==='momentum'){
   const rows=calculateMomentumFusion(bars),g=rows.map(x=>valid(x.emaFast)&&valid(x.emaSlow)?x.emaFast-x.emaSlow:null),atr=atr14(bars);
-  const near=(i,s)=>atr[i]>0&&Math.abs(g[i])<=1*atr[i]&&compress(g,i,s);
+  const near=(i,s)=>atr[i]>0&&Math.abs(g[i])<=threshold*atr[i]&&compress(g,i,s);
   return {signals:rows.flatMap((x,i)=>x.crossUpFromOS&&(x.bullTrend||near(i,1))?[ev(x.time,'long','momentum_fusion')]:x.crossDnFromOB&&(x.bearTrend||near(i,-1))?[ev(x.time,'short','momentum_fusion')]:[])};
  }
  if(ch==='speed'){
   const rows=classifySpeedCandleV3(bars,{minTick:priceStep});let last=-Infinity,lastSide=null,lastVolume=0;const signals=[];
-  for(let i=0;i<rows.length;i++){const x=rows[i];if(!x.color)continue;const s=x.color.startsWith('bull')?'long':'short';if(s===lastSide&&i-last<=1&&!(x.volumePercent>=lastVolume+50))continue;signals.push(ev(x.time,s,x.color));last=i;lastSide=s;lastVolume=x.volumePercent;}
+  for(let i=0;i<rows.length;i++){const x=rows[i];if(!x.color)continue;const s=x.color.startsWith('bull')?'long':'short';if(s===lastSide&&i-last<=1&&!(x.volumePercent>=lastVolume+threshold))continue;signals.push(ev(x.time,s,x.color));last=i;lastSide=s;lastVolume=x.volumePercent;}
   return {signals};
  }
  if(ch==='cipher'){
@@ -85,7 +87,7 @@ export function generate(ch,bars,priceStep,candidate=false){
    if(x.signal){if(!(active&&x.signal===lastSide&&i-lastWarning<=2))signals.push(ev(x.time,x.signal,'cj_cipher_wt'));active=false;continue;}
    if(!valid(g)||!valid(pg))continue;
    const s=g<0?'long':g>0?'short':null,sign=s==='long'?1:-1;
-   if(s&&Math.abs(g)<=2&&Math.abs(g)<=.35*Math.abs(pg)&&sign*g>sign*pg&&sign*(x.wt1-p.wt1)>0&&!(active&&lastSide===s&&i-lastWarning<=2)){
+   if(s&&Math.abs(g)<=2&&Math.abs(g)<=threshold*Math.abs(pg)&&sign*g>sign*pg&&sign*(x.wt1-p.wt1)>0&&!(active&&lastSide===s&&i-lastWarning<=2)){
     signals.push(ev(x.time,s,'cipher_prealert'));warnings.push({i,s});lastWarning=i;lastSide=s;active=true;
    }
   }
@@ -94,7 +96,7 @@ export function generate(ch,bars,priceStep,candidate=false){
  }
  if(ch==='frank_cross'){
   const a=traceFrank(bars),g=a.trace.ef.map((x,i)=>x-a.trace.es[i]),signals=[],atr=atr14(bars);
-  const near=(i,s)=>atr[i]>0&&Math.abs(g[i])<=.25*atr[i]&&compress(g,i,s);
+  const near=(i,s)=>atr[i]>0&&Math.abs(g[i])<=threshold*atr[i]&&compress(g,i,s);
   for(let i=1;i<bars.length;i++){
    const t=a.oscillator[i],p=a.oscillator[i-1],k=a.k[i],prev=a.k[i-1];if(!valid(t)||!valid(p))continue;
    const buy=(t>22&&p<=22)||(t<18&&t>p&&k>prev),sell=(t<76&&p>=76)||(t>82&&t<p&&k<prev);
@@ -104,16 +106,16 @@ export function generate(ch,bars,priceStep,candidate=false){
  }
  throw Error('UNKNOWN_CHANNEL');
 }
-export function experimentChannel(ch,bars,report){
+export function experimentChannel(ch,bars,report,threshold=RULES[ch]?.anchor){
  const n=Math.floor(bars.length*.7),training=bars.slice(0,n),step=report.priceStep;
  insist(n>=150&&valid(step)&&step>0,'INVALID_TRAINING');
- const before=generate(ch,training,step,false),after=generate(ch,training,step,true);
+ const before=generate(ch,training,step,false),after=generate(ch,training,step,true,threshold);
  const expected=report.indicators[ch].signals.filter(x=>x.time<training.at(-1).time+1);
  insist(JSON.stringify(before.signals)===JSON.stringify(expected),'ARCHIVE_TRAINING_PARITY_'+ch);
  const cut1=Math.floor(n/3),cut2=Math.floor(n*2/3),cuts=[0,cut1,cut2,n];
  // Recompute prefixes independently, reject changes to earlier signals or state.
  for(const cut of [cut1,cut2]){
-  const prefix=generate(ch,training.slice(0,cut),step,true);
+  const prefix=generate(ch,training.slice(0,cut),step,true,threshold);
   insist(JSON.stringify(prefix.signals)===JSON.stringify(after.signals.filter(x=>x.time<=training[cut-1].time)),'CANDIDATE_PREFIX_PARITY_'+ch);
   if(after.direction)insist(JSON.stringify(prefix.direction)===JSON.stringify(after.direction.slice(0,cut)),'CANDIDATE_DIRECTION_PARITY');
  }
