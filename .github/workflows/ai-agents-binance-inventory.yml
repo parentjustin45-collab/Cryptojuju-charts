@@ -1,0 +1,21 @@
+name: DEV Binance five year archive inventory
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/binance-five-year-inventory.py'
+      - '.github/workflows/ai-agents-binance-inventory.yml'
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 backtest/agents/render/binance-five-year-inventory.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: binance-five-year-inventory
+          path: binance-inventory/
