@@ -25,7 +25,7 @@ export function reviewResult(z){
  return {status:review?'REVIEW_CANDIDATE_ONLY':'RETAIN_BASELINE_OR_INSUFFICIENT_EVIDENCE',base,candidate,foldWins,noPromotion:true,independentValidation:false};
 }
 export async function initializeAutonomousQueue(db){
- await db.query("CREATE TABLE IF NOT EXISTS cj_autonomous_experiments (id char(64) PRIMARY KEY,protocol text NOT NULL,symbol text NOT NULL,timeframe text NOT NULL,channel text NOT NULL,hypothesis text NOT NULL,status text NOT NULL DEFAULT 'PENDING',attempts integer NOT NULL DEFAULT 0,lease_token text,lease_until timestamptz,priority integer NOT NULL,report jsonb,report_sha256 char(64),error text,updated_at timestamptz NOT NULL DEFAULT now())");
+ await db.query("CREATE TABLE IF NOT EXISTS cj_autonomous_experiments (id char(64) PRIMARY KEY,protocol text NOT NULL,symbol text NOT NULL,timeframe text NOT NULL,channel text NOT NULL,hypothesis text NOT NULL,status text NOT NULL DEFAULT 'PENDING',attempts integer NOT NULL DEFAULT 0,lease_token text,lease_until timestamptz,priority integer NOT NULL,report text,report_sha256 char(64),error text,updated_at timestamptz NOT NULL DEFAULT now())");
  const jobs=planJobs().map((x,priority)=>({...x,priority}));
  await db.query("INSERT INTO cj_autonomous_experiments(id,protocol,symbol,timeframe,channel,hypothesis,priority) SELECT id,$2,symbol,timeframe,channel,hypothesis,priority FROM jsonb_to_recordset($1::jsonb) AS j(id text,symbol text,timeframe text,channel text,hypothesis text,priority int) ON CONFLICT(id) DO NOTHING",[JSON.stringify(jobs),VERSION]);
 }
@@ -34,6 +34,7 @@ export async function runAutonomousExperiment(db,{memoryBudgetBytes=350*1024*102
  const size=await db.query('SELECT pg_database_size(current_database())::bigint AS bytes');
  if(storageState(Number(size.rows[0]?.bytes)).warning)return {status:'PAUSED_STORAGE',noTrading:true};
  await initializeAutonomousQueue(db);
+ await db.query("UPDATE cj_autonomous_experiments SET status='BLOCKED',error='FINAL_LEASE_EXPIRED',lease_token=NULL,lease_until=NULL,updated_at=now() WHERE protocol=$1 AND status='RUNNING' AND attempts>=3 AND lease_until<=now()",[VERSION]);
  const token=randomUUID();
  const q=await db.query("WITH next AS (SELECT id FROM cj_autonomous_experiments WHERE protocol=$1 AND attempts<3 AND (status='PENDING' OR (status IN ('RUNNING','RETRY') AND lease_until<=now())) ORDER BY priority FOR UPDATE SKIP LOCKED LIMIT 1) UPDATE cj_autonomous_experiments j SET status='RUNNING',attempts=attempts+1,lease_token=$2,lease_until=now()+interval '15 minutes',updated_at=now() FROM next WHERE j.id=next.id RETURNING trim(j.id) AS id,j.symbol,j.timeframe,j.channel,j.hypothesis,j.attempts",[VERSION,token]);
  const j=q.rows[0];
@@ -56,7 +57,7 @@ export async function runAutonomousExperiment(db,{memoryBudgetBytes=350*1024*102
   require(body.length<=1000000,'REPORT_TOO_LARGE');
   const cap=await db.query('SELECT pg_database_size(current_database())::bigint AS bytes');
   require(!storageState(Number(cap.rows[0]?.bytes),undefined,Buffer.byteLength(body)).warning,'CAPACITY_GUARD');
-  const save=await db.query("UPDATE cj_autonomous_experiments SET status='COMPLETED',report=$3::jsonb,report_sha256=$4,lease_token=NULL,lease_until=NULL,error=NULL,updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='RUNNING' RETURNING id",[j.id,token,body,hash(body)]);
+  const save=await db.query("UPDATE cj_autonomous_experiments SET status='COMPLETED',report=$3,report_sha256=$4,lease_token=NULL,lease_until=NULL,error=NULL,updated_at=now() WHERE id=$1 AND lease_token=$2 AND status='RUNNING' RETURNING id",[j.id,token,body,hash(body)]);
   require(save.rowCount===1,'LEASE_LOST');
   return {status:'COMPLETED',symbol,timeframe,channel,hypothesis:j.hypothesis,review,reportSha256:hash(body),prefixChecks:experiment.prefixChecks,noTrading:true};
  }catch(e){
