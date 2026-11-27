@@ -1,0 +1,3 @@
+import pg from 'pg';import assert from 'node:assert/strict';import {runBinanceBatch,planArchives} from './binance-library.mjs';
+const db=new pg.Pool({connectionString:process.env.DATABASE_URL,max:2});
+try{const a=await runBinanceBatch(db,{limit:2});console.log('CJ_BINANCE_INTEGRATION '+JSON.stringify(a));assert.equal(a.verifiedArchives,2);assert.equal(a.verifiedBars,planArchives().slice(0,2).reduce((n,x)=>n+x.bars,0));const q=await db.query('SELECT count(*)::int AS n FROM cj_binance_um_candles');assert.equal(q.rows[0].n,a.verifiedBars);const b=await runBinanceBatch(db,{limit:1});assert.equal(b.verifiedArchives,3);assert.equal(b.verifiedBars,planArchives().slice(0,3).reduce((n,x)=>n+x.bars,0));console.log('CJ_BINANCE_INTEGRATION PASS');}finally{await db.end();}

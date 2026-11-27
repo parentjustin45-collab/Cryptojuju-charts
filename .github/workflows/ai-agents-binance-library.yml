@@ -1,0 +1,33 @@
+name: DEV Binance independent archive library
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/binance-library*'
+      - '.github/workflows/ai-agents-binance-library.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: cjtest
+        ports:
+          - 5432:5432
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test backtest/agents/render/binance-library.test.mjs backtest/agents/render-runtime.test.mjs
+      - run: npm install --no-audit --no-fund
+        working-directory: backtest/agents/render
+      - run: node backtest/agents/render/binance-library-integration.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/cjtest
+          CJ_ARCHIVE_DISK_BUDGET_BYTES: '10000000000'
