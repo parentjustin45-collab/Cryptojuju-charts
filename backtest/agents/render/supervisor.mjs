@@ -16,6 +16,7 @@ import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
 import {runBinanceBatch} from './binance-library.mjs';
 import {runOlderHistoryBatch} from './older-history-worker.mjs';
 import {dryRunLlm,runLlmResearch} from './llm-research.mjs';
+import {runLevel5Pilot} from './level5-vector-diagnostic.mjs';
 import {runAdaptiveResearch} from './adaptive-research.mjs';
 import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
@@ -485,6 +486,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_LLM_DRY_RUN '+JSON.stringify(await dryRunLlm(db)));}
     catch(e){console.error('CJ_LLM_DRY_RUN_ERROR '+String(e?.message??e).slice(0,180));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_LEVEL5_VECTOR_PILOT_ENABLED==='1'&&!busy){
+    busy=true;
+    try{console.log('CJ_LEVEL5_VECTOR '+JSON.stringify(await runLevel5Pilot(db)));}
+    catch(e){console.error('CJ_LEVEL5_VECTOR_ERROR '+String(e?.message??e).slice(0,120));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
