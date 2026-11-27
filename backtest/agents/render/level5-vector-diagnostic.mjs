@@ -24,14 +24,14 @@ export function bodyTag(bars,i){
  return Math.abs(a.close-a.open)/(a.high-a.low)<Math.abs(b.close-b.open)/(b.high-b.low)?'tagged':'untagged';
 }
 function summarize(s){return {...s,precision:s.eligible?(s.early+s.on+s.late)/s.eligible:null,meanGrossBps:s.samples?s.sumGrossBps/s.samples:null,meanNet10Bps:s.samples?s.sumGrossBps/s.samples-10:null,meanNet20Bps:s.samples?s.sumGrossBps/s.samples-20:null};}
-export function stratifyFold(bars,atr,positions,pivots,generated,start,end){
+export function stratifyFold(bars,atr,positions,pivots,generated,start,end,tag=bodyTag){
  const full=scoreFold(bars,atr,positions,pivots,generated,start,end);
  const g=Object.fromEntries(groups.map(k=>[k,blank()]));
  const pmap=new Set(pivots.map(p=>p.side+'|'+p.index)),near=new Set(),matched=new Set(),used=new Set(),candidates=[],eligible=[];
  for(let k=0;k<generated.signals.length;k++){
   const e=generated.signals[k],i=positions.get(e.time);
   need(Number.isInteger(i),'SIGNAL_INDEX');if(i<start||i>=end)continue;
-  const s=g[bodyTag(bars,i)];s.events++;
+  const group=tag(bars,i,e.side);need(groups.includes(group),'INVALID_DIAGNOSTIC_TAG');const s=g[group];s.events++;
   if(i<Math.max(start+12,14)||i>=end-12||!(atr[i]>0)){s.excluded++;continue;}
   s.eligible++;eligible.push({k,s});for(let d=-3;d<=3;d++){const key=e.side+'|'+(i+d);if(pmap.has(key)){candidates.push({k,key,delta:-d,s});near.add(k);}}
   const gross=10000*(e.side==='long'?1:-1)*(bars[i+12].close-bars[i+1].open)/bars[i+1].open;
