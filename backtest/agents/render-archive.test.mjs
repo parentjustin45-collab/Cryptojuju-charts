@@ -9,12 +9,13 @@ import {
 } from './render/archive.mjs';
 
 const SLOT='2026-11-23T02:00:00.000Z';
-function fakePool(){
+function fakePool(writeUsed=100000000){
   const objects=new Map(),manifest=new Map(),sqls=[];
   const client={
     async query(sql,args=[]){
       sqls.push(sql);
       if(sql==='BEGIN'||sql==='COMMIT'||sql==='ROLLBACK')return {rows:[]};
+      if(sql.startsWith('SELECT pg_database_size'))return {rows:[{used_bytes:String(writeUsed)}]};
       if(sql.startsWith('INSERT INTO cj_archive_objects')){
         if(!objects.has(args[0]))objects.set(args[0],{
           sha256:args[0],raw_bytes:args[1],content:args[3]
@@ -142,4 +143,16 @@ test('successful Momentum and SPEED archives require all nine per-bar timelines'
     await assert.rejects(()=>listArchiveInputs('speed',SLOT,{root}),
       /MISSING_NINE_PER_BAR_RESEARCH_ARCHIVES/);
   }finally{await rm(root,{recursive:true,force:true});}
+});
+
+test('archive refuses writes at the configured guard and preserves existing data',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'cj-capacity-'));
+ try{
+  await mkdir(join(root,'data'));await writeFile(join(root,'data','summary.json'),'{}');
+  const db=fakePool(7000000000);
+  const before=process.env.CJ_ARCHIVE_DISK_BUDGET_BYTES;
+  process.env.CJ_ARCHIVE_DISK_BUDGET_BYTES='10000000000';
+  try{await assert.rejects(()=>archiveAgentArtifacts(db,'bitunix-data',SLOT,{root}),/ARCHIVE_DATABASE_CAPACITY_GUARD/);assert.equal(db.objects.size,0);assert.ok(db.sqls.includes('ROLLBACK'));}
+  finally{if(before===undefined)delete process.env.CJ_ARCHIVE_DISK_BUDGET_BYTES;else process.env.CJ_ARCHIVE_DISK_BUDGET_BYTES=before;}
+ }finally{await rm(root,{recursive:true,force:true});}
 });

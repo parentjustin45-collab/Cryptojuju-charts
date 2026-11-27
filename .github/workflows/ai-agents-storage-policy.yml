@@ -1,0 +1,18 @@
+name: DEV shared storage capacity protection
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/storage-policy*'
+      - '.github/workflows/ai-agents-storage-policy.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test backtest/agents/render/storage-policy.test.mjs backtest/agents/render-archive.test.mjs backtest/agents/historical-library.test.mjs backtest/agents/render-runtime.test.mjs

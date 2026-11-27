@@ -11,6 +11,8 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES,isFiveByFive} from './five-by-five.mjs';
 
+import {storageBudget,storageState} from './storage-policy.mjs';
+
 export const MAX_FILE_BYTES=16*1024*1024;
 export const MAX_RUN_BYTES=80*1024*1024;
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -85,6 +87,10 @@ export async function archiveAgentArtifacts(db,agent,slot,opts={}){
   const client=await db.connect();
   try{
     await client.query('BEGIN');
+    const capacity=await client.query('SELECT pg_database_size(current_database())::bigint AS used_bytes');
+    const reserve=files.reduce((n,f)=>n+f.gzip.length,0);
+    if(storageState(Number(capacity.rows[0]?.used_bytes),storageBudget(),reserve).warning)
+      throw Error('ARCHIVE_DATABASE_CAPACITY_GUARD');
     for(const f of files){
       await client.query(
         "INSERT INTO cj_archive_objects(sha256,raw_bytes,compressed_bytes,encoding,content) "+
@@ -119,12 +125,7 @@ export async function archiveAgentArtifacts(db,agent,slot,opts={}){
 export async function archiveCapacity(db){
   const r=await db.query('SELECT pg_database_size(current_database())::bigint AS used_bytes');
   const used=Number(r.rows[0]?.used_bytes);
-  const diskBudget=Number(process.env.CJ_ARCHIVE_DISK_BUDGET_BYTES??1073741824);
-  if(!Number.isFinite(used)||used<0)throw Error('ARCHIVE_DISK_USAGE_UNKNOWN');
-  const ratio=Number.isFinite(diskBudget)&&diskBudget>0?used/diskBudget:null;
-  return {dbBytes:used,configuredBudgetBytes:diskBudget,
-    ratio,warning:ratio!==null&&ratio>=0.70,
-    action:'Measure disk and scale storage before 1 GB quota; NEVER prune history silently.'};
+  return {...storageState(used),action:'Measure physical disk and scale storage before quota; NEVER prune history silently.'};
 }
 export async function restoreArchivedRun(db,{agent,slot,destination}){
   if(!agentRoots[agent])throw Error('Unknown archive agent');

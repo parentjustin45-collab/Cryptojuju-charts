@@ -13,7 +13,8 @@ const sha=b=>createHash('sha256').update(b).digest('hex');
 const valid=(s,t)=>FIVE_CASES.some(x=>x.symbol===s&&x.timeframe===t);
 const SHA=/^[a-f0-9]{64}$/i;
 const SOURCE_PREFIX='hourly-bitunix|';
-export const STORAGE_BUDGET=1073741824;
+import {DEFAULT_STORAGE_BUDGET,storageBudget,storageState} from './storage-policy.mjs';
+export const STORAGE_BUDGET=DEFAULT_STORAGE_BUDGET;
 const FIELDS=['open','high','low','close','volume'];
 export function validateHistoricalSource(first,repeat){
   const m=first?.market??{},p=first?.provenance??{},w=first?.historyWindow??{};
@@ -86,7 +87,7 @@ export async function initializeHistoricalLibrary(db){
     "created_at timestamptz NOT NULL DEFAULT now())");
 }
 export async function ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey,
-  diskBudgetBytes=STORAGE_BUDGET,archiveEvidence=false}={}){
+  diskBudgetBytes=storageBudget(),archiveEvidence=false}={}){
   if(typeof sourceKey!=='string'||sourceKey.length>220||sourceKey.length<10||
     !/^[A-Za-z0-9|:._/-]+$/.test(sourceKey))throw Error('INVALID_HISTORICAL_SOURCE_KEY');
   const v=validateHistoricalSource(first,repeat);
@@ -98,7 +99,7 @@ export async function ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey,
     await client.query("SELECT pg_advisory_xact_lock(hashtext('CJ_HISTORICAL_LIBRARY_V1'))");
     const r=await client.query('SELECT pg_database_size(current_database())::bigint AS bytes');
     const bytes=Number(r.rows[0]?.bytes);
-    if(!Number.isSafeInteger(bytes)||bytes>=diskBudgetBytes*.70)
+    if(storageState(bytes,diskBudgetBytes).warning)
       throw Error('HISTORICAL_DATABASE_CAPACITY_GUARD');
     const prior=await client.query(
       'SELECT raw_sha256,derived_sha256,checked_bars FROM cj_historical_source_receipts WHERE source_key=$1',

@@ -12,6 +12,8 @@ import {replayCompletePeriodFromPostgres}
   from './historical-multiyear-replay.mjs';
 import {readBitunixContractPrecision} from '../bitunix-contract-precision.mjs';
 
+import {storageState,storageBudget} from './storage-policy.mjs';
+
 const hash=buffer=>createHash('sha256').update(buffer).digest('hex');
 const VERSION='CJ_FIVE_INDICATOR_TWO_YEAR_REPLAY_V1_20261124';
 export async function initializeMultiYearReplay(db){
@@ -87,7 +89,7 @@ export async function runEligibleMultiYearReplay(db,{maxPairs=1,
     try{
       await client.query('BEGIN');
       const size=await client.query('SELECT pg_database_size(current_database())::bigint AS bytes');
-      if(Number(size.rows[0]?.bytes)>=1073741824*.70)
+      if(storageState(Number(size.rows[0]?.bytes),storageBudget(),gzip.length).warning)
         throw Error('HISTORICAL_REPLAY_DATABASE_CAPACITY_GUARD');
       const stored=await client.query('INSERT INTO cj_multiyear_replay_reports ('+
         'symbol,timeframe,period_start_ms,period_end_ms,engine_version,'+
