@@ -1,0 +1,19 @@
+name: DEV prospective validation protocol
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/prospective-validation*'
+      - '.github/workflows/ai-agents-prospective-validation.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/prospective-validation-runner.mjs
+      - run: node --test backtest/agents/render/prospective-validation.test.mjs backtest/agents/render/historical-targeted-v3-experiments.test.mjs
