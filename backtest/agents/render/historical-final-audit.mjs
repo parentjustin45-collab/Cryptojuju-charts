@@ -226,9 +226,17 @@ export function validateReport(row,source,receipt,target){
   const p=JSON.parse(raw.toString('utf8'));
   insist(String(row.source_sequence_sha256).trim()===source.sequenceSha256&&
     p.sourceSequenceSha256===source.sequenceSha256&&source.sequenceSha256===receipt.sourceSequenceSha256,'SOURCE_SEQUENCE_MISMATCH');
+  // The first three Daily reports predate the listing-aware schema.
+  // Their exact raw hash is already pinned to the original Render receipt.
+  const legacyDaily=receipt.timeframe==='1d'&&['BTCUSDT','ETHUSDT','SOLUSDT'].includes(receipt.symbol)&&
+    target.coverageKind==='FULL_TWO_YEAR'&&p.coverageKind===undefined;
+  const expectedStatus=target.coverageKind==='FULL_TWO_YEAR'
+    ?'TWO_YEAR_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED'
+    :'LISTING_ADJUSTED_CAUSAL_RESEARCH_COMPLETE_NOT_PERFORMANCE_CERTIFIED';
+  insist(p.status===expectedStatus,'REPORT_STATUS_MISMATCH');
   insist(p.protocol==='CJ_CONTINUOUS_TWO_YEAR_FIVE_INDICATOR_REPLAY_V1'&&
     p.symbol===receipt.symbol&&p.timeframe===receipt.timeframe&&
-    p.startTime===target.startMs&&p.endTime===target.endMs&&p.coverageKind===target.coverageKind&&
+    p.startTime===target.startMs&&p.endTime===target.endMs&&(p.coverageKind===target.coverageKind||legacyDaily)&&
     p.closedCandles===receipt.closedBars,'REPORT_IDENTITY_OR_COVERAGE_MISMATCH');
   insist(p.noLookaheadTestsPassed===true&&p.causalPrefixChecks>=3&&p.marketOrdersPlaced===0&&
     p.trainingOptimizationPerformed===false&&p.feesAndSlippageIncluded===false&&p.profitCertification===false,'REPORT_RESEARCH_SAFETY_FLAGS');
