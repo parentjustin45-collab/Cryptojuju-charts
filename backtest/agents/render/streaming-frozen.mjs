@@ -63,7 +63,7 @@ export function createFrozenStream({priceStep,intervalMs}){
   for(const key of KEYS)for(const e of out[key]){counts[key]++;hashes[key].update(JSON.stringify(e)+'\n');}
   i++;return out;
  }
- return {consume,consumePage(bars,onRow){for(const b of bars)onRow?.(consume(b),b);},finish(){
+ return {consume,consumePage(bars,onRow){for(const b of bars){const e=consume(b);onRow?.(e,b);}},finish(){
   need(!sealed&&i>0,'EMPTY_OR_FINISHED');sealed=true;original.finish();
   return {version:VERSION,bars:i,counts,eventSha256:Object.fromEntries(KEYS.map(k=>[k,hashes[k].digest('hex')])),warningStats:{'cipher|v2':{tested:cipher[0].tested,confirmed:cipher[0].confirmed,unresolved:cipher[0].pending.length},'cipher|v3':{tested:cipher[1].tested,confirmed:cipher[1].confirmed,unresolved:cipher[1].pending.length},'frank_divergence|v3':{tested:frankTested,confirmed:frankConfirmed,unresolved:frankPending.length}},noTrading:true};
  }};
