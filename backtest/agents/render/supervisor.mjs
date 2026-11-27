@@ -15,6 +15,7 @@ import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive
 import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
 import {runBinanceBatch} from './binance-library.mjs';
 import {runOlderHistoryBatch} from './older-history-worker.mjs';
+import {dryRunLlm,runLlmResearch} from './llm-research.mjs';
 import {runAdaptiveResearch} from './adaptive-research.mjs';
 import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
@@ -393,6 +394,10 @@ export async function main(){
         try{console.log('CJ_ADAPTIVE_RESEARCH '+JSON.stringify(await runAdaptiveResearch(db)));}
         catch(e){console.error('CJ_ADAPTIVE_RESEARCH_ERROR '+String(e?.message??e).slice(0,180));}
       }
+      if(process.env.CJ_LLM_RESEARCH_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===11){
+        try{console.log('CJ_LLM_RESEARCH '+JSON.stringify(await runLlmResearch(db)));}
+        catch(e){console.error('CJ_LLM_RESEARCH_ERROR '+String(e?.message??e).slice(0,180));}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
@@ -474,6 +479,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_ADAPTIVE_RESEARCH_BOOTSTRAP '+JSON.stringify(await runAdaptiveResearch(db)));}
     catch(e){console.error('CJ_ADAPTIVE_RESEARCH_ERROR '+String(e?.message??e).slice(0,180));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_LLM_DRY_RUN_ENABLED==='1'&&!busy){
+    busy=true;
+    try{console.log('CJ_LLM_DRY_RUN '+JSON.stringify(await dryRunLlm(db)));}
+    catch(e){console.error('CJ_LLM_DRY_RUN_ERROR '+String(e?.message??e).slice(0,180));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};

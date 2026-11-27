@@ -1,0 +1,33 @@
+name: DEV LLM research adapter and budget safety
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/llm-research*'
+      - '.github/workflows/ai-agents-llm-research.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: cjtest
+        ports:
+          - 5432:5432
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/supervisor.mjs
+      - run: node --test backtest/agents/render/llm-research.test.mjs backtest/agents/render/adaptive-research.test.mjs
+      - run: npm install --no-audit --no-fund
+        working-directory: backtest/agents/render
+      - run: node backtest/agents/render/llm-research-integration.mjs
+        env:
+          DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/cjtest
