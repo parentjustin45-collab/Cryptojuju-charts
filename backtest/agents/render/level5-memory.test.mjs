@@ -29,7 +29,7 @@ test('same specialist can learn across scopes, but duplicates only block exact s
 test('readback prioritizes exact scope and verifies duplicate gate',async()=>{
  const row=fixture(),cross=fixture({...scope,symbol:'ETHUSDT'});
  const db={query:async(sql,args)=>{
-  if(sql.includes('to_regclass'))return {rows:[{t:'yes',structured:'yes'}]};
+  if(sql.includes('to_regclass'))return {rows:[sql.includes(' AS pilot')?{pilot:null,structured:'yes'}:{t:'yes'}]};
   if(sql.includes('AND NOT ('))return {rows:[cross],rowCount:1};
   if(sql.includes('LIMIT 9')||sql.includes('LIMIT 1'))return {rows:[row],rowCount:1};
   throw Error('unexpected query');
