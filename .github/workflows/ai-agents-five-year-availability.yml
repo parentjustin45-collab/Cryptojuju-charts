@@ -1,0 +1,19 @@
+name: DEV five-year Bitunix availability survey
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/five-year-availability.mjs'
+      - '.github/workflows/ai-agents-five-year-availability.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node backtest/agents/render/five-year-availability.mjs
