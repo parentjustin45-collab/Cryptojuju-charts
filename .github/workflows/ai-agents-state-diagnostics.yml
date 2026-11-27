@@ -1,0 +1,20 @@
+name: DEV historical state diagnostics tests
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/historical-state*'
+      - 'backtest/agents/render/state-*'
+      - '.github/workflows/ai-agents-state-diagnostics.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/historical-state-research.mjs
+      - run: node --test backtest/agents/render/historical-state-diagnostics.test.mjs backtest/agents/render/historical-pivot-diagnostics.test.mjs
