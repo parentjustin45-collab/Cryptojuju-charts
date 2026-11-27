@@ -1,0 +1,19 @@
+name: DEV historical pivot diagnostics tests
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/historical-pivot*'
+      - '.github/workflows/ai-agents-pivot-diagnostics.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/historical-pivot-research.mjs
+      - run: node --test backtest/agents/render/historical-pivot-diagnostics.test.mjs
