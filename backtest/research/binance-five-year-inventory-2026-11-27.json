@@ -1,0 +1,739 @@
+{
+  "run": 46035670801,
+  "job": 140630326415,
+  "summary": {
+    "ready": 25,
+    "expected": 25,
+    "targetBars": 1280806,
+    "archives": 1775,
+    "zipBytes": 63332629,
+    "scope": "object inventory and boundary samples only"
+  },
+  "results": [
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 43824,
+      "archiveCount": 83,
+      "zipBytes": 2303982,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/BTCUSDT/1h/BTCUSDT-1h-2021-11.zip",
+          "sha256": "a013f6adfd3012130c0b0bc58895373ae478cd38c646ac87957b855682c7f069",
+          "zipBytes": 38610,
+          "firstMs": 1635724800000,
+          "lastMs": 1638313200000,
+          "bars": 720
+        },
+        {
+          "key": "data/futures/um/daily/klines/BTCUSDT/1h/BTCUSDT-1h-2026-11-23.zip",
+          "sha256": "c43a98b84799e43d97a35e5f79a857abb4abfc605a87913667823740a99486d3",
+          "zipBytes": 1573,
+          "firstMs": 1795392000000,
+          "lastMs": 1795474800000,
+          "bars": 24
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "BTCUSDT",
+      "timeframe": "15m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 175296,
+      "archiveCount": 83,
+      "zipBytes": 8612770,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/BTCUSDT/15m/BTCUSDT-15m-2021-11.zip",
+          "sha256": "8c3170955683fc914da107d67d8ebde0cda6f3a6250e9b4b5f6ceb94f5593712",
+          "zipBytes": 146206,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315900000,
+          "bars": 2880
+        },
+        {
+          "key": "data/futures/um/daily/klines/BTCUSDT/15m/BTCUSDT-15m-2026-11-23.zip",
+          "sha256": "b73583fe9321027b321b45c8af442e916ffa257115148ded776c8387429372f1",
+          "zipBytes": 5164,
+          "firstMs": 1795392000000,
+          "lastMs": 1795477500000,
+          "bars": 96
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "BTCUSDT",
+      "timeframe": "30m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 87648,
+      "archiveCount": 83,
+      "zipBytes": 4455791,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/BTCUSDT/30m/BTCUSDT-30m-2021-11.zip",
+          "sha256": "7d6d755063c50f51730f24d022677cc01232a4cbb6ff002fb47528d3c31716c8",
+          "zipBytes": 75150,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315000000,
+          "bars": 1440
+        },
+        {
+          "key": "data/futures/um/daily/klines/BTCUSDT/30m/BTCUSDT-30m-2026-11-23.zip",
+          "sha256": "ffb5e045096a52f4a83ef2f814f25161fa4a33100763063909353f7ac3b01da9",
+          "zipBytes": 2794,
+          "firstMs": 1795392000000,
+          "lastMs": 1795476600000,
+          "bars": 48
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "BTCUSDT",
+      "timeframe": "1d",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 1826,
+      "archiveCount": 83,
+      "zipBytes": 133882,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/BTCUSDT/1d/BTCUSDT-1d-2021-11.zip",
+          "sha256": "17814825202c6e1bf932c9d0b3e0fc682c73eb5dd0df23be323d3fa72909722c",
+          "zipBytes": 2029,
+          "firstMs": 1635724800000,
+          "lastMs": 1638230400000,
+          "bars": 30
+        },
+        {
+          "key": "data/futures/um/daily/klines/BTCUSDT/1d/BTCUSDT-1d-2026-11-23.zip",
+          "sha256": "2d48cebc1ee9cd42e6fc67fbb4121235755641bf2fc0b1d0a0fa903d3ce8c835",
+          "zipBytes": 352,
+          "firstMs": 1795392000000,
+          "lastMs": 1795392000000,
+          "bars": 1
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 10956,
+      "archiveCount": 83,
+      "zipBytes": 638748,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/BTCUSDT/4h/BTCUSDT-4h-2021-11.zip",
+          "sha256": "06ff7fbaf5edf3d77e9a070bca341e2a7781d9e30bb199051d1442df1a79fc0b",
+          "zipBytes": 10480,
+          "firstMs": 1635724800000,
+          "lastMs": 1638302400000,
+          "bars": 180
+        },
+        {
+          "key": "data/futures/um/daily/klines/BTCUSDT/4h/BTCUSDT-4h-2026-11-23.zip",
+          "sha256": "f639032de58c5b7a194c1819d1bbb39cee998edbe89b372c74b63698c0874355",
+          "zipBytes": 629,
+          "firstMs": 1795392000000,
+          "lastMs": 1795464000000,
+          "bars": 6
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "ETHUSDT",
+      "timeframe": "15m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 175296,
+      "archiveCount": 83,
+      "zipBytes": 8758321,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/ETHUSDT/15m/ETHUSDT-15m-2021-11.zip",
+          "sha256": "016ce492025483e69485963f4d503ef0b04b7d961f2c89f2fd455d6bb15169fc",
+          "zipBytes": 142393,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315900000,
+          "bars": 2880
+        },
+        {
+          "key": "data/futures/um/daily/klines/ETHUSDT/15m/ETHUSDT-15m-2026-11-23.zip",
+          "sha256": "1545bf5741b20f09dbdb6542c03368ad1d35a93a8e394133e523e6a3d449be99",
+          "zipBytes": 5227,
+          "firstMs": 1795392000000,
+          "lastMs": 1795477500000,
+          "bars": 96
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 43824,
+      "archiveCount": 83,
+      "zipBytes": 2339091,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/ETHUSDT/1h/ETHUSDT-1h-2021-11.zip",
+          "sha256": "d61dcde383cefa67bd3febb54690d28db408cc7cfb4b4c99f4c00710f5e5b3ad",
+          "zipBytes": 37694,
+          "firstMs": 1635724800000,
+          "lastMs": 1638313200000,
+          "bars": 720
+        },
+        {
+          "key": "data/futures/um/daily/klines/ETHUSDT/1h/ETHUSDT-1h-2026-11-23.zip",
+          "sha256": "3cce8a67f2a36bec1efb44e9148d6a794e32413dac84a00a55e067c26466e2da",
+          "zipBytes": 1592,
+          "firstMs": 1795392000000,
+          "lastMs": 1795474800000,
+          "bars": 24
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "ETHUSDT",
+      "timeframe": "4h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 10956,
+      "archiveCount": 83,
+      "zipBytes": 647218,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/ETHUSDT/4h/ETHUSDT-4h-2021-11.zip",
+          "sha256": "a9ba89cdae825fd31c6404febe0d3138fc2ed0dc5085d987e1c20eea09767ace",
+          "zipBytes": 10250,
+          "firstMs": 1635724800000,
+          "lastMs": 1638302400000,
+          "bars": 180
+        },
+        {
+          "key": "data/futures/um/daily/klines/ETHUSDT/4h/ETHUSDT-4h-2026-11-23.zip",
+          "sha256": "b9a6ee9bc2ad6f077121e9dce354a313ebec45a7fe256e9bfcf7c12f3b2ced54",
+          "zipBytes": 635,
+          "firstMs": 1795392000000,
+          "lastMs": 1795464000000,
+          "bars": 6
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "ETHUSDT",
+      "timeframe": "30m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 87648,
+      "archiveCount": 83,
+      "zipBytes": 4525440,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/ETHUSDT/30m/ETHUSDT-30m-2021-11.zip",
+          "sha256": "c346d4d5848ebed6683b9a8aa7d09a45d2d04f413776e2a67a314c8c332fc082",
+          "zipBytes": 73326,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315000000,
+          "bars": 1440
+        },
+        {
+          "key": "data/futures/um/daily/klines/ETHUSDT/30m/ETHUSDT-30m-2026-11-23.zip",
+          "sha256": "1e2ce773fd49a2dc7b2728e4fc8414cb3678218a3e10a7086ad4ceac8880fc1e",
+          "zipBytes": 2831,
+          "firstMs": 1795392000000,
+          "lastMs": 1795476600000,
+          "bars": 48
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "ETHUSDT",
+      "timeframe": "1d",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 1826,
+      "archiveCount": 83,
+      "zipBytes": 135080,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/ETHUSDT/1d/ETHUSDT-1d-2021-11.zip",
+          "sha256": "dccb3f8867a5672fc18b285b963f61e43ef1a3c9c0cf2bea654d1f214ec95aa4",
+          "zipBytes": 1988,
+          "firstMs": 1635724800000,
+          "lastMs": 1638230400000,
+          "bars": 30
+        },
+        {
+          "key": "data/futures/um/daily/klines/ETHUSDT/1d/ETHUSDT-1d-2026-11-23.zip",
+          "sha256": "478ae2e4533d5abf9459db98e9c3dbcffd7c830ac1d4c5ee0ca7381141c41cba",
+          "zipBytes": 355,
+          "firstMs": 1795392000000,
+          "lastMs": 1795392000000,
+          "bars": 1
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "SOLUSDT",
+      "timeframe": "30m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 87648,
+      "archiveCount": 83,
+      "zipBytes": 3942381,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/SOLUSDT/30m/SOLUSDT-30m-2021-11.zip",
+          "sha256": "d310c587d36ceb012ef4ddec15cc0eeab49a5adfd0acb8195497a67c35a93276",
+          "zipBytes": 64715,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315000000,
+          "bars": 1440
+        },
+        {
+          "key": "data/futures/um/daily/klines/SOLUSDT/30m/SOLUSDT-30m-2026-11-23.zip",
+          "sha256": "7621e2473fcb63140b06bcdcdd4f66a60d9296bce94122e35718fd4f65cd7128",
+          "zipBytes": 2614,
+          "firstMs": 1795392000000,
+          "lastMs": 1795476600000,
+          "bars": 48
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "SOLUSDT",
+      "timeframe": "15m",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 175296,
+      "archiveCount": 83,
+      "zipBytes": 7588871,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/SOLUSDT/15m/SOLUSDT-15m-2021-11.zip",
+          "sha256": "e0acf781c3cc131e9cddb1652dfd5920bbc5364d0894165b256c7982ee4d2432",
+          "zipBytes": 125139,
+          "firstMs": 1635724800000,
+          "lastMs": 1638315900000,
+          "bars": 2880
+        },
+        {
+          "key": "data/futures/um/daily/klines/SOLUSDT/15m/SOLUSDT-15m-2026-11-23.zip",
+          "sha256": "7312d72d9da6b76dea4228be34e9a6c38fa4557542a57058a4ce1fb870ea6640",
+          "zipBytes": 4780,
+          "firstMs": 1795392000000,
+          "lastMs": 1795477500000,
+          "bars": 96
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 43824,
+      "archiveCount": 83,
+      "zipBytes": 2050976,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/SOLUSDT/1h/SOLUSDT-1h-2021-11.zip",
+          "sha256": "4939d7a971e30ac1d7b87c6c0352375bf8a0a539cd13bbf3e3920969a24bb42e",
+          "zipBytes": 33457,
+          "firstMs": 1635724800000,
+          "lastMs": 1638313200000,
+          "bars": 720
+        },
+        {
+          "key": "data/futures/um/daily/klines/SOLUSDT/1h/SOLUSDT-1h-2026-11-23.zip",
+          "sha256": "f8a91d4355ac86856592991d0fe6a07c304af3b378eaf01333b8768ad22032ab",
+          "zipBytes": 1485,
+          "firstMs": 1795392000000,
+          "lastMs": 1795474800000,
+          "bars": 24
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 10956,
+      "archiveCount": 83,
+      "zipBytes": 574666,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/SOLUSDT/4h/SOLUSDT-4h-2021-11.zip",
+          "sha256": "033dcdaec0fa031b610cd18f47a528f683c27d600a3a2545c19e56aeba7bea76",
+          "zipBytes": 9220,
+          "firstMs": 1635724800000,
+          "lastMs": 1638302400000,
+          "bars": 180
+        },
+        {
+          "key": "data/futures/um/daily/klines/SOLUSDT/4h/SOLUSDT-4h-2026-11-23.zip",
+          "sha256": "f225601f0a277f2cb649340a5071839cf062fbf016ec1d3c9cfc5cbe75d6d806",
+          "zipBytes": 610,
+          "firstMs": 1795392000000,
+          "lastMs": 1795464000000,
+          "bars": 6
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "firstAvailableMs": 1637712000000,
+      "endMs": 1795478400000,
+      "targetBars": 1826,
+      "archiveCount": 83,
+      "zipBytes": 123426,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/SOLUSDT/1d/SOLUSDT-1d-2021-11.zip",
+          "sha256": "237f6c0d5c0d7f1a695fff66968212642d8472767d87a70b453c2ebb13592ce3",
+          "zipBytes": 1812,
+          "firstMs": 1635724800000,
+          "lastMs": 1638230400000,
+          "bars": 30
+        },
+        {
+          "key": "data/futures/um/daily/klines/SOLUSDT/1d/SOLUSDT-1d-2026-11-23.zip",
+          "sha256": "7e8377753469f823a942f88811d1f5c319975d1fc6fbbfa16220c1eabc13a68f",
+          "zipBytes": 355,
+          "firstMs": 1795392000000,
+          "lastMs": 1795392000000,
+          "bars": 1
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "15m",
+      "firstAvailableMs": 1748601000000,
+      "endMs": 1795478400000,
+      "targetBars": 52086,
+      "archiveCount": 41,
+      "zipBytes": 2477483,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/HYPEUSDT/15m/HYPEUSDT-15m-2025-05.zip",
+          "sha256": "255d70ad2d0f916f6092b1c454ffddec44965cb08bda7694053bb5697b9ec5cb",
+          "zipBytes": 7482,
+          "firstMs": 1748601000000,
+          "lastMs": 1748735100000,
+          "bars": 150
+        },
+        {
+          "key": "data/futures/um/daily/klines/HYPEUSDT/15m/HYPEUSDT-15m-2026-11-23.zip",
+          "sha256": "9ffe1bef39403b8e28eaec0483b64148a12292907cc3ec9914df180e51c44155",
+          "zipBytes": 4997,
+          "firstMs": 1795392000000,
+          "lastMs": 1795477500000,
+          "bars": 96
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "30m",
+      "firstAvailableMs": 1748601000000,
+      "endMs": 1795478400000,
+      "targetBars": 26043,
+      "archiveCount": 41,
+      "zipBytes": 1283506,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/HYPEUSDT/30m/HYPEUSDT-30m-2025-05.zip",
+          "sha256": "6afc2217b5700c93c975ea0fd1544b69a0347e8494b8cb04c1489f6082b3c06c",
+          "zipBytes": 3999,
+          "firstMs": 1748601000000,
+          "lastMs": 1748734200000,
+          "bars": 75
+        },
+        {
+          "key": "data/futures/um/daily/klines/HYPEUSDT/30m/HYPEUSDT-30m-2026-11-23.zip",
+          "sha256": "6fb682da9a78341b521c85f9ee36f45e80927387a100cbaed8db0a201f8f23a0",
+          "zipBytes": 2734,
+          "firstMs": 1795392000000,
+          "lastMs": 1795476600000,
+          "bars": 48
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1h",
+      "firstAvailableMs": 1748599200000,
+      "endMs": 1795478400000,
+      "targetBars": 13022,
+      "archiveCount": 41,
+      "zipBytes": 665718,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/HYPEUSDT/1h/HYPEUSDT-1h-2025-05.zip",
+          "sha256": "69d010e01af960c23568a8dfb1c4bca203134326b193d240ede52dc5c80c51fb",
+          "zipBytes": 2225,
+          "firstMs": 1748599200000,
+          "lastMs": 1748732400000,
+          "bars": 38
+        },
+        {
+          "key": "data/futures/um/daily/klines/HYPEUSDT/1h/HYPEUSDT-1h-2026-11-23.zip",
+          "sha256": "6e3f59d6da29887038b817525d62d9dfbf2dc81da746fbb43bba1e92e90d97bb",
+          "zipBytes": 1546,
+          "firstMs": 1795392000000,
+          "lastMs": 1795474800000,
+          "bars": 24
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "4h",
+      "firstAvailableMs": 1748592000000,
+      "endMs": 1795478400000,
+      "targetBars": 3256,
+      "archiveCount": 41,
+      "zipBytes": 188488,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/HYPEUSDT/4h/HYPEUSDT-4h-2025-05.zip",
+          "sha256": "1c53b99a9a2f8f0cb72e06a48c8d4bbbc7ea821f62f922ed4b20c42bc6bb7ceb",
+          "zipBytes": 821,
+          "firstMs": 1748592000000,
+          "lastMs": 1748721600000,
+          "bars": 10
+        },
+        {
+          "key": "data/futures/um/daily/klines/HYPEUSDT/4h/HYPEUSDT-4h-2026-11-23.zip",
+          "sha256": "e7ac0d6c8cf0b95eefa0dc9a11e00adff0822950263d6a8e8a4320624a75e18d",
+          "zipBytes": 628,
+          "firstMs": 1795392000000,
+          "lastMs": 1795464000000,
+          "bars": 6
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1d",
+      "firstAvailableMs": 1748563200000,
+      "endMs": 1795478400000,
+      "targetBars": 543,
+      "archiveCount": 41,
+      "zipBytes": 43742,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2025-05.zip",
+          "sha256": "dad90dbaeede7fcb9a515952c9cb3ded034944958cac41d12232accf57c879e0",
+          "zipBytes": 411,
+          "firstMs": 1748563200000,
+          "lastMs": 1748649600000,
+          "bars": 2
+        },
+        {
+          "key": "data/futures/um/daily/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-11-23.zip",
+          "sha256": "e04d552adb15f6e95466615b096939990e3ceea5acaa489c6d9b813a5e7345f8",
+          "zipBytes": 356,
+          "firstMs": 1795392000000,
+          "lastMs": 1795392000000,
+          "bars": 1
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "15m",
+      "firstAvailableMs": 1683304200000,
+      "endMs": 1795478400000,
+      "targetBars": 124638,
+      "archiveCount": 65,
+      "zipBytes": 6317450,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/1000PEPEUSDT/15m/1000PEPEUSDT-15m-2023-05.zip",
+          "sha256": "eb7703864d57631818fa1574a7936cf37e3f953d42beeeb8e07e77e7fa98bba3",
+          "zipBytes": 130444,
+          "firstMs": 1683304200000,
+          "lastMs": 1685576700000,
+          "bars": 2526
+        },
+        {
+          "key": "data/futures/um/daily/klines/1000PEPEUSDT/15m/1000PEPEUSDT-15m-2026-11-23.zip",
+          "sha256": "23e65e41cb5868053a257c10eca4c836caedbde1972a4fd5d1b1d1a45ee5062d",
+          "zipBytes": 5236,
+          "firstMs": 1795392000000,
+          "lastMs": 1795477500000,
+          "bars": 96
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "30m",
+      "firstAvailableMs": 1683304200000,
+      "endMs": 1795478400000,
+      "targetBars": 62319,
+      "archiveCount": 65,
+      "zipBytes": 3266115,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/1000PEPEUSDT/30m/1000PEPEUSDT-30m-2023-05.zip",
+          "sha256": "3dcb8066b21371be21a3203d4bad3a9259841a8760393b2090512354b76315ad",
+          "zipBytes": 67433,
+          "firstMs": 1683304200000,
+          "lastMs": 1685575800000,
+          "bars": 1263
+        },
+        {
+          "key": "data/futures/um/daily/klines/1000PEPEUSDT/30m/1000PEPEUSDT-30m-2026-11-23.zip",
+          "sha256": "ea7c07de8c7ea414c7e34eb84e85542f594bf64504dbd194b038e3d3397c4f34",
+          "zipBytes": 2829,
+          "firstMs": 1795392000000,
+          "lastMs": 1795476600000,
+          "bars": 48
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "1h",
+      "firstAvailableMs": 1683302400000,
+      "endMs": 1795478400000,
+      "targetBars": 31160,
+      "archiveCount": 65,
+      "zipBytes": 1691781,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/1000PEPEUSDT/1h/1000PEPEUSDT-1h-2023-05.zip",
+          "sha256": "cc22969dc1a25ef6e538f7f72171b3149a4729305c31a78839605b194c97dc92",
+          "zipBytes": 34926,
+          "firstMs": 1683302400000,
+          "lastMs": 1685574000000,
+          "bars": 632
+        },
+        {
+          "key": "data/futures/um/daily/klines/1000PEPEUSDT/1h/1000PEPEUSDT-1h-2026-11-23.zip",
+          "sha256": "5fdbebef6004e4ca07dfb15055a894e440987ed90f9db0b8f7472388c0bf87c2",
+          "zipBytes": 1601,
+          "firstMs": 1795392000000,
+          "lastMs": 1795474800000,
+          "bars": 24
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "4h",
+      "firstAvailableMs": 1683302400000,
+      "endMs": 1795478400000,
+      "targetBars": 7790,
+      "archiveCount": 65,
+      "zipBytes": 468682,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/1000PEPEUSDT/4h/1000PEPEUSDT-4h-2023-05.zip",
+          "sha256": "3736a03c10eba36b4d6bcb8697bf3c11c01c56067d61f1e1842c665af8cee340",
+          "zipBytes": 9596,
+          "firstMs": 1683302400000,
+          "lastMs": 1685563200000,
+          "bars": 158
+        },
+        {
+          "key": "data/futures/um/daily/klines/1000PEPEUSDT/4h/1000PEPEUSDT-4h-2026-11-23.zip",
+          "sha256": "ceb7cabb4972097d108d1f47d9b4d3279a2af3f4d4b5cd4eb0c0b23bfae98772",
+          "zipBytes": 644,
+          "firstMs": 1795392000000,
+          "lastMs": 1795464000000,
+          "bars": 6
+        }
+      ]
+    },
+    {
+      "status": "INVENTORY_READY",
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "1d",
+      "firstAvailableMs": 1683244800000,
+      "endMs": 1795478400000,
+      "targetBars": 1299,
+      "archiveCount": 65,
+      "zipBytes": 99021,
+      "internalMissing": [],
+      "samples": [
+        {
+          "key": "data/futures/um/monthly/klines/1000PEPEUSDT/1d/1000PEPEUSDT-1d-2023-05.zip",
+          "sha256": "c8b057366929c1684f953d526661843eed349611f2c8d1fb63ea67f2bb2db2de",
+          "zipBytes": 1978,
+          "firstMs": 1683244800000,
+          "lastMs": 1685491200000,
+          "bars": 27
+        },
+        {
+          "key": "data/futures/um/daily/klines/1000PEPEUSDT/1d/1000PEPEUSDT-1d-2026-11-23.zip",
+          "sha256": "2b0e3891fb90adba01efab46cba0d7305a95c6f2b4411831f5909bc95e66f2c5",
+          "zipBytes": 364,
+          "firstMs": 1795392000000,
+          "lastMs": 1795392000000,
+          "bars": 1
+        }
+      ]
+    }
+  ]
+}
