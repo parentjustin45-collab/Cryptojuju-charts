@@ -1,0 +1,25 @@
+name: DEV hourly Bitunix anchor recovery validation
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - '.github/workflows/ai-agents-hourly-anchor-recovery.yml'
+      - 'backtest/agents/hourly-bitunix-recovery*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install runtime dependencies
+        run: npm install --prefix backtest/agents/render --no-audit --no-fund
+      - name: Verify strict gates and regressions
+        run: node --test backtest/agents/hourly-bitunix-recovery.test.mjs backtest/agents/bitunix-data-pilot.test.mjs backtest/agents/bitunix-readback-consistency.test.mjs backtest/agents/historical-library.test.mjs backtest/agents/render-runtime.test.mjs backtest/agents/render-five-by-five.test.mjs backtest/agents/render-archive.test.mjs
+      - name: Reproduce and recover 13 real archived refusals
+        run: node backtest/agents/hourly-bitunix-recovery-live.mjs

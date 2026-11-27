@@ -6,10 +6,10 @@
 import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {makeBitunixFetchPage} from '../bitunix-adapter.mjs';
-import {PILOT_SYMBOLS,PILOT_TIMEFRAMES,fetchBitunixDataPilot} from './bitunix-data-pilot.mjs';
+import {PILOT_SYMBOLS,PILOT_TIMEFRAMES} from './bitunix-data-pilot.mjs';
 import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES,isFiveByFive} from './render/five-by-five.mjs';
 import {renderBitunixDataCenterHtml} from './bitunix-data-center-view.mjs';
-import {compareBitunixReadbacks} from './bitunix-readback-consistency.mjs';
+import {fetchHourlyVerifiedWindow,summarizeHourlyFailure} from './hourly-bitunix-recovery.mjs';
 
 const destination=resolve(process.argv[2]??'bitunix-data-pilot-report');
 const closedBars=Number(process.env.CJ_DATA_PILOT_BARS??96);
@@ -40,46 +40,16 @@ const summary={
 };
 for(const symbol of symbols){
   for(const timeframe of timeframes){
-    let out;
-    try{
-      out=await fetchBitunixDataPilot({
-        symbol,timeframe,closedBars,nowMs:anchorTime,
-        fetchPage
-      });
-    }catch(e){
-      out={market:{symbol,timeframe},status:'BLOCKED',reason:'UNHANDLED_FETCH_OR_VALIDATION_ERROR',
-        error:String(e?.message??e),acceptedCandles:[]};
-    }
-    await writeFile(resolve(destination,`${symbol}-${timeframe}.json`),
-      JSON.stringify(out,null,2)+'\n');
-    // Second public REST read of the exact SAME full CLOSED window (+3 anchors).
-    // Both captures use the SAME anchorTime and start/end, so no new anchor-boundary defect is introduced.
-    // A revision or fetch failure blocks this configuration for research.
-    let readback={status:'BLOCKED',reason:'FIRST_READ_NOT_READY'};
-    if(out.status==='DATA_READY_FOR_RESEARCH_ONLY'){
-      try{
-        const second=await fetchBitunixDataPilot({
-          symbol,timeframe,closedBars,anchorBars:3,
-          nowMs:anchorTime,fetchPage
-        });
-        readback=compareBitunixReadbacks(out,second);
-        if(readback.status!=='STABLE_TWO_READS'){
-          // Preserve the second original and derived rows for provenance
-          // diagnostics; never silently increase tolerance or force success.
-          await writeFile(resolve(destination,`${symbol}-${timeframe}-second-read-when-blocked.json`),
-            JSON.stringify(second,null,2)+'\n');
-          readback.secondReadStatus=second.status;
-          readback.secondReadReason=second.reason??null;
-          readback.secondReadQuality=second.quality??null;
-          readback.secondReadIssues=second.normalizationIssues?.slice(0,6)??[];
-        }
-      }catch(e){
-        readback={status:'BLOCKED',reason:'SECOND_READ_EXCEPTION',
-          error:String(e?.message??e)};
-      }
-    }
-    await writeFile(resolve(destination,`${symbol}-${timeframe}-repeatability.json`),
-      JSON.stringify(readback,null,2)+'\n');
+    const {first:out,second,readback,anchorBars,attempts,recovered}=await fetchHourlyVerifiedWindow({
+      symbol,timeframe,closedBars,nowMs:anchorTime,fetchPage
+    });
+    const name=symbol+'-'+timeframe;
+    await writeFile(resolve(destination,name+'.json'),JSON.stringify(out,null,2)+'\n');
+    await writeFile(resolve(destination,name+'-repeatability.json'),JSON.stringify(readback,null,2)+'\n');
+    if(attempts.length)
+      await writeFile(resolve(destination,name+'-anchor-recovery.json'),JSON.stringify({attempts,second,anchorBars,recovered},null,2)+'\n');
+    if(second&&readback.status!=='STABLE_TWO_READS')
+      await writeFile(resolve(destination,name+'-second-read-when-blocked.json'),JSON.stringify(second,null,2)+'\n');
     const stable=readback.status==='STABLE_TWO_READS';
     const s={symbol,timeframe,status:stable?'DATA_READY_FOR_RESEARCH_ONLY':'BLOCKED',
       requestedBars:closedBars,
@@ -92,6 +62,8 @@ for(const symbol of symbols){
       consistencyStatus:readback.status,
       repeatCheckedBars:readback.checkedDerived??0,
       differenceCount:readback.differenceCount??0,
+      anchorBars,recoveryAttempts:attempts.length,recovered,
+      failureDetails:stable?null:summarizeHourlyFailure(out,readback),
       reason:stable?null:(out.reason??readback.reason)};
     summary.checks.push(s);
     console.log('BITUNIX_DATA '+JSON.stringify(s));

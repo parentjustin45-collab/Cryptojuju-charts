@@ -89,7 +89,9 @@ export async function executeResearchProcess(agent,slot,{spawnImpl=spawn}={}){
         ? assessment.status:'BLOCKED';
       evidence={...evidence,checks:summary.checks.map(c=>({
         symbol:c.symbol,timeframe:c.timeframe,acceptedBars:c.acceptedBars,
-        consistencyStatus:c.consistencyStatus,sha256:c.sha256,status:c.status
+        consistencyStatus:c.consistencyStatus,sha256:c.sha256,status:c.status,
+        reason:c.reason??null,anchorBars:c.anchorBars??null,recovered:c.recovered===true,
+        failureDetails:c.failureDetails??null
       })),assessment};
     }catch(err){
       status='BLOCKED';evidence={...evidence,assessment:{reason:String(err?.message??err)}};
@@ -304,6 +306,8 @@ export async function runDueCycle(db,now=new Date(),{
       passedChecks:Array.isArray(result.evidence?.checks)
         ?result.evidence.checks.filter(x=>x.status==='DATA_READY_FOR_RESEARCH_ONLY').length:null,
       reason:result.evidence?.assessment?.reason??result.evidence?.reason??null,
+      failedChecks:result.evidence?.checks?.filter(x=>x.status!=='DATA_READY_FOR_RESEARCH_ONLY').map(({symbol,timeframe,reason,failureDetails,anchorBars})=>({symbol,timeframe,reason,failureDetails,anchorBars}))??null,
+      recoveredChecks:result.evidence?.checks?.filter(x=>x.recovered).map(({symbol,timeframe,anchorBars})=>({symbol,timeframe,anchorBars}))??null,
       sourceRehydrated:result.evidence?.sourceRehydrated??false,
       totalCases:result.evidence?.summary?.cases??null,
       passedCases:result.evidence?.summary?.passed??null,
