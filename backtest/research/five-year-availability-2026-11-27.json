@@ -1,0 +1,568 @@
+{
+  "status": "BOUNDARY_SAMPLES_VERIFIED",
+  "probeRun": 46028830992,
+  "metadata": {
+    "BTCUSDT": 1719403200000,
+    "ETHUSDT": 1719403200000,
+    "SOLUSDT": 1719403200000,
+    "HYPEUSDT": 1743062400000,
+    "1000PEPEUSDT": 1710403200000
+  },
+  "targetBars": 123517,
+  "eligible": 20,
+  "proofs": [
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "15m",
+      "launch": 1719403200000,
+      "startMs": 1719405900000,
+      "endMs": 1732406400000,
+      "targetBars": 14445,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1719837900000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "2793f0d7080a5bbfa31b96df2c19d139411dbda658bb0576762c0bf70200b6ff"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "24e07f6a845f10df80a1791007e45d3ad46c940b5920fad0c35f93e8df96481a"
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "30m",
+      "launch": 1719403200000,
+      "startMs": 1719408600000,
+      "endMs": 1732406400000,
+      "targetBars": 7221,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1720272600000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "a0ce0faeeca1e8ab2bb00da5c34857d66aa6468e56c8bf8a11f72294512c29c1"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "f2c0baa38211a25de8f2b3d96cc1f1e33d17c904c37deb4c2750ff76a4026cba"
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "launch": 1719403200000,
+      "startMs": 1719414000000,
+      "endMs": 1732406400000,
+      "targetBars": 3609,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1721142000000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "08c5e3f7ddccb77ea021cfae42acd1c47b6629ef450ab0bfca1afb0fb76cee4a"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "7902ca4c5e50c4e59776a140df4fcb0d1bc0d77ddb87e0f5de188303de00578f"
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "4h",
+      "launch": 1719403200000,
+      "startMs": 1719446400000,
+      "endMs": 1732406400000,
+      "targetBars": 900,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1726358400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "fab7ca5f4cd57ea09051a7cee6d3677796dbf4713fca87d4e2d74fc469e47d8a"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "8cc3814e7ab6403a320e3983579b2c49e603f64f20c58af175cc3a6cf47b2f3e"
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "timeframe": "1d",
+      "launch": 1719403200000,
+      "startMs": 1719705600000,
+      "endMs": 1732406400000,
+      "targetBars": 147,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 147,
+          "sha": "fdb526edc803c83c396e957a5ea5f7d4f7d2529cb2bebc3ea2b980ea8fac30f0"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "15m",
+      "launch": 1719403200000,
+      "startMs": 1719405900000,
+      "endMs": 1732406400000,
+      "targetBars": 14445,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1719837900000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "bdc0fc5507edcf644448953510b6bf92cd79bda9357676c73cac879d0f9dc1d1"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "2a0594c1b6014b4938c256079d840e87bf521a7e502dc39ec7e8314887d73ea1"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "30m",
+      "launch": 1719403200000,
+      "startMs": 1719408600000,
+      "endMs": 1732406400000,
+      "targetBars": 7221,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1720272600000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "7a145c871414b879556ee9286fb0e802b829e98d7f41a9d55595fc3a46509c0d"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "de2e94bb1f0fdf6a7adc7f51f37d0864fa98e7d5c869d8a0fe4ef53baa3c84d4"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "launch": 1719403200000,
+      "startMs": 1719414000000,
+      "endMs": 1732406400000,
+      "targetBars": 3609,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1721142000000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "0441dff9e459664e255ade98f925a5a296e24d59bade81a8900e972312596c6a"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "f36cd301679ba8d2090676ea2c543ae169c651f2769c752d49dbb1a1ed3485b2"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "4h",
+      "launch": 1719403200000,
+      "startMs": 1719446400000,
+      "endMs": 1732406400000,
+      "targetBars": 900,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1726358400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "1d9bcfed4285ef40f103cbeba5b3b25fb3dbfbccd1b1d6b7fe949d6d3688e058"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "2b08d4c03d1f502e4004da2c8d1f33344eb12b5a809515601d8bdb94a4f8e443"
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "timeframe": "1d",
+      "launch": 1719403200000,
+      "startMs": 1719705600000,
+      "endMs": 1732406400000,
+      "targetBars": 147,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 147,
+          "sha": "eefb69934d8199c2f3be99890379bb288d6ca2014849071ab9f1ef2a8450a00d"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "timeframe": "15m",
+      "launch": 1719403200000,
+      "startMs": 1719405900000,
+      "endMs": 1732406400000,
+      "targetBars": 14445,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1719837900000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "05fdc6a7e31d1581009eea2214c35e0f20928ed6f18ac6d18572b4351b8b98da"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "2133559c5126925f321c12fcd04ce6b7de022fee0c920deba292501a226466b1"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "timeframe": "30m",
+      "launch": 1719403200000,
+      "startMs": 1719408600000,
+      "endMs": 1732406400000,
+      "targetBars": 7221,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1720272600000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "d0f2271ec9027aa3d9effad0386afb71cd0d077b31df921c1237622294b2aa97"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "1334be235ccca10ae46dd0b907c45909c21ad74a68a5329ee8e55bd4e29445fc"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "launch": 1719403200000,
+      "startMs": 1719414000000,
+      "endMs": 1732406400000,
+      "targetBars": 3609,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1721142000000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "c4c7c3a0e75a47efbf651dae2dc9a6055fde7c86947b8afb9773554912406dec"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "124b622df77174b23c11c1bf9baa1d429bd796f8048023b2f31e90dbe9989311"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "timeframe": "4h",
+      "launch": 1719403200000,
+      "startMs": 1719446400000,
+      "endMs": 1732406400000,
+      "targetBars": 900,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1726358400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "40b05d7b194ec78c9d03ea66cdfcea72e4d0824b79e3017fbd1f687410634b69"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "51fbd49a02f39e9c957f06b68716819c0bcb64c35c3258522017ea909366c534"
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "timeframe": "1d",
+      "launch": 1719403200000,
+      "startMs": 1719705600000,
+      "endMs": 1732406400000,
+      "targetBars": 147,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 147,
+          "sha": "ff6f8ec90ddcdc591c55d7723450ea3e804a2fdc380b7e506216a4b3eb254ccb"
+        }
+      ]
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "15m",
+      "launch": 1743062400000,
+      "startMs": 1743065100000,
+      "endMs": 1732406400000,
+      "targetBars": 0,
+      "status": "NO_PRE_2024_LISTING_HISTORY"
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "30m",
+      "launch": 1743062400000,
+      "startMs": 1743067800000,
+      "endMs": 1732406400000,
+      "targetBars": 0,
+      "status": "NO_PRE_2024_LISTING_HISTORY"
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "1h",
+      "launch": 1743062400000,
+      "startMs": 1743073200000,
+      "endMs": 1732406400000,
+      "targetBars": 0,
+      "status": "NO_PRE_2024_LISTING_HISTORY"
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "4h",
+      "launch": 1743062400000,
+      "startMs": 1743105600000,
+      "endMs": 1732406400000,
+      "targetBars": 0,
+      "status": "NO_PRE_2024_LISTING_HISTORY"
+    },
+    {
+      "symbol": "HYPEUSDT",
+      "timeframe": "1d",
+      "launch": 1743062400000,
+      "startMs": 1743379200000,
+      "endMs": 1732406400000,
+      "targetBars": 0,
+      "status": "NO_PRE_2024_LISTING_HISTORY"
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "15m",
+      "launch": 1710403200000,
+      "startMs": 1710405900000,
+      "endMs": 1732406400000,
+      "targetBars": 24445,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1710837900000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "95bfeda9e6db13af8a16839ca924f70818852ffec2c8c91d84a233f96707fdd9"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "c1e819da146686d0ee4cb15f70c717ffdce260c43b63816211b964932765f701"
+        }
+      ]
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "30m",
+      "launch": 1710403200000,
+      "startMs": 1710408600000,
+      "endMs": 1732406400000,
+      "targetBars": 12221,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1711272600000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "371140ad65c93ba1c68231c8dec6e6b8031054e5feebe5627ca6ff2ae019fdce"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "491646942dc6d97d3c10d4998cea8078a56a93d11ca42fa9ae768cf6d2dd17a3"
+        }
+      ]
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "1h",
+      "launch": 1710403200000,
+      "startMs": 1710414000000,
+      "endMs": 1732406400000,
+      "targetBars": 6109,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1712142000000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "bc694cc28ecdb1dfe61227f75efefac2ab2d4e6f15bcd40a224e7dd516a8497b"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "2282ac4ba0b7ed169fe64ebe1ed8bd1736f25c50d83311af35918214b3c71871"
+        }
+      ]
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "4h",
+      "launch": 1710403200000,
+      "startMs": 1710446400000,
+      "endMs": 1732406400000,
+      "targetBars": 1525,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1717358400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "d46a84683c1d2d36d00e0ce5557ac6e4368ee1544dc67a91916a3ed69ae7f058"
+        },
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 480,
+          "sha": "e4f96f6c46bf709684b841498c8f9839ff0a17bd01cda0109f9c3f3bebadad70"
+        }
+      ]
+    },
+    {
+      "symbol": "1000PEPEUSDT",
+      "timeframe": "1d",
+      "launch": 1710403200000,
+      "startMs": 1710720000000,
+      "endMs": 1732406400000,
+      "targetBars": 251,
+      "status": "BOUNDARY_SAMPLES_VERIFIED",
+      "results": [
+        {
+          "endMs": 1732406400000,
+          "stable": true,
+          "reason": null,
+          "firstReason": null,
+          "checked": 251,
+          "sha": "751a67992e9bd13d0856e20624b25d4be817d6eabcd6395eb1298a5ba9bcba32"
+        }
+      ]
+    }
+  ]
+}

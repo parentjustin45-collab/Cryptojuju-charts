@@ -1,0 +1,19 @@
+name: DEV listing adjusted extension queue
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/older-history-*'
+      - '.github/workflows/ai-agents-older-history.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/supervisor.mjs
+      - run: node --test backtest/agents/render/older-history-worker.test.mjs backtest/agents/render/autonomous-experiment-worker.test.mjs backtest/agents/hourly-bitunix-recovery.test.mjs backtest/agents/render-runtime.test.mjs
