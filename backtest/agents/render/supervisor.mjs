@@ -13,6 +13,7 @@ import {SPECIALISTS,dueSpecialists,utcSlot,assessBitunixData,summarizeDiagnostic
 import {initializeSpecialistMemory} from './knowledge.mjs';
 import {initializeArchive,archiveAgentArtifacts,archiveCapacity} from './archive.mjs';
 import {runHistoricalBridgeIfEnabled} from './historical-bridge-scheduler.mjs';
+import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
@@ -377,6 +378,10 @@ export async function main(){
             String(err?.message??err).slice(0,220));
         }
       }
+      if(r.completed.some(x=>x.agent==='diagnostics') && process.env.CJ_AUTONOMOUS_EXPERIMENTS_ENABLED==='1'){
+        try{console.log('CJ_AUTONOMOUS_EXPERIMENT '+JSON.stringify(await runAutonomousExperiment(db)));}
+        catch(e){console.error('CJ_AUTONOMOUS_EXPERIMENT_ERROR '+String(e?.message??e).slice(0,180));}
+      }
     }catch(e){
       lastError=String(e?.message??e);
       console.error('CJ_AGENT_CYCLE_ERROR '+lastError);
@@ -430,6 +435,12 @@ export async function main(){
     }catch(err){
       console.error('CJ_HISTORICAL_BACKFILL_ANCHOR_REPAIR_ERROR '+String(err?.message??err).slice(0,220));
     }finally{busy=false;}
+  }
+  if(process.env.CJ_AUTONOMOUS_EXPERIMENTS_ENABLED==='1'&&!busy){
+    busy=true;
+    try{console.log('CJ_AUTONOMOUS_EXPERIMENT_BOOTSTRAP '+JSON.stringify(await runAutonomousExperiment(db)));}
+    catch(e){console.error('CJ_AUTONOMOUS_EXPERIMENT_ERROR '+String(e?.message??e).slice(0,180));}
+    finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
   process.once('SIGTERM',()=>{void stop();});
