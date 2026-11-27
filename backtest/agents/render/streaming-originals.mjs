@@ -24,7 +24,7 @@ function sma(s,x,n,skip){
 const sm=()=>({q:[],sum:0});
 function stoch(a,flat){if(!a.every(valid))return null;const lo=Math.min(...a),hi=Math.max(...a);return hi===lo?flat?50:null:100*(a.at(-1)-lo)/(hi-lo);}
 const evt=(time,side,tag)=>({time,side,tag});
-export function createStreamingReplay({priceStep,intervalMs}){
+export function createStreamingReplay({priceStep,intervalMs,includeTrace=false}){
  need(valid(priceStep)&&priceStep>0&&Number.isSafeInteger(intervalMs)&&intervalMs>0,'BAD_CONFIG');
  let i=0,prev=null;
  const v={tr:[],vol:[],spread:[],atr:null,dir:0,entry:null};
@@ -102,7 +102,7 @@ export function createStreamingReplay({priceStep,intervalMs}){
   }
   prev={time,close:cl};i++;
   for(const ch of CHANNELS)for(const e of events[ch]){counts[ch]++;hashes[ch].update(JSON.stringify(e)+'\n');}
-  return {events,vector:{time,bullishVector:bull,bearishVector:bear,signal:vs,exit,direction:v.dir,closedTradeReturnPct},speed:{time,color,volumePercent,speedPercent,closed:true},momentum:{rsi:mr,stochRsi:ms,momentumRank:rank,composite:comp,emaFast:mf,emaSlow:ml},cipher:{hlc3:ap,esa,deviation:dev,ci,wt1,wt2},frank:{oscillator:trend,slow,k,d}};
+  return {...(includeTrace?{trace:{common,rangeAtr:v.atr>0?range/v.atr:null,volumeRatio:av>0?vol/av:null,spreadRatio:as>0?vol*range/as:null,bullStrength:(cl-l)/range,bearStrength:(h-cl)/range,mup,mdn}}:{}),events,vector:{time,bullishVector:bull,bearishVector:bear,signal:vs,exit,direction:v.dir,closedTradeReturnPct},speed:{time,color,volumePercent,speedPercent,closed:true},momentum:{rsi:mr,stochRsi:ms,momentumRank:rank,composite:comp,emaFast:mf,emaSlow:ml},cipher:{hlc3:ap,esa,deviation:dev,ci,wt1,wt2},frank:{oscillator:trend,slow,k,d}};
  }
  return {consume,consumePage(bars,onRow){need(Array.isArray(bars),'BAD_PAGE');for(const b of bars){const out=consume(b);onRow?.(out,b);}},finish(){need(!sealed&&i>0,'EMPTY_OR_FINISHED');sealed=true;return {version:VERSION,bars:i,lastTime:prev.time,counts:{...counts},eventSha256:Object.fromEntries(CHANNELS.map(k=>[k,hashes[k].digest('hex')])),stateWindowSizes:{price:history.length,vector:v.vol.length,momentum:m.mom.length,frankPivots:f.lows.length+f.highs.length},noTrading:true};}};
 }

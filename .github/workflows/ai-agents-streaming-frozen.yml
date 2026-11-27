@@ -1,0 +1,19 @@
+name: DEV frozen candidate streaming parity
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/streaming-frozen*'
+      - '.github/workflows/ai-agents-streaming-frozen.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --max-old-space-size=1536 --test backtest/agents/render/streaming-frozen.test.mjs backtest/agents/render/streaming-originals.test.mjs
