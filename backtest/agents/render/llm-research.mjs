@@ -49,6 +49,16 @@ export function requestBody(packet,{structured=false,feedback=[]}={}){
  }
  need(Buffer.byteLength(JSON.stringify(body))<=MAX_REQUEST_BYTES,'EVIDENCE_PACKET_TOO_LARGE');return body;
 }
+// Bound exported memory to the existing request byte cap. Keep the full local
+// memory for duplicate checks; persist exactly the subset sent for replay.
+export function requestWithMemory(packet,memory){
+ for(let n=Math.min(memory.length,4);n>=0;n--){
+  const feedback=memory.slice(0,n);
+  try{return {body:requestBody(packet,{structured:true,feedback}),feedback};}
+  catch(e){if(e.message!=='EVIDENCE_PACKET_TOO_LARGE')throw e;}
+ }
+ throw Error('EVIDENCE_PACKET_TOO_LARGE');
+}
 export function validateProposal(x){
  need(x&&typeof x==='object'&&!Array.isArray(x)&&same(Object.keys(x).sort(),[...SCHEMA.required].sort()),'SCHEMA_KEYS');
  for(const k of SCHEMA.required.filter(k=>k!=='evidence_ids'&&k!=='kind'))need(typeof x[k]==='string'&&x[k].trim().length>=5&&x[k].length<=2000,'SCHEMA_TEXT_'+k);
@@ -96,15 +106,15 @@ async function nextPacket(db,live=false){
  const q=await db.query("SELECT trim(a.id) AS adaptive_id,a.report AS adaptive_report,trim(a.report_sha256) AS adaptive_sha,trim(p.id) AS parent_id,p.report AS parent_report,trim(p.report_sha256) AS parent_sha FROM cj_adaptive_research a JOIN cj_autonomous_experiments p ON p.id=a.parent_id "+(live?"LEFT JOIN cj_llm_research_attempts l ON l.parent_id=a.id ":"")+"WHERE a.status='COMPLETED' AND p.status='COMPLETED' "+(live?"AND l.id IS NULL ":"")+(live?"ORDER BY (SELECT count(*) FROM cj_llm_research_attempts h WHERE (CASE WHEN h.channel IN ('frank_cross','frank_divergence') THEN 'frank' ELSE h.channel END)=(CASE WHEN a.channel IN ('frank_cross','frank_divergence') THEN 'frank' ELSE a.channel END)),a.updated_at,a.id LIMIT 1":"ORDER BY a.updated_at,a.id LIMIT 1"));
  return q.rowCount?buildPacket(q.rows[0]):null;
 }
-export async function dryRunLlm(db){const packet=await nextPacket(db);if(!packet)return {status:'NO_EVIDENCE_YET',paidCalls:0};const structured=process.env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',feedback=structured?await readFeedback(db,packet):[],body=requestBody(packet,{structured,feedback});return {status:'EVIDENCE_READY_DRY_RUN',model:MODEL,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,evidenceIds:packet.evidence.map(e=>e.id),packetSha256:hash(JSON.stringify(packet)),requestBytes:Buffer.byteLength(JSON.stringify(body)),structuredRules:structured,feedbackCount:feedback.length,feedback:feedback.map(x=>({ruleId:x.ruleId,reportSha256:x.reportSha256,decision:x.decision,sameScope:x.sameScope})),paidCalls:0,configuration:configuration().status,noExecution:true};}
+export async function dryRunLlm(db){const packet=await nextPacket(db);if(!packet)return {status:'NO_EVIDENCE_YET',paidCalls:0};const structured=process.env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',memory=structured?await readFeedback(db,packet):[],{body,feedback}=structured?requestWithMemory(packet,memory):{body:requestBody(packet),feedback:[]};return {status:'EVIDENCE_READY_DRY_RUN',model:MODEL,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,evidenceIds:packet.evidence.map(e=>e.id),packetSha256:hash(JSON.stringify(packet)),requestBytes:Buffer.byteLength(JSON.stringify(body)),structuredRules:structured,feedbackCount:feedback.length,localMemoryCount:memory.length,feedback:feedback.map(x=>({ruleId:x.ruleId,reportSha256:x.reportSha256,decision:x.decision,sameScope:x.sameScope})),paidCalls:0,configuration:configuration().status,noExecution:true};}
 export async function runLlmResearch(db,{env=process.env,fetchImpl=fetch}={}){
  const cfg=configuration(env);if(cfg.status!=='READY')return {status:cfg.status,paidCalls:0};
  if(process.memoryUsage().rss>350*1024*1024)return {status:'PAUSED_MEMORY',paidCalls:0};
  const cap=await db.query('SELECT pg_database_size(current_database())::bigint AS bytes');if(storageState(Number(cap.rows[0]?.bytes)).warning)return {status:'PAUSED_STORAGE',paidCalls:0};
  await initializeLlm(db);const packet=await nextPacket(db,true);if(!packet)return {status:'NO_NEW_EVIDENCE',paidCalls:0};
- const structured=env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',feedback=structured?await readFeedback(db,packet):[],body=requestBody(packet,{structured,feedback}),r=await reserveAttempt(db,packet,cfg.budgetMicros);if(r.status!=='RESERVED')return {...r,paidCalls:0};
- try{const result=await callModel(body,env.OPENAI_API_KEY,fetchImpl),review=structured?validateNewRule(result.experimentRule,packet,feedback):null,report=JSON.stringify({...result,...(review?{ruleReview:review,feedback,requestSha256:hash(JSON.stringify(body))}:{}),packetSha256:r.sha,source:packet.source,channel:packet.channel,status:'HUMAN_REVIEW_ONLY',noPromotion:true,noTrading:true});
+ const structured=env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',memory=structured?await readFeedback(db,packet):[],{body,feedback}=structured?requestWithMemory(packet,memory):{body:requestBody(packet),feedback:[]},r=await reserveAttempt(db,packet,cfg.budgetMicros);if(r.status!=='RESERVED')return {...r,paidCalls:0};
+ try{const result=await callModel(body,env.OPENAI_API_KEY,fetchImpl),review=structured?validateNewRule(result.experimentRule,packet,memory):null,report=JSON.stringify({...result,...(review?{ruleReview:review,feedback,requestSha256:hash(JSON.stringify(body))}:{}),packetSha256:r.sha,source:packet.source,channel:packet.channel,status:'HUMAN_REVIEW_ONLY',noPromotion:true,noTrading:true});
  const z=await db.query("UPDATE cj_llm_research_attempts SET status='HUMAN_REVIEW_ONLY',result=$2,result_sha256=$3 WHERE id=$1 AND status='RESERVED'",[r.id,report,hash(report)]);need(z.rowCount===1,'RESULT_SAVE_FAILED');
  return {status:'HUMAN_REVIEW_ONLY',channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,reportSha256:hash(report),usage:result.usage,estimatedMicroUsd:result.estimatedMicroUsd,...(review?{ruleReview:review,feedbackCount:feedback.length}:{}),paidCalls:1,noExecution:true};
- }catch(e){const reason=/^(PROVIDER_HTTP_\d+|PROVIDER_INCOMPLETE|USAGE_LIMIT|PROVIDER_REFUSAL_OR_FORMAT|PROVIDER_RESPONSE_TOO_LARGE|SCHEMA_[A-Z_]+|RULE_[A-Z_]+|REPEATED_REJECTED_RULE|RESULT_SAVE_FAILED)$/.test(e.message)?e.message:'REQUEST_OR_SAVE_UNCERTAIN';await db.query("UPDATE cj_llm_research_attempts SET status='FAILED_NO_AUTOMATIC_RETRY',error=$2 WHERE id=$1 AND status='RESERVED'",[r.id,reason]);return {status:'FAILED_NO_AUTOMATIC_RETRY',reason,paidCallsAttempted:1,reservationRetained:true};}
+ }catch(e){const reason=/^(PROVIDER_HTTP_\d+|PROVIDER_INCOMPLETE|USAGE_LIMIT|PROVIDER_REFUSAL_OR_FORMAT|PROVIDER_RESPONSE_TOO_LARGE|SCHEMA_[A-Z_]+|RULE_[A-Z_]+|REPEATED_REJECTED_RULE|REPEATED_COMPLETED_RULE|RESULT_SAVE_FAILED)$/.test(e.message)?e.message:'REQUEST_OR_SAVE_UNCERTAIN';await db.query("UPDATE cj_llm_research_attempts SET status='FAILED_NO_AUTOMATIC_RETRY',error=$2 WHERE id=$1 AND status='RESERVED'",[r.id,reason]);return {status:'FAILED_NO_AUTOMATIC_RETRY',reason,paidCallsAttempted:1,reservationRetained:true};}
 }
