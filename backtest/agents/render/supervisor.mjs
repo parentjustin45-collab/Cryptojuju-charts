@@ -18,6 +18,7 @@ import {runOlderHistoryBatch} from './older-history-worker.mjs';
 import {dryRunLlm,runLlmResearch} from './llm-research.mjs';
 import {runLevel5Pilot} from './level5-vector-diagnostic.mjs';
 import {runStructuredExecution} from './level5-structured-execution.mjs';
+import {auditFeedback} from './level5-rule-contract.mjs';
 import {runAdaptiveResearch} from './adaptive-research.mjs';
 import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
@@ -503,6 +504,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_L5_STRUCTURED_EXECUTION '+JSON.stringify(await runStructuredExecution(db)));}
     catch{console.error('CJ_L5_STRUCTURED_EXECUTION_ERROR');}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_L5_STRUCTURED_RULES_ENABLED==='1'&&!busy){
+    busy=true;
+    try{console.log('CJ_L5_MEMORY_AUDIT '+JSON.stringify(await auditFeedback(db)));}
+    catch(e){console.error('CJ_L5_MEMORY_AUDIT_ERROR '+(/^[A-Z_]+$/.test(e.message)?e.message:'AUDIT_FAILED'));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
