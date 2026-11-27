@@ -10,6 +10,12 @@ const VERSION='CJ_FIVE_INDICATOR_TWO_YEAR_REPLAY_V1_20261124';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const log=o=>console.log('CJ_STATE_RESEARCH '+JSON.stringify(o));
 const insist=(v,msg)=>{if(!v)throw Error(msg)};
+const compact=groups=>Object.fromEntries(Object.entries(groups).map(([g,v])=>[g,{count:v.count,offsets:Object.fromEntries(Object.entries(v.offsets).map(([off,features])=>[off,Object.fromEntries(Object.entries(features).map(([k,a])=>[k,[a.n,Number(a.sum.toPrecision(11)),Number(a.sumSq.toPrecision(11))]]))]))}]));
+// Keep each log below a conservative 12KB; split per group if necessary.
+function emitGroups(status,meta,groups){
+ const data=compact(groups);
+ for(const [group,value] of Object.entries(data))log({status,...meta,group,value});
+}
 const md=await readFile(new URL('../../HISTORICAL_LIBRARY_FINAL_AUDIT_2026-11-27.md',import.meta.url),'utf8');
 const baseline=JSON.parse(md.split('\x60\x60\x60json\n')[1].split('\n\x60\x60\x60')[0]);
 insist(baseline.status==='PASS'&&baseline.pairs.length===25,'AUDIT_BASELINE_REQUIRED');
@@ -56,15 +62,15 @@ try{
   // Separate channel logs keep each log bounded; retain stratified statistics and examples.
   for(const ch of CHANNELS){
    const {events,groups,samples}=study[ch];
-   log({status:'CHANNEL',symbol,timeframe,channel:ch,events,groups});
+   emitGroups('CHANNEL',{symbol,timeframe,channel:ch,events},groups);
    // Retain representative raw feature snapshots only for 1h to limit logs.
-   if(timeframe==='1h')log({status:'SAMPLES',symbol,timeframe,channel:ch,samples});
+   if(timeframe==='1h')for(const [group,sample] of Object.entries(samples))log({status:'SAMPLE',symbol,timeframe,channel:ch,group,sample});
   }
   log({status:'PAIR',symbol,timeframe,bars:source.barCount,events:n,channels:6});
  }
  insist(pairs===25&&bars===617151&&events===360092,'FINAL_COUNT_MISMATCH');
  await db.query('ROLLBACK');
- for(const ch of CHANNELS)log({status:'AGGREGATE',channel:ch,groups:aggregate[ch]});
+ for(const ch of CHANNELS)emitGroups('AGGREGATE',{channel:ch},aggregate[ch]);
  log({status:'PASS',pairs,bars,events,channels:150,phase:'training_only_features',readOnly:true,noTrading:true});
 }catch(e){if(db)try{await db.query('ROLLBACK')}catch{};log({status:'FAIL',pairs,bars,events,reason:String(e.message).slice(0,200)});process.exitCode=1;}
 finally{db?.release();await pool.end();}
