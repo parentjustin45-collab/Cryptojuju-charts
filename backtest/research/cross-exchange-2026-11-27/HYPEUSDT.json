@@ -1,0 +1,1284 @@
+{
+  "run": 46031158308,
+  "job": 140615093043,
+  "symbol": "HYPEUSDT",
+  "results": [
+    {
+      "status": "PASS",
+      "symbol": "HYPEUSDT",
+      "timeframe": "15m",
+      "bars": 2880,
+      "priceStep": 0.001,
+      "priceStepPolicy": "same Bitunix current quote precision on both feeds, not historical Binance tick",
+      "bitunixSha256": "d9f507394aab87891cd2087c0cbd06549603d7af12e6e0947d10915713912264",
+      "binanceSha256": "006e554de9ff8694e238450ead19f0482a0e6b88add42dd5f5435738beb4d623",
+      "ohlcAbsBps": {
+        "open": {
+          "mean": 0.3798870745504296,
+          "p95": 1.5731185502132483,
+          "max": 7.88172330066228
+        },
+        "high": {
+          "mean": 0.7790848160261101,
+          "p95": 3.0214991284127635,
+          "max": 36.93931398416783
+        },
+        "low": {
+          "mean": 0.993002942117678,
+          "p95": 3.8110224604459564,
+          "max": 81.54141611308674
+        },
+        "close": {
+          "mean": 0.37576288418601655,
+          "p95": 1.5884361845752704,
+          "max": 8.521309360047802
+        }
+      },
+      "meanSignedCloseBps": -0.001417519104162125,
+      "returnCorrelation": 0.9995847711865333,
+      "directionAgreement": 0.9920138888888889,
+      "volumeCorrelation": 0.795241597479,
+      "relativeVolumeCorrelation": 0.7723347212955434,
+      "relativeVolumeSamples": 2880,
+      "volumeRatio": 15.232215195635204,
+      "channels": {
+        "vector": {
+          "exact": {
+            "matched": 94,
+            "bitunix": 188,
+            "binance": 169,
+            "earlier": 0,
+            "later": 0,
+            "same": 94,
+            "meanAbsLag": 0,
+            "f1": 0.5266106442577031
+          },
+          "within1": {
+            "matched": 102,
+            "bitunix": 188,
+            "binance": 169,
+            "earlier": 5,
+            "later": 3,
+            "same": 94,
+            "meanAbsLag": 0.0784313725490196,
+            "f1": 0.5714285714285714
+          },
+          "within3": {
+            "matched": 111,
+            "bitunix": 188,
+            "binance": 169,
+            "earlier": 9,
+            "later": 8,
+            "same": 94,
+            "meanAbsLag": 0.2702702702702703,
+            "f1": 0.6218487394957983
+          }
+        },
+        "momentum": {
+          "exact": {
+            "matched": 71,
+            "bitunix": 73,
+            "binance": 73,
+            "earlier": 0,
+            "later": 0,
+            "same": 71,
+            "meanAbsLag": 0,
+            "f1": 0.9726027397260274
+          },
+          "within1": {
+            "matched": 72,
+            "bitunix": 73,
+            "binance": 73,
+            "earlier": 0,
+            "later": 1,
+            "same": 71,
+            "meanAbsLag": 0.013888888888888888,
+            "f1": 0.9863013698630136
+          },
+          "within3": {
+            "matched": 72,
+            "bitunix": 73,
+            "binance": 73,
+            "earlier": 0,
+            "later": 1,
+            "same": 71,
+            "meanAbsLag": 0.013888888888888888,
+            "f1": 0.9863013698630136
+          }
+        },
+        "speed": {
+          "exact": {
+            "matched": 303,
+            "bitunix": 511,
+            "binance": 447,
+            "earlier": 0,
+            "later": 0,
+            "same": 303,
+            "meanAbsLag": 0,
+            "f1": 0.6325678496868476
+          },
+          "within1": {
+            "matched": 313,
+            "bitunix": 511,
+            "binance": 447,
+            "earlier": 9,
+            "later": 1,
+            "same": 303,
+            "meanAbsLag": 0.03194888178913738,
+            "f1": 0.6534446764091858
+          },
+          "within3": {
+            "matched": 329,
+            "bitunix": 511,
+            "binance": 447,
+            "earlier": 14,
+            "later": 12,
+            "same": 303,
+            "meanAbsLag": 0.15501519756838905,
+            "f1": 0.6868475991649269
+          }
+        },
+        "cipher": {
+          "exact": {
+            "matched": 433,
+            "bitunix": 446,
+            "binance": 452,
+            "earlier": 0,
+            "later": 0,
+            "same": 433,
+            "meanAbsLag": 0,
+            "f1": 0.9643652561247216
+          },
+          "within1": {
+            "matched": 446,
+            "bitunix": 446,
+            "binance": 452,
+            "earlier": 6,
+            "later": 7,
+            "same": 433,
+            "meanAbsLag": 0.02914798206278027,
+            "f1": 0.9933184855233853
+          },
+          "within3": {
+            "matched": 446,
+            "bitunix": 446,
+            "binance": 452,
+            "earlier": 6,
+            "later": 7,
+            "same": 433,
+            "meanAbsLag": 0.02914798206278027,
+            "f1": 0.9933184855233853
+          }
+        },
+        "frank_cross": {
+          "exact": {
+            "matched": 59,
+            "bitunix": 64,
+            "binance": 59,
+            "earlier": 0,
+            "later": 0,
+            "same": 59,
+            "meanAbsLag": 0,
+            "f1": 0.959349593495935
+          },
+          "within1": {
+            "matched": 59,
+            "bitunix": 64,
+            "binance": 59,
+            "earlier": 0,
+            "later": 0,
+            "same": 59,
+            "meanAbsLag": 0,
+            "f1": 0.959349593495935
+          },
+          "within3": {
+            "matched": 59,
+            "bitunix": 64,
+            "binance": 59,
+            "earlier": 0,
+            "later": 0,
+            "same": 59,
+            "meanAbsLag": 0,
+            "f1": 0.959349593495935
+          }
+        },
+        "frank_divergence": {
+          "exact": {
+            "matched": 376,
+            "bitunix": 423,
+            "binance": 432,
+            "earlier": 0,
+            "later": 0,
+            "same": 376,
+            "meanAbsLag": 0,
+            "f1": 0.87953216374269
+          },
+          "within1": {
+            "matched": 387,
+            "bitunix": 423,
+            "binance": 432,
+            "earlier": 7,
+            "later": 4,
+            "same": 376,
+            "meanAbsLag": 0.028423772609819122,
+            "f1": 0.9052631578947369
+          },
+          "within3": {
+            "matched": 394,
+            "bitunix": 423,
+            "binance": 432,
+            "earlier": 9,
+            "later": 9,
+            "same": 376,
+            "meanAbsLag": 0.06852791878172589,
+            "f1": 0.9216374269005848
+          }
+        }
+      }
+    },
+    {
+      "status": "PASS",
+      "symbol": "HYPEUSDT",
+      "timeframe": "30m",
+      "bars": 1440,
+      "priceStep": 0.001,
+      "priceStepPolicy": "same Bitunix current quote precision on both feeds, not historical Binance tick",
+      "bitunixSha256": "062d12bac7a39e7d75e2a8e0cc68684abece821638452a83b2d30da4e1dbbf8a",
+      "binanceSha256": "81aeccb5cc85db95d8e35e5c9b53004f32c4dba7eacd712ffb79fed748bacfe3",
+      "ohlcAbsBps": {
+        "open": {
+          "mean": 0.38728823328130463,
+          "p95": 1.5402387370055948,
+          "max": 7.88172330066228
+        },
+        "high": {
+          "mean": 0.8945953351184978,
+          "p95": 3.2869972749716148,
+          "max": 33.35092348284996
+        },
+        "low": {
+          "mean": 1.2133214656604627,
+          "p95": 4.679989881103408,
+          "max": 81.54141611308674
+        },
+        "close": {
+          "mean": 0.3856537477995629,
+          "p95": 1.5765410688950432,
+          "max": 8.521309360047802
+        }
+      },
+      "meanSignedCloseBps": -0.01376069131377476,
+      "returnCorrelation": 0.999768176337465,
+      "directionAgreement": 0.9923611111111111,
+      "volumeCorrelation": 0.8453509189016578,
+      "relativeVolumeCorrelation": 0.852417826768699,
+      "relativeVolumeSamples": 1440,
+      "volumeRatio": 15.232214471089453,
+      "channels": {
+        "vector": {
+          "exact": {
+            "matched": 59,
+            "bitunix": 90,
+            "binance": 89,
+            "earlier": 0,
+            "later": 0,
+            "same": 59,
+            "meanAbsLag": 0,
+            "f1": 0.659217877094972
+          },
+          "within1": {
+            "matched": 62,
+            "bitunix": 90,
+            "binance": 89,
+            "earlier": 2,
+            "later": 1,
+            "same": 59,
+            "meanAbsLag": 0.04838709677419355,
+            "f1": 0.6927374301675978
+          },
+          "within3": {
+            "matched": 67,
+            "bitunix": 90,
+            "binance": 89,
+            "earlier": 5,
+            "later": 3,
+            "same": 59,
+            "meanAbsLag": 0.2537313432835821,
+            "f1": 0.7486033519553073
+          }
+        },
+        "momentum": {
+          "exact": {
+            "matched": 37,
+            "bitunix": 37,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 37,
+            "meanAbsLag": 0,
+            "f1": 0.9866666666666667
+          },
+          "within1": {
+            "matched": 37,
+            "bitunix": 37,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 37,
+            "meanAbsLag": 0,
+            "f1": 0.9866666666666667
+          },
+          "within3": {
+            "matched": 37,
+            "bitunix": 37,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 37,
+            "meanAbsLag": 0,
+            "f1": 0.9866666666666667
+          }
+        },
+        "speed": {
+          "exact": {
+            "matched": 179,
+            "bitunix": 274,
+            "binance": 244,
+            "earlier": 0,
+            "later": 0,
+            "same": 179,
+            "meanAbsLag": 0,
+            "f1": 0.6911196911196911
+          },
+          "within1": {
+            "matched": 186,
+            "bitunix": 274,
+            "binance": 244,
+            "earlier": 2,
+            "later": 5,
+            "same": 179,
+            "meanAbsLag": 0.03763440860215054,
+            "f1": 0.7181467181467182
+          },
+          "within3": {
+            "matched": 194,
+            "bitunix": 274,
+            "binance": 244,
+            "earlier": 7,
+            "later": 8,
+            "same": 179,
+            "meanAbsLag": 0.14432989690721648,
+            "f1": 0.749034749034749
+          }
+        },
+        "cipher": {
+          "exact": {
+            "matched": 230,
+            "bitunix": 236,
+            "binance": 236,
+            "earlier": 0,
+            "later": 0,
+            "same": 230,
+            "meanAbsLag": 0,
+            "f1": 0.9745762711864406
+          },
+          "within1": {
+            "matched": 234,
+            "bitunix": 236,
+            "binance": 236,
+            "earlier": 3,
+            "later": 1,
+            "same": 230,
+            "meanAbsLag": 0.017094017094017096,
+            "f1": 0.9915254237288136
+          },
+          "within3": {
+            "matched": 234,
+            "bitunix": 236,
+            "binance": 236,
+            "earlier": 3,
+            "later": 1,
+            "same": 230,
+            "meanAbsLag": 0.017094017094017096,
+            "f1": 0.9915254237288136
+          }
+        },
+        "frank_cross": {
+          "exact": {
+            "matched": 38,
+            "bitunix": 39,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 38,
+            "meanAbsLag": 0,
+            "f1": 0.987012987012987
+          },
+          "within1": {
+            "matched": 38,
+            "bitunix": 39,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 38,
+            "meanAbsLag": 0,
+            "f1": 0.987012987012987
+          },
+          "within3": {
+            "matched": 38,
+            "bitunix": 39,
+            "binance": 38,
+            "earlier": 0,
+            "later": 0,
+            "same": 38,
+            "meanAbsLag": 0,
+            "f1": 0.987012987012987
+          }
+        },
+        "frank_divergence": {
+          "exact": {
+            "matched": 220,
+            "bitunix": 240,
+            "binance": 238,
+            "earlier": 0,
+            "later": 0,
+            "same": 220,
+            "meanAbsLag": 0,
+            "f1": 0.9205020920502092
+          },
+          "within1": {
+            "matched": 225,
+            "bitunix": 240,
+            "binance": 238,
+            "earlier": 1,
+            "later": 4,
+            "same": 220,
+            "meanAbsLag": 0.022222222222222223,
+            "f1": 0.9414225941422594
+          },
+          "within3": {
+            "matched": 228,
+            "bitunix": 240,
+            "binance": 238,
+            "earlier": 3,
+            "later": 5,
+            "same": 220,
+            "meanAbsLag": 0.05263157894736842,
+            "f1": 0.9539748953974896
+          }
+        }
+      }
+    },
+    {
+      "status": "PASS",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1h",
+      "bars": 720,
+      "priceStep": 0.001,
+      "priceStepPolicy": "same Bitunix current quote precision on both feeds, not historical Binance tick",
+      "bitunixSha256": "12f6f354d7b30ac4415d27b149def8a0c10c292e69b91446d31049f61ac257e7",
+      "binanceSha256": "44c482d4a6b91a25d6d23a06dbd2fc7731752f3bf37346ebbc4478ff8786d918",
+      "ohlcAbsBps": {
+        "open": {
+          "mean": 0.39606106577480377,
+          "p95": 1.5355479346879086,
+          "max": 7.88172330066228
+        },
+        "high": {
+          "mean": 1.084082038901229,
+          "p95": 3.8315955692824755,
+          "max": 33.35092348284996
+        },
+        "low": {
+          "mean": 1.3448293195181955,
+          "p95": 5.252044545911438,
+          "max": 37.745757705058836
+        },
+        "close": {
+          "mean": 0.39565352626622097,
+          "p95": 1.525126458402637,
+          "max": 7.627474161930881
+        }
+      },
+      "meanSignedCloseBps": -0.0037096806157642685,
+      "returnCorrelation": 0.9998902729257144,
+      "directionAgreement": 0.9986111111111111,
+      "volumeCorrelation": 0.8644032799264423,
+      "relativeVolumeCorrelation": 0.8939684585429314,
+      "relativeVolumeSamples": 720,
+      "volumeRatio": 15.232215308551439,
+      "channels": {
+        "vector": {
+          "exact": {
+            "matched": 25,
+            "bitunix": 38,
+            "binance": 34,
+            "earlier": 0,
+            "later": 0,
+            "same": 25,
+            "meanAbsLag": 0,
+            "f1": 0.6944444444444444
+          },
+          "within1": {
+            "matched": 25,
+            "bitunix": 38,
+            "binance": 34,
+            "earlier": 0,
+            "later": 0,
+            "same": 25,
+            "meanAbsLag": 0,
+            "f1": 0.6944444444444444
+          },
+          "within3": {
+            "matched": 26,
+            "bitunix": 38,
+            "binance": 34,
+            "earlier": 1,
+            "later": 0,
+            "same": 25,
+            "meanAbsLag": 0.07692307692307693,
+            "f1": 0.7222222222222222
+          }
+        },
+        "momentum": {
+          "exact": {
+            "matched": 19,
+            "bitunix": 19,
+            "binance": 19,
+            "earlier": 0,
+            "later": 0,
+            "same": 19,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 19,
+            "bitunix": 19,
+            "binance": 19,
+            "earlier": 0,
+            "later": 0,
+            "same": 19,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 19,
+            "bitunix": 19,
+            "binance": 19,
+            "earlier": 0,
+            "later": 0,
+            "same": 19,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "speed": {
+          "exact": {
+            "matched": 92,
+            "bitunix": 129,
+            "binance": 116,
+            "earlier": 0,
+            "later": 0,
+            "same": 92,
+            "meanAbsLag": 0,
+            "f1": 0.7510204081632653
+          },
+          "within1": {
+            "matched": 92,
+            "bitunix": 129,
+            "binance": 116,
+            "earlier": 0,
+            "later": 0,
+            "same": 92,
+            "meanAbsLag": 0,
+            "f1": 0.7510204081632653
+          },
+          "within3": {
+            "matched": 94,
+            "bitunix": 129,
+            "binance": 116,
+            "earlier": 1,
+            "later": 1,
+            "same": 92,
+            "meanAbsLag": 0.06382978723404255,
+            "f1": 0.7673469387755102
+          }
+        },
+        "cipher": {
+          "exact": {
+            "matched": 104,
+            "bitunix": 104,
+            "binance": 106,
+            "earlier": 0,
+            "later": 0,
+            "same": 104,
+            "meanAbsLag": 0,
+            "f1": 0.9904761904761905
+          },
+          "within1": {
+            "matched": 104,
+            "bitunix": 104,
+            "binance": 106,
+            "earlier": 0,
+            "later": 0,
+            "same": 104,
+            "meanAbsLag": 0,
+            "f1": 0.9904761904761905
+          },
+          "within3": {
+            "matched": 104,
+            "bitunix": 104,
+            "binance": 106,
+            "earlier": 0,
+            "later": 0,
+            "same": 104,
+            "meanAbsLag": 0,
+            "f1": 0.9904761904761905
+          }
+        },
+        "frank_cross": {
+          "exact": {
+            "matched": 17,
+            "bitunix": 17,
+            "binance": 17,
+            "earlier": 0,
+            "later": 0,
+            "same": 17,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 17,
+            "bitunix": 17,
+            "binance": 17,
+            "earlier": 0,
+            "later": 0,
+            "same": 17,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 17,
+            "bitunix": 17,
+            "binance": 17,
+            "earlier": 0,
+            "later": 0,
+            "same": 17,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "frank_divergence": {
+          "exact": {
+            "matched": 104,
+            "bitunix": 112,
+            "binance": 112,
+            "earlier": 0,
+            "later": 0,
+            "same": 104,
+            "meanAbsLag": 0,
+            "f1": 0.9285714285714286
+          },
+          "within1": {
+            "matched": 105,
+            "bitunix": 112,
+            "binance": 112,
+            "earlier": 0,
+            "later": 1,
+            "same": 104,
+            "meanAbsLag": 0.009523809523809525,
+            "f1": 0.9375
+          },
+          "within3": {
+            "matched": 105,
+            "bitunix": 112,
+            "binance": 112,
+            "earlier": 0,
+            "later": 1,
+            "same": 104,
+            "meanAbsLag": 0.009523809523809525,
+            "f1": 0.9375
+          }
+        }
+      }
+    },
+    {
+      "status": "PASS",
+      "symbol": "HYPEUSDT",
+      "timeframe": "4h",
+      "bars": 180,
+      "priceStep": 0.001,
+      "priceStepPolicy": "same Bitunix current quote precision on both feeds, not historical Binance tick",
+      "bitunixSha256": "451a3252dae807a51e70d5f8af4ca61ade936fad0dd15d3e4cc4fc68525ed2e9",
+      "binanceSha256": "07379d2113029d524bd58973cb45a2e6cea15ffdcb316fd7c32ba5f2e204b834",
+      "ohlcAbsBps": {
+        "open": {
+          "mean": 0.4206027043418238,
+          "p95": 1.5130353817516262,
+          "max": 5.366707095859624
+        },
+        "high": {
+          "mean": 1.248265615440675,
+          "p95": 5.222954886727749,
+          "max": 11.100594758182147
+        },
+        "low": {
+          "mean": 1.8500593767166094,
+          "p95": 6.601967386281604,
+          "max": 37.745757705058836
+        },
+        "close": {
+          "mean": 0.4125018947425734,
+          "p95": 1.6112240345034223,
+          "max": 5.259372953944075
+        }
+      },
+      "meanSignedCloseBps": -0.05471403206291914,
+      "returnCorrelation": 0.9999680226564537,
+      "directionAgreement": 0.9944444444444445,
+      "volumeCorrelation": 0.8861482880756056,
+      "relativeVolumeCorrelation": 0.9193367105025472,
+      "relativeVolumeSamples": 180,
+      "volumeRatio": 15.232215308551446,
+      "channels": {
+        "vector": {
+          "exact": {
+            "matched": 6,
+            "bitunix": 13,
+            "binance": 11,
+            "earlier": 0,
+            "later": 0,
+            "same": 6,
+            "meanAbsLag": 0,
+            "f1": 0.5
+          },
+          "within1": {
+            "matched": 6,
+            "bitunix": 13,
+            "binance": 11,
+            "earlier": 0,
+            "later": 0,
+            "same": 6,
+            "meanAbsLag": 0,
+            "f1": 0.5
+          },
+          "within3": {
+            "matched": 7,
+            "bitunix": 13,
+            "binance": 11,
+            "earlier": 0,
+            "later": 1,
+            "same": 6,
+            "meanAbsLag": 0.2857142857142857,
+            "f1": 0.5833333333333334
+          }
+        },
+        "momentum": {
+          "exact": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "speed": {
+          "exact": {
+            "matched": 26,
+            "bitunix": 30,
+            "binance": 31,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 0.8524590163934426
+          },
+          "within1": {
+            "matched": 26,
+            "bitunix": 30,
+            "binance": 31,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 0.8524590163934426
+          },
+          "within3": {
+            "matched": 26,
+            "bitunix": 30,
+            "binance": 31,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 0.8524590163934426
+          }
+        },
+        "cipher": {
+          "exact": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "frank_cross": {
+          "exact": {
+            "matched": 7,
+            "bitunix": 7,
+            "binance": 7,
+            "earlier": 0,
+            "later": 0,
+            "same": 7,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 7,
+            "bitunix": 7,
+            "binance": 7,
+            "earlier": 0,
+            "later": 0,
+            "same": 7,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 7,
+            "bitunix": 7,
+            "binance": 7,
+            "earlier": 0,
+            "later": 0,
+            "same": 7,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "frank_divergence": {
+          "exact": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 26,
+            "bitunix": 26,
+            "binance": 26,
+            "earlier": 0,
+            "later": 0,
+            "same": 26,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        }
+      }
+    },
+    {
+      "status": "PASS",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1d",
+      "bars": 30,
+      "priceStep": 0.001,
+      "priceStepPolicy": "same Bitunix current quote precision on both feeds, not historical Binance tick",
+      "bitunixSha256": "c2c00b9fb87b961e5b470f50e00509e1292faa870d2624a209cbec7f81bd2508",
+      "binanceSha256": "94876c90b774c9ba62cd227fda1c6b2a95b04f2b52aeb7b086a67c088abbee64",
+      "ohlcAbsBps": {
+        "open": {
+          "mean": 0.31434337734622303,
+          "p95": 1.1366736382645293,
+          "max": 1.3825227850383648
+        },
+        "high": {
+          "mean": 1.7984537812597563,
+          "p95": 5.222954886727749,
+          "max": 11.100594758182147
+        },
+        "low": {
+          "mean": 1.8019588104245903,
+          "p95": 5.233188382322007,
+          "max": 7.478606282029787
+        },
+        "close": {
+          "mean": 0.2997656468064491,
+          "p95": 1.0230062744387425,
+          "max": 1.3825227850383648
+        }
+      },
+      "meanSignedCloseBps": 0.11780063875077573,
+      "returnCorrelation": 0.9999985553348958,
+      "directionAgreement": 1,
+      "volumeCorrelation": 0.7830579318595879,
+      "relativeVolumeCorrelation": 0.815948025896041,
+      "relativeVolumeSamples": 30,
+      "volumeRatio": 15.232215515564523,
+      "channels": {
+        "vector": {
+          "exact": {
+            "matched": 0,
+            "bitunix": 0,
+            "binance": 0,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": null
+          },
+          "within1": {
+            "matched": 0,
+            "bitunix": 0,
+            "binance": 0,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": null
+          },
+          "within3": {
+            "matched": 0,
+            "bitunix": 0,
+            "binance": 0,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": null
+          }
+        },
+        "momentum": {
+          "exact": {
+            "matched": 1,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 1,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 1,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 1,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 1,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 1,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "speed": {
+          "exact": {
+            "matched": 0,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": 0
+          },
+          "within1": {
+            "matched": 0,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": 0
+          },
+          "within3": {
+            "matched": 0,
+            "bitunix": 1,
+            "binance": 1,
+            "earlier": 0,
+            "later": 0,
+            "same": 0,
+            "meanAbsLag": null,
+            "f1": 0
+          }
+        },
+        "cipher": {
+          "exact": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "frank_cross": {
+          "exact": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within1": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          },
+          "within3": {
+            "matched": 4,
+            "bitunix": 4,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 4,
+            "meanAbsLag": 0,
+            "f1": 1
+          }
+        },
+        "frank_divergence": {
+          "exact": {
+            "matched": 3,
+            "bitunix": 3,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 3,
+            "meanAbsLag": 0,
+            "f1": 0.8571428571428571
+          },
+          "within1": {
+            "matched": 3,
+            "bitunix": 3,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 3,
+            "meanAbsLag": 0,
+            "f1": 0.8571428571428571
+          },
+          "within3": {
+            "matched": 3,
+            "bitunix": 3,
+            "binance": 4,
+            "earlier": 0,
+            "later": 0,
+            "same": 3,
+            "meanAbsLag": 0,
+            "f1": 0.8571428571428571
+          }
+        }
+      }
+    }
+  ],
+  "archives": [
+    {
+      "status": "READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "15m",
+      "receipts": [
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/15m/HYPEUSDT-15m-2026-08.zip",
+          "sha256": "a4cb732c9147c6255b02063341744c76319358a668da303722eaf620cb925b38",
+          "bytes": 140996
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/15m/HYPEUSDT-15m-2026-09.zip",
+          "sha256": "703ca91c42946fae41ee9391a71d1f8d2b1e63490ce6082e15ffe150c8287174",
+          "bytes": 137845
+        }
+      ]
+    },
+    {
+      "status": "READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "30m",
+      "receipts": [
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/30m/HYPEUSDT-30m-2026-08.zip",
+          "sha256": "6fecb08c890d48dd11fd80b7a7359ba833a571fd8c9d97dd93d593f1e8a37885",
+          "bytes": 72790
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/30m/HYPEUSDT-30m-2026-09.zip",
+          "sha256": "8d72a190b81f869e3cef6de89f146a6ae943ba35e00f61d36c3d4b96febcd78e",
+          "bytes": 71235
+        }
+      ]
+    },
+    {
+      "status": "READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1h",
+      "receipts": [
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1h/HYPEUSDT-1h-2026-08.zip",
+          "sha256": "4179d7e3c3df211d37f58f3528e5575b33c8aaaa71f218defe70b6ca8febdd24",
+          "bytes": 37619
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1h/HYPEUSDT-1h-2026-09.zip",
+          "sha256": "3d088ec28c4da98c744a34da921303c13f3773351ba12ae39aa167a29e742542",
+          "bytes": 36701
+        }
+      ]
+    },
+    {
+      "status": "READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "4h",
+      "receipts": [
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/4h/HYPEUSDT-4h-2026-08.zip",
+          "sha256": "b31ef16a279dcd772f749bbaf65494d045d08fb951ff80be9c1d818f11b937aa",
+          "bytes": 10393
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/4h/HYPEUSDT-4h-2026-09.zip",
+          "sha256": "7b1f6ea24e5bbc201aac059dbae555db1255ce8936d9f1cbe1dfedc7d70bf255",
+          "bytes": 10129
+        }
+      ]
+    },
+    {
+      "status": "READY",
+      "symbol": "HYPEUSDT",
+      "timeframe": "1d",
+      "receipts": [
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-03.zip",
+          "sha256": "7a8d9d241f8e4db1c10dc2cb19ef2e4f2d85407c95b271216c0ba2e2c3cd6f21",
+          "bytes": 2097
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-04.zip",
+          "sha256": "26bc9630661f4d1e8dc0762b14c39b8714dcd53cf421bc618683582f481a4045",
+          "bytes": 2005
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-05.zip",
+          "sha256": "59c73e3a94f80262753c2c9624a06503be8edae3927cb26c02b6427cbc6cd1bd",
+          "bytes": 2106
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-06.zip",
+          "sha256": "2df2606f34e5ac412a19ff5fc3b5b973a0a994e6ce71222b145c39e267c24b1f",
+          "bytes": 2086
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-07.zip",
+          "sha256": "f742fa74d34f1beeba7472cfacea28660e5318a59ecb058b747546fbec12fd4a",
+          "bytes": 2108
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-08.zip",
+          "sha256": "98e88c02e78c3cb08728b866cfcf3b82c5e7efaf65f31336347f12189a2ae025",
+          "bytes": 2095
+        },
+        {
+          "url": "https://data.binance.vision/data/futures/um/monthly/klines/HYPEUSDT/1d/HYPEUSDT-1d-2026-09.zip",
+          "sha256": "e3bcb674e69878666a3c3810e98a089bb4a68bb3ccca2cf32927b2d742bac9f6",
+          "bytes": 2051
+        }
+      ]
+    }
+  ]
+}
