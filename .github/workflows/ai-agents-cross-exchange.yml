@@ -1,0 +1,39 @@
+name: DEV Binance Bitunix paired comparison
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/cross-exchange*'
+      - '.github/workflows/ai-agents-cross-exchange.yml'
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test backtest/agents/render/cross-exchange-comparison.test.mjs
+  compare:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        symbol: [BTCUSDT, ETHUSDT, SOLUSDT, HYPEUSDT, 1000PEPEUSDT]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python3 backtest/agents/render/cross-exchange-binance.py ${{ matrix.symbol }}
+      - run: node backtest/agents/render/cross-exchange-runner.mjs ${{ matrix.symbol }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comparison-${{ matrix.symbol }}
+          path: cross-exchange-output/
