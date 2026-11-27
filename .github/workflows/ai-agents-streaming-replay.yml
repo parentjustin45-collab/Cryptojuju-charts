@@ -1,0 +1,20 @@
+name: DEV streaming five year replay parity
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/streaming-*'
+      - '.github/workflows/ai-agents-streaming-replay.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/streaming-period.mjs
+      - run: node --max-old-space-size=1024 --test backtest/agents/render/streaming-originals.test.mjs
