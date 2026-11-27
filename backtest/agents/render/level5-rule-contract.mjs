@@ -115,7 +115,8 @@ export async function auditFeedback(db){
  if(!q.rowCount)return {status:'NO_STRUCTURED_MEMORY_YET',count:0};
  const row=q.rows[0],p=JSON.parse(row.packet),latest=feedbackFromStructured(row,p),memory=await readFeedback(db,p);
  need(latest&&memory.some(x=>x.ruleId===latest.ruleId&&x.sameScope),'MEMORY_READBACK');
- return {status:'MEMORY_READBACK_OK',channel:p.channel,symbol:p.symbol,timeframe:p.timeframe,count:memory.length,latest,duplicateBlocked:memory.some(x=>x.ruleId===latest.ruleId)};
+ let duplicateBlocked=false;try{validateNewRule(latest.rule,p,memory);}catch(e){duplicateBlocked=['REPEATED_REJECTED_RULE','REPEATED_COMPLETED_RULE'].includes(e.message);}need(duplicateBlocked,'MEMORY_DUPLICATE_GATE');
+ return {status:'MEMORY_READBACK_OK',channel:p.channel,symbol:p.symbol,timeframe:p.timeframe,count:memory.length,latest,duplicateBlocked};
 }
 export function validateNewRule(rule,scope,feedback=[]){
  const r=validateRule(rule),id=ruleId(r,scope);
