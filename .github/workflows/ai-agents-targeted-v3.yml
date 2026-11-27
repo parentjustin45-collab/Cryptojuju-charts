@@ -1,0 +1,19 @@
+name: DEV targeted V3 indicator experiments
+on:
+  push:
+    branches: [dev/ai-agents-phase1]
+    paths:
+      - 'backtest/agents/render/historical-targeted-v3*'
+      - '.github/workflows/ai-agents-targeted-v3.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check backtest/agents/render/historical-targeted-v3-research.mjs
+      - run: node --test backtest/agents/render/historical-targeted-v3-experiments.test.mjs backtest/agents/render/historical-targeted-experiments.test.mjs backtest/agents/render/historical-single-change-experiments.test.mjs backtest/agents/render/historical-state-diagnostics.test.mjs
