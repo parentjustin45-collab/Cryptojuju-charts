@@ -137,6 +137,17 @@ export function studyContinuousHistoricalPeriod(source,{priceStep}={}){
       startMs:source.historyWindow.startTime,endMs:source.historyWindow.endTime
     }))
     throw Error(target.coverageKind==='FULL_TWO_YEAR'?'REPLAY_REQUIRES_COMPLETE_TWO_YEAR_VERIFIED_SOURCE':'REPLAY_REQUIRES_COMPLETE_LISTING_ADJUSTED_VERIFIED_SOURCE');
+  return studyVerifiedCore(source,target,priceStep,'verified Bitunix trading_pairs caller');
+}
+// Separate explicit cross-exchange entry; old output and source contract unchanged.
+export function studyMatchedExchangePeriod(source,{priceStep,target}={}){
+ requireStep(priceStep);
+ const m=source?.market,w=source?.historyWindow;
+ const provenance=m?.exchange==='Binance'?'CJ_BINANCE_UM_POSTGRES_ARCHIVE_VERIFIED_V1':m?.exchange==='Bitunix'?'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1':null;
+ if(!provenance||source.source!==provenance||source.status!=='CONTIGUOUS_SHA256_VERIFIED_UTC'||m.priceType!=='LAST_PRICE'||!target||w?.startTime!==target.startMs||w?.endTime!==target.endMs||source.candles?.length!==expectedHistoricalBars({timeframe:m.timeframe,startMs:target.startMs,endMs:target.endMs})||!/^[a-f0-9]{64}$/.test(source.sequenceSha256??''))throw Error('MATCHED_SOURCE_NOT_VERIFIED');
+ return {...studyVerifiedCore(source,target,priceStep,'COMMON_FIXED_RESEARCH_STEP_NOT_BINANCE_NATIVE_TICK'),exchange:m.exchange,sourceProtocol:source.source,comparisonOnly:true};
+}
+function studyVerifiedCore(source,target,priceStep,priceStepSource){
   const bars=source.candles,n=bars.length;
   const results={
     vector:vectorAIT(bars,{minTick:priceStep}),
@@ -166,7 +177,7 @@ export function studyContinuousHistoricalPeriod(source,{priceStep}={}){
     holdoutStartTime:bars[splitIndex].time,
     executionConvention:'signal confirmed at candle close, hypothetical entry next candle open',
     horizonBars:HORIZONS,
-    priceStep,priceStepSource:'verified Bitunix trading_pairs caller',
+    priceStep,priceStepSource,
     indicators:byIndicator,
     frankImplementation:'WEBAPP_v2.2_PORT_NOT_PINE_PARITY',
     noLookaheadTestsPassed:true,trainingOptimizationPerformed:false,
