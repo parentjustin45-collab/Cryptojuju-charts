@@ -11,6 +11,7 @@ import {normalizeBitunixOpenEnvelope} from '../ohlc-bitunix-open-envelope.mjs';
 import {auditData} from './roles/01-bitunix-data.mjs';
 import {VERIFIED_INTERVALS} from './research-batch.mjs';
 import {FIVE_CRYPTO_SYMBOLS,FIVE_TIMEFRAMES} from './render/five-by-five.mjs';
+import {CANDIDATES,RANGE} from './render/level6-expansion-plan.mjs';
 
 export const PILOT_SYMBOLS=Object.freeze(['BTCUSDT','ETHUSDT','SOLUSDT']);
 export const PILOT_TIMEFRAMES=Object.freeze(['15m','1h','4h']);
@@ -42,9 +43,10 @@ export async function fetchBitunixDataPilot({
   symbol='BTCUSDT',timeframe='15m',closedBars=96,
   nowMs=Date.now(),historicalEndExclusiveMs=null,
   anchorBars=3,pageBars=150,
-  fetchPage=makeBitunixFetchPage(),retries=2
+  fetchPage=makeBitunixFetchPage(),retries=2,expansionOnly=false
 }={}) {
-  const expanded=FIVE_CRYPTO_SYMBOLS.includes(symbol)&&FIVE_TIMEFRAMES.includes(timeframe);
+  const expansion=expansionOnly===true&&CANDIDATES.includes(symbol)&&FIVE_TIMEFRAMES.includes(timeframe)&&Number.isSafeInteger(historicalEndExclusiveMs)&&historicalEndExclusiveMs<=RANGE.endMs&&historicalEndExclusiveMs-closedBars*VERIFIED_INTERVALS[timeframe]>=RANGE.startMs;
+  const expanded=(FIVE_CRYPTO_SYMBOLS.includes(symbol)&&FIVE_TIMEFRAMES.includes(timeframe))||expansion;
   const intraday=expanded||(PILOT_SYMBOLS.includes(symbol)&&PILOT_TIMEFRAMES.includes(timeframe))
     ||(PILOT_TIMEFRAMES.includes(timeframe)&&DAILY_INTRADAY_RESEARCH_SYMBOLS.includes(symbol));
   const daily=timeframe==='1d'&&DAILY_RESEARCH_SYMBOLS.includes(symbol);
