@@ -12,6 +12,7 @@ import {stratifyFold,evaluate} from './level5-vector-diagnostic.mjs';
 import {atr14,findPivots} from './state-pivot-observer.mjs';
 import {historicalTargetFor,loadHistoricalPeriod} from './historical-period.mjs';
 import {storageState} from './storage-policy.mjs';
+import {initializeRefinement,followupIdentity,requirePriorFeedback} from './level5-refinement.mjs';
 export const VERSION='CJ_L5_STRUCTURED_EXECUTION_V1';
 export const PILOT_TIMEFRAMES=['1d','4h','1h'];
 const hash=x=>createHash('sha256').update(x).digest('hex'),need=(x,m)=>{if(!x)throw Error(m)};
@@ -23,6 +24,11 @@ export function verifyStructuredResult(row,packet,liveFeedback=[]){
  const review=validateNewRule(result.experimentRule,packet,result.feedback);
  need(same(review,result.ruleReview)&&hash(JSON.stringify(requestBody(packet,{structured:true,feedback:result.feedback})))===result.requestSha256,'REVIEW_PROVENANCE');
  need(review.rule.kind==='NONE'||proposal.kind==='DIAGNOSTIC_ONLY','DIAGNOSTIC_ONLY');
+ if(Number(row.cycle_round??0)>0){
+  const identity=followupIdentity(packet.parentId,trim(row.prior_attempt_id),trim(row.prior_report_sha),Number(row.cycle_round)-1);
+  need(trim(row.reservation_parent_id)===identity.reservationParentId&&same(result.refinement,identity)&&trim(row.prior_actual_sha)===identity.priorReportSha,'REFINEMENT_LINEAGE');
+  requirePriorFeedback(result.feedback,{reportSha256:identity.priorReportSha,ruleId:trim(row.prior_rule_id)});
+ }else need(!result.refinement,'UNEXPECTED_REFINEMENT');
  const duplicate=review.rule.kind!=='NONE'&&liveFeedback.some(x=>x.ruleId===review.ruleId);
  return {...review,duplicate,proposalKind:proposal.kind};
 }
@@ -40,13 +46,14 @@ export function runDiagnostic({channel,bars,priceStep,rule}){
 export async function runStructuredExecution(db){
  if(process.memoryUsage().rss>350*1024*1024)return {status:'PAUSED_MEMORY'};
  const cap=await db.query('SELECT pg_database_size(current_database())::bigint AS bytes');if(storageState(Number(cap.rows[0]?.bytes)).warning)return {status:'PAUSED_STORAGE'};
+ await initializeRefinement(db);
  const c=await db.connect();let attemptId=null;
  try{
   await c.query('BEGIN');
   const lock=await c.query("SELECT pg_try_advisory_xact_lock(hashtext('CJ_LEVEL5_STRUCTURED_V1')) AS locked");
   if(!lock.rows[0].locked){await c.query('ROLLBACK');return {status:'BUSY'};}
   await c.query("CREATE TABLE IF NOT EXISTS cj_llm_structured_executions (attempt_id char(64) PRIMARY KEY,rule_id char(64),status text NOT NULL,report text,report_sha256 char(64),error text,created_at timestamptz NOT NULL DEFAULT now())");
-  const q=await c.query("SELECT trim(l.id) AS attempt_id,l.result,trim(l.result_sha256) AS result_sha,l.packet,trim(l.packet_sha256) AS packet_sha,trim(a.id) AS adaptive_id,a.report AS adaptive_report,trim(a.report_sha256) AS adaptive_sha,trim(p.id) AS parent_id,p.report AS parent_report,trim(p.report_sha256) AS parent_sha FROM cj_llm_research_attempts l JOIN cj_adaptive_research a ON a.id=l.parent_id JOIN cj_autonomous_experiments p ON p.id=a.parent_id LEFT JOIN cj_llm_structured_executions x ON x.attempt_id=l.id WHERE l.status='HUMAN_REVIEW_ONLY' AND a.status='COMPLETED' AND p.status='COMPLETED' AND a.timeframe=ANY($1::text[]) AND l.result::jsonb ? 'experimentRule' AND x.attempt_id IS NULL ORDER BY l.created_at,l.id LIMIT 1",[PILOT_TIMEFRAMES]);
+  const q=await c.query("SELECT trim(l.id) AS attempt_id,l.cycle_round,trim(l.parent_id) AS reservation_parent_id,trim(l.prior_attempt_id) AS prior_attempt_id,trim(l.prior_report_sha256) AS prior_report_sha,trim(pr.report_sha256) AS prior_actual_sha,trim(pr.rule_id) AS prior_rule_id,l.result,trim(l.result_sha256) AS result_sha,l.packet,trim(l.packet_sha256) AS packet_sha,trim(a.id) AS adaptive_id,a.report AS adaptive_report,trim(a.report_sha256) AS adaptive_sha,trim(p.id) AS parent_id,p.report AS parent_report,trim(p.report_sha256) AS parent_sha FROM cj_llm_research_attempts l JOIN cj_adaptive_research a ON a.id=coalesce(l.origin_parent_id,l.parent_id) JOIN cj_autonomous_experiments p ON p.id=a.parent_id LEFT JOIN cj_llm_structured_executions x ON x.attempt_id=l.id LEFT JOIN cj_llm_structured_executions pr ON pr.attempt_id=l.prior_attempt_id AND pr.status='COMPLETED' WHERE l.status='HUMAN_REVIEW_ONLY' AND a.status='COMPLETED' AND p.status='COMPLETED' AND a.timeframe=ANY($1::text[]) AND l.result::jsonb ? 'experimentRule' AND x.attempt_id IS NULL ORDER BY l.created_at,l.id LIMIT 1",[PILOT_TIMEFRAMES]);
   if(!q.rowCount){await c.query('COMMIT');return {status:'NO_ELIGIBLE_STRUCTURED_RULE',timeframes:PILOT_TIMEFRAMES};}
   const row=q.rows[0];await c.query('SAVEPOINT structured_job');attemptId=row.attempt_id;
   const packet=buildPacket(row),review=verifyStructuredResult(row,packet,await readFeedback(c,packet));
@@ -66,10 +73,10 @@ export async function runStructuredExecution(db){
   need(archive.holdoutStartTime===src.candles[n].time,'TRAIN_BOUNDARY');
   need(JSON.stringify(experimentChannel(packet.channel,src.candles,archive))===JSON.stringify(e.experiment),'PARENT_REPLAY');
   const diagnostic=runDiagnostic({channel:packet.channel,bars,priceStep:archive.priceStep,rule:review.rule});
-  const report={version:VERSION,attemptId,proposalSha256:row.result_sha,packetSha256:row.packet_sha,ruleId:review.ruleId,rule:review.rule,source:packet.source,sourceSha256:packet.sourceSha256,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,...diagnostic};
+  const report={version:VERSION,attemptId,...(Number(row.cycle_round)>0?{refinement:JSON.parse(row.result).refinement}:{}),proposalSha256:row.result_sha,packetSha256:row.packet_sha,ruleId:review.ruleId,rule:review.rule,source:packet.source,sourceSha256:packet.sourceSha256,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,...diagnostic};
   const body=JSON.stringify(report),sha=hash(body);need(Buffer.byteLength(body)<1000000,'REPORT_TOO_LARGE');
   const size=await c.query('SELECT pg_database_size(current_database())::bigint AS bytes');need(!storageState(Number(size.rows[0]?.bytes),undefined,Buffer.byteLength(body)).warning,'CAPACITY_GUARD');
   await c.query("INSERT INTO cj_llm_structured_executions(attempt_id,rule_id,status,report,report_sha256) VALUES($1,$2,'COMPLETED',$3,$4)",[attemptId,review.ruleId,body,sha]);
-  await c.query('COMMIT');return {status:'COMPLETED',reportSha256:sha,ruleId:review.ruleId,rule:review.rule,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,evaluation:diagnostic.evaluation,noSignalChanges:true,noPromotion:true,noTrading:true,holdoutUsed:false};
+  await c.query('COMMIT');return {status:'COMPLETED',reportSha256:sha,...(report.refinement?{refinement:report.refinement}:{}),ruleId:review.ruleId,rule:review.rule,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,evaluation:diagnostic.evaluation,noSignalChanges:true,noPromotion:true,noTrading:true,holdoutUsed:false};
  }catch(e){const reason=/^[A-Z0-9_]+$/.test(String(e.message))?String(e.message).slice(0,100):'EXECUTION_BLOCKED';if(attemptId&&reason!=='CAPACITY_GUARD'){try{await c.query('ROLLBACK TO SAVEPOINT structured_job');await c.query("INSERT INTO cj_llm_structured_executions(attempt_id,status,error) VALUES($1,'BLOCKED',$2) ON CONFLICT(attempt_id) DO NOTHING",[attemptId,reason]);await c.query('COMMIT');return {status:'BLOCKED',attemptId,reason,noTrading:true};}catch{/* rollback below */}}await c.query('ROLLBACK');return {status:'BLOCKED',attemptId,reason,noTrading:true};}finally{c.release();}
 }
