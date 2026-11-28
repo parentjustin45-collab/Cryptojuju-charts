@@ -26,6 +26,7 @@ import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
 import {runExpansionPreflight} from './level6-expansion-plan.mjs';
 import {runExpansionBatch} from './level6-expansion-worker.mjs';
+import {runCrossExchangePilot} from './level6-cross-exchange.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const RESEARCH_SOURCE_COMMIT=(()=>{
@@ -423,6 +424,10 @@ export async function main(){
         try{console.log('CJ_L6_EXPANSION '+JSON.stringify(await runExpansionBatch(db)));}
         catch(e){console.error('CJ_L6_EXPANSION_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'EXPANSION_BLOCKED'));}
       }
+      if(process.env.CJ_L6_CROSS_EXCHANGE_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===45){
+        try{console.log('CJ_L6_CROSS_EXCHANGE '+JSON.stringify(await runCrossExchangePilot(db)));}
+        catch(e){console.error('CJ_L6_CROSS_EXCHANGE_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'CROSS_EXCHANGE_BLOCKED'));}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
@@ -542,6 +547,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_L6_EXPANSION_BOOTSTRAP '+JSON.stringify(await runExpansionBatch(db,{limit:3})));}
     catch(e){console.error('CJ_L6_EXPANSION_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'EXPANSION_BLOCKED'));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_L6_CROSS_EXCHANGE_ENABLED==='1'&&!busy&&![9,10,11,12,13,21,22,23,24,25,26,39,49].includes(new Date().getUTCMinutes())){
+    busy=true;
+    try{console.log('CJ_L6_CROSS_EXCHANGE_BOOTSTRAP '+JSON.stringify(await runCrossExchangePilot(db)));}
+    catch(e){console.error('CJ_L6_CROSS_EXCHANGE_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'CROSS_EXCHANGE_BLOCKED'));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
