@@ -31,7 +31,7 @@ test('readback prioritizes exact scope and verifies duplicate gate',async()=>{
  const db={query:async(sql,args)=>{
   if(sql.includes('to_regclass'))return {rows:[sql.includes(' AS pilot')?{pilot:null,structured:'yes'}:{t:'yes'}]};
   if(sql.includes('AND NOT ('))return {rows:[cross],rowCount:1};
-  if(sql.includes('LIMIT 19')||sql.includes('LIMIT 1'))return {rows:[row],rowCount:1};
+  if(sql.includes('LIMIT 49')||sql.includes('LIMIT 1'))return {rows:[row],rowCount:1};
   throw Error('unexpected query');
  }};
  const list=await readFeedback(db,scope);assert.equal(list.length,2);assert.equal(list[0].sameScope,true);
