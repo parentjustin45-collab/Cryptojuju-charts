@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {verifyBinanceRows,matchedReport,loadMatchedBinanceDaily} from './level6-cross-exchange.mjs';
+import {verifyBinanceRows,matchedReport,loadMatchedBinanceDaily,baselineDifference} from './level6-cross-exchange.mjs';
 import {historicalTargetFor} from './historical-period.mjs';
 import {studyContinuousHistoricalPeriod,studyMatchedExchangePeriod} from './historical-multiyear-replay.mjs';
 const sha=x=>createHash('sha256').update(x).digest('hex');
@@ -33,4 +33,11 @@ test('incomplete archive scope cannot start a replay',async()=>{
  const db={query:async(sql)=>{assert.match(sql,/status='VERIFIED'/);return {rows:[]}}};
  const r=await loadMatchedBinanceDaily(db,{symbol,startMs:target.startMs,endMs:target.endMs});
  assert.equal(r.status,'AWAITING_BINANCE_ARCHIVES');assert.equal(r.verified,0);assert.ok(r.required>0);
+});
+
+test('diagnostic distinguishes serialization order from altered signal or metric without waiving hash',()=>{
+ const a={x:1,signals:[{time:1,side:'long'}]},b={signals:[{side:'long',time:1}],x:1};
+ assert.equal(baselineDifference(a,b).semanticEqual,true);
+ const c=structuredClone(b);c.signals[0].side='short';c.x=2;
+ const d=baselineDifference(a,c);assert.equal(d.count,2);assert.equal(d.semanticEqual,false);assert.ok(d.differences.some(x=>x.path==='report.signals.0.side'));
 });
