@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {verifyBinanceRows,matchedReport,loadMatchedBinanceDaily,baselineDifference} from './level6-cross-exchange.mjs';
+import {verifyBinanceRows,matchedReport,loadMatchedBinanceDaily,baselineDifference,verifyBaselineReplay} from './level6-cross-exchange.mjs';
 import {historicalTargetFor} from './historical-period.mjs';
 import {studyContinuousHistoricalPeriod,studyMatchedExchangePeriod} from './historical-multiyear-replay.mjs';
 const sha=x=>createHash('sha256').update(x).digest('hex');
@@ -40,4 +40,19 @@ test('diagnostic distinguishes serialization order from altered signal or metric
  assert.equal(baselineDifference(a,b).semanticEqual,true);
  const c=structuredClone(b);c.signals[0].side='short';c.x=2;
  const d=baselineDifference(a,c);assert.equal(d.count,2);assert.equal(d.semanticEqual,false);assert.ok(d.differences.some(x=>x.path==='report.signals.0.side'));
+});
+
+test('legacy full-period baseline requires exact original hash and forbids any other changes',()=>{
+ const b=verifyBinanceRows(rows,scope),bitunix={...b,source:'CJ_HISTORICAL_POSTGRES_TWO_READ_VERIFIED_V1',market:{...b.market,exchange:'Bitunix'},sequenceSha256:'a'.repeat(64)};
+ const priceStep=.1,original=studyContinuousHistoricalPeriod(bitunix,{priceStep});
+ const {coverageKind,launchMs,...legacy}=original;
+ const baselineSha=sha(JSON.stringify(legacy));
+ assert.equal(verifyBaselineReplay(original,baselineSha,legacy).mode,'EXACT_LEGACY_FULL_PERIOD');
+ const report=matchedReport(bitunix,b,{baselineSha,priceStep,archivedBaseline:legacy});
+ assert.equal(report.baselineVerification.verifiedSha,baselineSha);
+ const wrong=structuredClone(original);wrong.indicators.vector.signalCount++;
+ assert.equal(verifyBaselineReplay(wrong,baselineSha,legacy),null);
+ assert.equal(verifyBaselineReplay({...original,launchMs:1},baselineSha,legacy),null);
+ assert.equal(verifyBaselineReplay(original,baselineSha,{...legacy,coverageKind:'FULL_TWO_YEAR'}),null);
+ assert.equal(verifyBaselineReplay(original,baselineSha),null);
 });
