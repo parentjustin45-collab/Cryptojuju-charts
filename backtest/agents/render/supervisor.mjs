@@ -414,7 +414,7 @@ export async function main(){
         try{console.log('CJ_L5_STRUCTURED_EXECUTION '+JSON.stringify(await runStructuredExecution(db)));}
         catch{console.error('CJ_L5_STRUCTURED_EXECUTION_ERROR');}
       }
-      if(process.env.CJ_L6_PREFLIGHT_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===35){
+      if(process.env.CJ_L6_PREFLIGHT_ENABLED!=='0'&&r.completed.length===0&&new Date().getUTCMinutes()===35){
         try{console.log('CJ_L6_PREFLIGHT '+JSON.stringify(await runExpansionPreflight(db)));}
         catch(e){console.error('CJ_L6_PREFLIGHT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'PREFLIGHT_BLOCKED'));}
       }
@@ -523,6 +523,14 @@ export async function main(){
     busy=true;
     try{console.log('CJ_L5_MEMORY_AUDIT '+JSON.stringify(await auditFeedback(db)));}
     catch(e){console.error('CJ_L5_MEMORY_AUDIT_ERROR '+(/^[A-Z_]+$/.test(e.message)?e.message:'AUDIT_FAILED'));}
+    finally{busy=false;}
+  }
+  // Read-only admission checks enabled by this explicitly approved DEV rollout.
+  // Skip startup probe near paid refinement slots; the hourly :35 probe remains.
+  if(process.env.CJ_L6_PREFLIGHT_ENABLED!=='0'&&!busy&&![21,22,23,24,25,26].includes(new Date().getUTCMinutes())){
+    busy=true;
+    try{console.log('CJ_L6_PREFLIGHT '+JSON.stringify(await runExpansionPreflight(db)));}
+    catch(e){console.error('CJ_L6_PREFLIGHT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'PREFLIGHT_BLOCKED'));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
