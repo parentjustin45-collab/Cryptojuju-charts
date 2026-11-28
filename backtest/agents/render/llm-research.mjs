@@ -9,6 +9,7 @@ import {reviewResult} from './autonomous-experiment-worker.mjs';
 import {SPEC} from './autonomous-rule-candidates.mjs';
 import {storageState} from './storage-policy.mjs';
 import {RULE_SCHEMA,RULE_INSTRUCTIONS,validateRule,validateNewRule,readFeedback} from './level5-rule-contract.mjs';
+import {initializeRefinement,nextFollowup,requirePriorFeedback} from './level5-refinement.mjs';
 export const VERSION='CJ_LLM_RESEARCH_PILOT_V1_20261127',MODEL='gpt-6.1-terra';
 export const RESERVE_MICRO_USD=50000,MAX_OUTPUT=2000,MAX_REQUEST_BYTES=16000,MAX_DAILY_CALLS=4;
 const hash=x=>createHash('sha256').update(x).digest('hex'),need=(x,m)=>{if(!x)throw Error(m)};
@@ -91,14 +92,19 @@ export async function callModel(body,key,fetchImpl=fetch){
 export async function initializeLlm(db){
  await db.query("CREATE TABLE IF NOT EXISTS cj_llm_research_attempts (id char(64) PRIMARY KEY,source text NOT NULL,channel text NOT NULL,parent_id char(64) UNIQUE NOT NULL,packet_sha256 char(64) NOT NULL,packet text NOT NULL,model text NOT NULL,reserved_micros integer NOT NULL CHECK(reserved_micros>0),status text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),result text,result_sha256 char(64),error text)");
 }
-export async function reserveAttempt(db,packet,budgetMicros){
+export async function reserveAttempt(db,packet,budgetMicros,identity=null){
  need(Number.isSafeInteger(budgetMicros)&&budgetMicros>=RESERVE_MICRO_USD&&budgetMicros<=5000000,'BUDGET_POLICY');
- const body=JSON.stringify(packet),sha=hash(body),id=hash(JSON.stringify([VERSION,packet.parentId,sha,MODEL]));
+ const body=JSON.stringify(packet),sha=hash(body),reservationParentId=identity?.reservationParentId??packet.parentId,id=hash(JSON.stringify([VERSION,reservationParentId,sha,MODEL]));
  const c=await db.connect();
  try{await c.query('BEGIN');await c.query("SELECT pg_advisory_xact_lock(hashtext('CJ_LLM_BUDGET_V1'))");
  const q=await c.query("SELECT coalesce(sum(reserved_micros) FILTER(WHERE created_at>=date_trunc('month',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),0)::bigint AS month, count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')::int AS day FROM cj_llm_research_attempts");
  if(Number(q.rows[0].month)+RESERVE_MICRO_USD>budgetMicros||Number(q.rows[0].day)>=MAX_DAILY_CALLS){await c.query('ROLLBACK');return {status:'BUDGET_LIMIT'};}
- const z=await c.query("INSERT INTO cj_llm_research_attempts(id,source,channel,parent_id,packet_sha256,packet,model,reserved_micros,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'RESERVED') ON CONFLICT(parent_id) DO NOTHING",[id,packet.source,packet.channel,packet.parentId,sha,body,MODEL,RESERVE_MICRO_USD]);
+ const params=[id,packet.source,packet.channel,reservationParentId,sha,body,MODEL,RESERVE_MICRO_USD];
+ if(identity){
+  const prior=await c.query("SELECT 1 FROM cj_llm_structured_executions x JOIN cj_llm_research_attempts l ON l.id=x.attempt_id WHERE l.id=$1 AND x.report_sha256=$2 AND x.status='COMPLETED' AND coalesce(l.origin_parent_id,l.parent_id)=$3 AND l.cycle_round=$4",[identity.priorAttempt,identity.priorReportSha,packet.parentId,identity.round-1]);
+  need(prior.rowCount===1,'FOLLOWUP_PARENT_CHANGED');
+ }
+ const z=identity?await c.query("INSERT INTO cj_llm_research_attempts(id,source,channel,parent_id,packet_sha256,packet,model,reserved_micros,status,origin_parent_id,cycle_round,prior_attempt_id,prior_report_sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'RESERVED',$9,$10,$11,$12) ON CONFLICT(parent_id) DO NOTHING",[...params,packet.parentId,identity.round,identity.priorAttempt,identity.priorReportSha]):await c.query("INSERT INTO cj_llm_research_attempts(id,source,channel,parent_id,packet_sha256,packet,model,reserved_micros,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'RESERVED') ON CONFLICT(parent_id) DO NOTHING",params);
  await c.query('COMMIT');return z.rowCount===1?{status:'RESERVED',id,sha}:{status:'ALREADY_ATTEMPTED'};
  }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
 }
@@ -107,14 +113,20 @@ async function nextPacket(db,live=false){
  return q.rowCount?buildPacket(q.rows[0]):null;
 }
 export async function dryRunLlm(db){const packet=await nextPacket(db);if(!packet)return {status:'NO_EVIDENCE_YET',paidCalls:0};const structured=process.env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',memory=structured?await readFeedback(db,packet):[],{body,feedback}=structured?requestWithMemory(packet,memory):{body:requestBody(packet),feedback:[]};return {status:'EVIDENCE_READY_DRY_RUN',model:MODEL,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,evidenceIds:packet.evidence.map(e=>e.id),packetSha256:hash(JSON.stringify(packet)),requestBytes:Buffer.byteLength(JSON.stringify(body)),structuredRules:structured,feedbackCount:feedback.length,localMemoryCount:memory.length,feedback:feedback.map(x=>({ruleId:x.ruleId,reportSha256:x.reportSha256,decision:x.decision,sameScope:x.sameScope})),paidCalls:0,configuration:configuration().status,noExecution:true};}
-export async function runLlmResearch(db,{env=process.env,fetchImpl=fetch}={}){
+export async function runLlmResearch(db,{env=process.env,fetchImpl=fetch,followupOnly=false}={}){
+ if(followupOnly&&(env.CJ_L5_REFINEMENT_ENABLED!=='1'||env.CJ_L5_STRUCTURED_RULES_ENABLED!=='1'||env.CJ_L5_STRUCTURED_EXECUTION_ENABLED!=='1'))return {status:'REFINEMENT_DISABLED',paidCalls:0};
  const cfg=configuration(env);if(cfg.status!=='READY')return {status:cfg.status,paidCalls:0};
  if(process.memoryUsage().rss>350*1024*1024)return {status:'PAUSED_MEMORY',paidCalls:0};
  const cap=await db.query('SELECT pg_database_size(current_database())::bigint AS bytes');if(storageState(Number(cap.rows[0]?.bytes)).warning)return {status:'PAUSED_STORAGE',paidCalls:0};
- await initializeLlm(db);const packet=await nextPacket(db,true);if(!packet)return {status:'NO_NEW_EVIDENCE',paidCalls:0};
- const structured=env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',memory=structured?await readFeedback(db,packet):[],{body,feedback}=structured?requestWithMemory(packet,memory):{body:requestBody(packet),feedback:[]},r=await reserveAttempt(db,packet,cfg.budgetMicros);if(r.status!=='RESERVED')return {...r,paidCalls:0};
- try{const result=await callModel(body,env.OPENAI_API_KEY,fetchImpl),review=structured?validateNewRule(result.experimentRule,packet,memory):null,report=JSON.stringify({...result,...(review?{ruleReview:review,feedback,requestSha256:hash(JSON.stringify(body))}:{}),packetSha256:r.sha,source:packet.source,channel:packet.channel,status:'HUMAN_REVIEW_ONLY',noPromotion:true,noTrading:true});
+ await initializeLlm(db);
+ let followup=null;
+ if(followupOnly){await initializeRefinement(db);followup=await nextFollowup(db,buildPacket);if(!followup)return {status:'NO_ELIGIBLE_FOLLOWUP',paidCalls:0};}
+ const packet=followup?.packet??await nextPacket(db,true);if(!packet)return {status:'NO_NEW_EVIDENCE',paidCalls:0};
+ const structured=env.CJ_L5_STRUCTURED_RULES_ENABLED==='1',memory=followup?.memory??(structured?await readFeedback(db,packet):[]),{body,feedback}=structured?requestWithMemory(packet,memory):{body:requestBody(packet),feedback:[]};
+ if(followup)requirePriorFeedback(feedback,followup.previous);
+ const r=await reserveAttempt(db,packet,cfg.budgetMicros,followup?.identity);if(r.status!=='RESERVED')return {...r,paidCalls:0};
+ try{const result=await callModel(body,env.OPENAI_API_KEY,fetchImpl),review=structured?validateNewRule(result.experimentRule,packet,memory):null,report=JSON.stringify({...result,...(review?{ruleReview:review,feedback,requestSha256:hash(JSON.stringify(body))}:{}),...(followup?{refinement:followup.identity}:{}),packetSha256:r.sha,source:packet.source,channel:packet.channel,status:'HUMAN_REVIEW_ONLY',noPromotion:true,noTrading:true});
  const z=await db.query("UPDATE cj_llm_research_attempts SET status='HUMAN_REVIEW_ONLY',result=$2,result_sha256=$3 WHERE id=$1 AND status='RESERVED'",[r.id,report,hash(report)]);need(z.rowCount===1,'RESULT_SAVE_FAILED');
- return {status:'HUMAN_REVIEW_ONLY',channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,reportSha256:hash(report),usage:result.usage,estimatedMicroUsd:result.estimatedMicroUsd,...(review?{ruleReview:review,feedbackCount:feedback.length}:{}),paidCalls:1,noExecution:true};
+ return {status:'HUMAN_REVIEW_ONLY',channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,reportSha256:hash(report),usage:result.usage,estimatedMicroUsd:result.estimatedMicroUsd,...(review?{ruleReview:review,feedbackCount:feedback.length}:{}),...(followup?{refinement:followup.identity}:{}),paidCalls:1,noExecution:true};
  }catch(e){const reason=/^(PROVIDER_HTTP_\d+|PROVIDER_INCOMPLETE|USAGE_LIMIT|PROVIDER_REFUSAL_OR_FORMAT|PROVIDER_RESPONSE_TOO_LARGE|SCHEMA_[A-Z_]+|RULE_[A-Z_]+|REPEATED_REJECTED_RULE|REPEATED_COMPLETED_RULE|RESULT_SAVE_FAILED)$/.test(e.message)?e.message:'REQUEST_OR_SAVE_UNCERTAIN';await db.query("UPDATE cj_llm_research_attempts SET status='FAILED_NO_AUTOMATIC_RETRY',error=$2 WHERE id=$1 AND status='RESERVED'",[r.id,reason]);return {status:'FAILED_NO_AUTOMATIC_RETRY',reason,paidCallsAttempted:1,reservationRetained:true};}
 }
