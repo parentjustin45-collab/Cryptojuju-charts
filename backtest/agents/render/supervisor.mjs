@@ -28,6 +28,7 @@ import {runExpansionPreflight} from './level6-expansion-plan.mjs';
 import {runExpansionBatch} from './level6-expansion-worker.mjs';
 import {runCrossExchangePilot} from './level6-cross-exchange.mjs';
 import {runAdvancedPilot} from './level6-advanced-pilot.mjs';
+import {runThresholdPilot} from './level6-threshold-pilot.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const RESEARCH_SOURCE_COMMIT=(()=>{
@@ -433,6 +434,10 @@ export async function main(){
         try{console.log('CJ_L6_ADVANCED_PILOT '+JSON.stringify(await runAdvancedPilot(db)));}
         catch(e){console.error('CJ_L6_ADVANCED_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'ADVANCED_PILOT_BLOCKED'));}
       }
+      if(process.env.CJ_L6_THRESHOLDS_ENABLED==='1'&&r.completed.length===0&&[31,43,53].includes(new Date().getUTCMinutes())){
+        try{console.log('CJ_L6_THRESHOLD_PILOT '+JSON.stringify(await runThresholdPilot(db)));}
+        catch(e){console.error('CJ_L6_THRESHOLD_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'THRESHOLD_PILOT_BLOCKED'));}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
@@ -564,6 +569,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_L6_ADVANCED_PILOT_BOOTSTRAP '+JSON.stringify(await runAdvancedPilot(db)));}
     catch(e){console.error('CJ_L6_ADVANCED_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'ADVANCED_PILOT_BLOCKED'));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_L6_THRESHOLDS_ENABLED==='1'&&!busy&&![9,10,11,12,13,21,22,23,24,25,26,39,45,49,54,55,56,57].includes(new Date().getUTCMinutes())){
+    busy=true;
+    try{console.log('CJ_L6_THRESHOLD_PILOT_BOOTSTRAP '+JSON.stringify(await runThresholdPilot(db)));}
+    catch(e){console.error('CJ_L6_THRESHOLD_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'THRESHOLD_PILOT_BLOCKED'));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
