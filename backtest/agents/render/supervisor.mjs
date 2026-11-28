@@ -24,6 +24,7 @@ import {runAutonomousExperiment} from './autonomous-experiment-worker.mjs';
 import {runHistoricalBackfillBatch} from './historical-backfill-worker.mjs';
 import {runEligibleMultiYearReplay} from './historical-replay-worker.mjs';
 import {isFiveByFive} from './five-by-five.mjs';
+import {runExpansionPreflight} from './level6-expansion-plan.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const RESEARCH_SOURCE_COMMIT=(()=>{
@@ -412,6 +413,10 @@ export async function main(){
       if(process.env.CJ_L5_REFINEMENT_ENABLED==='1'&&process.env.CJ_L5_STRUCTURED_EXECUTION_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===25){
         try{console.log('CJ_L5_STRUCTURED_EXECUTION '+JSON.stringify(await runStructuredExecution(db)));}
         catch{console.error('CJ_L5_STRUCTURED_EXECUTION_ERROR');}
+      }
+      if(process.env.CJ_L6_PREFLIGHT_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===35){
+        try{console.log('CJ_L6_PREFLIGHT '+JSON.stringify(await runExpansionPreflight(db)));}
+        catch(e){console.error('CJ_L6_PREFLIGHT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'PREFLIGHT_BLOCKED'));}
       }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
