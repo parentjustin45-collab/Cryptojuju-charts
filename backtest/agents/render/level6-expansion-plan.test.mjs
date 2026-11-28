@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {CANDIDATES,RANGE,normalizeContracts,planCandidate,preflightExpansion} from './level6-expansion-plan.mjs';
+import {CANDIDATES,RANGE,normalizeContracts,planCandidate,preflightExpansion,capacityProjection,inspectExpansionCapacity} from './level6-expansion-plan.mjs';
 import {FIVE_CASES,FIVE_CRYPTO_SYMBOLS} from './five-by-five.mjs';
 const metadata={code:0,data:CANDIDATES.map(symbol=>({symbol,symbolStatus:'OPEN',quotePrecision:4,launchTime:Date.UTC(2023,0,1)}))};
 const response=p=>({ok:true,json:async()=>p});
@@ -41,4 +41,13 @@ test('read-only gate waits for level 5.5 and capacity; eligible does not mean ad
 });
 test('unstable official metadata is rejected before history planning',async()=>{
  let calls=0;await assert.rejects(()=>preflightExpansion({db:db(),fetchImpl:async()=>response(++calls===1?metadata:{...metadata,data:metadata.data.slice(1)})}),/METADATA_NOT_STABLE/);
+});
+
+test('capacity projection reserves pending Bitunix and Binance independently',async()=>{
+ const cap={dbBytes:450000000,thresholdBytes:7000000000};
+ const p=capacityProjection(cap,{expectedNewBars:638750,olderRemaining:48535,binanceRemaining:1271010});
+ assert.equal(p.withinGuard,true);assert.ok(p.projectedBytes>1500000000);
+ assert.equal(capacityProjection({...cap,thresholdBytes:700000000},{expectedNewBars:638750,olderRemaining:48535,binanceRemaining:1271010}).withinGuard,false);
+ const db={query:async sql=>sql.includes('to_regclass')?{rows:[{older:'yes',binance:'yes'}]}:{rows:[{older_remaining:'48535',binance_remaining:'1271010'}]}};
+ const actual=await inspectExpansionCapacity(db,{capacity:cap,expectedNewBars:638750});assert.equal(actual.projectedBytes,p.projectedBytes);
 });
