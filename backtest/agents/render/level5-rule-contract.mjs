@@ -84,13 +84,17 @@ export function feedbackFromStructured(row,scope){
  need(x.source==='Bitunix'&&p.source===x.source&&r.source===x.source&&r.channel===x.channel&&r.status==='HUMAN_REVIEW_ONLY'&&r.noExecution===true&&r.noTrading===true&&r.noPromotion===true&&x.holdoutUsed===false&&x.noTrading===true&&x.noPromotion===true&&x.noSignalChanges===true&&x.evaluation?.holdoutUsed===false&&x.evaluation.noTrading===true&&x.evaluation.noPromotion===true,'MEMORY_POLICY');
  const origin={channel:x.channel,symbol:x.symbol,timeframe:x.timeframe,sourceSha256:x.sourceSha256};
  need(sameScope(origin,p)&&CHANNELS.includes(scope.channel),'MEMORY_SCOPE');
- const rule=validateRule(x.rule),id=ruleId(rule,origin);
+ const thresholds=r.ruleGrammar==='CJ_L6_RULE_CONTRACT_V3',advanced=thresholds||r.ruleGrammar==='CJ_L6_RULE_CONTRACT_V2';
+ need(r.ruleGrammar===undefined||advanced,'MEMORY_GRAMMAR');
+ const rule=validateRule(x.rule,{advanced,thresholds}),id=ruleId(rule,origin);
+ if(x.window)need(thresholds&&['30m','15m'].includes(x.timeframe)&&x.window.policy==='CJ_FIRST_12000_TRAINING_BARS_V1'&&x.window.trainingBars===12000&&x.trainingBars===12000&&x.window.totalTrainingBars===x.window.trainingBars+x.window.unusedTrainingBars&&x.window.holdoutBars===x.holdoutBars&&/^[a-f0-9]{64}$/.test(x.window.windowSha256)&&x.parentFullReplayPerformed===false,'MEMORY_WINDOW');
+ else need(!['30m','15m'].includes(x.timeframe),'MEMORY_WINDOW_REQUIRED');
  need(rule.kind==='DIAGNOSTIC_TAG'&&r.proposal?.kind==='DIAGNOSTIC_ONLY'&&JSON.stringify(validateRule(r.experimentRule))===JSON.stringify(rule)&&r.ruleReview?.ruleId===id&&x.ruleId===id&&trim(row.rule_id)===id,'MEMORY_RULE');
  const metrics=Object.fromEntries(['original','parent'].map(k=>[k,summarizeSystem(x.evaluation.systems[k])]));
  const decision=Object.values(metrics).every(z=>z.pass)?decisions[0]:decisions[1];
  need(x.evaluation.decision===decision,'MEMORY_DECISION');
  if(family(scope.channel)!==family(origin.channel))return null;
- return {ruleId:id,rule,scope:origin,sameScope:sameScope(origin,scope),reportSha256:trim(row.sha),decision,metrics,holdoutUsed:false};
+ return {ruleId:id,rule,scope:origin,sameScope:sameScope(origin,scope),reportSha256:trim(row.sha),decision,metrics,...(x.window?{window:x.window}:{}),holdoutUsed:false};
 }
 const structuredSelect="SELECT trim(x.attempt_id) AS attempt_id,trim(x.rule_id) AS rule_id,trim(x.report_sha256) AS sha,x.report,l.result,trim(l.result_sha256) AS proposal_sha,l.packet,trim(l.packet_sha256) AS packet_sha FROM cj_llm_structured_executions x JOIN cj_llm_research_attempts l ON l.id=x.attempt_id WHERE x.status='COMPLETED' AND l.status='HUMAN_REVIEW_ONLY'";
 export async function readFeedback(db,scope){
