@@ -45,6 +45,7 @@ export function requestBody(packet,{structured=false,feedback=[],advanced=false,
  const body={model:MODEL,store:false,service_tier:'default',reasoning:{effort:'low'},max_output_tokens:MAX_OUTPUT,instructions:INSTRUCTIONS,input:JSON.stringify(packet),text:{format:{type:'json_schema',name:'cryptojuju_hypothesis',strict:true,schema:SCHEMA}}};
  if(structured){
   body.instructions+=' '+(thresholds?RULE_INSTRUCTIONS_V3:advanced?RULE_INSTRUCTIONS_V2:RULE_INSTRUCTIONS);
+  if(thresholds&&['30m','15m'].includes(packet.timeframe))body.instructions+=' For 30m or 15m, the execution uses only the first 12000 candles of the existing training portion, not the full training period. Parent evidence describes full training; it is context only, not proof for this bounded window. No holdout or selection of another window.';
   body.input=JSON.stringify({packet,feedback});
   body.text.format={type:'json_schema',name:thresholds?'cryptojuju_structured_hypothesis_v3':advanced?'cryptojuju_structured_hypothesis_v2':'cryptojuju_structured_hypothesis',strict:true,schema:{...SCHEMA,properties:{...SCHEMA.properties,experiment_rule:thresholds?RULE_SCHEMA_V3:advanced?RULE_SCHEMA_V2:RULE_SCHEMA},required:[...SCHEMA.required,'experiment_rule']}};
  }
