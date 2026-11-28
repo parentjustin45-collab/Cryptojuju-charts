@@ -405,6 +405,14 @@ export async function main(){
         try{console.log('CJ_L5_STRUCTURED_EXECUTION '+JSON.stringify(await runStructuredExecution(db)));}
         catch{console.error('CJ_L5_STRUCTURED_EXECUTION_ERROR');}
       }
+      if(process.env.CJ_L5_REFINEMENT_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===23){
+        try{console.log('CJ_L5_REFINEMENT '+JSON.stringify(await runLlmResearch(db,{followupOnly:true})));}
+        catch(e){console.error('CJ_L5_REFINEMENT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'REFINEMENT_BLOCKED'));}
+      }
+      if(process.env.CJ_L5_REFINEMENT_ENABLED==='1'&&process.env.CJ_L5_STRUCTURED_EXECUTION_ENABLED==='1'&&r.completed.length===0&&new Date().getUTCMinutes()===25){
+        try{console.log('CJ_L5_STRUCTURED_EXECUTION '+JSON.stringify(await runStructuredExecution(db)));}
+        catch{console.error('CJ_L5_STRUCTURED_EXECUTION_ERROR');}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
