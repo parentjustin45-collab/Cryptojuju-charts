@@ -34,6 +34,25 @@ export function planCandidate(contract){
  });
  return {...contract,targets};
 }
+// Deliberately conservative planning allowances, not measured marginal cost.
+export function capacityProjection(capacity,{expectedNewBars,olderRemaining,binanceRemaining}){
+ need([expectedNewBars,olderRemaining,binanceRemaining].every(n=>Number.isSafeInteger(n)&&n>=0),'INVALID_CAPACITY_PROJECTION');
+ const additionalBytes=(expectedNewBars+olderRemaining)*1024+binanceRemaining*512+128*1024*1024;
+ const projectedBytes=capacity.dbBytes+additionalBytes;
+ return {expectedNewBars,olderRemaining,binanceRemaining,additionalBytes,projectedBytes,thresholdBytes:capacity.thresholdBytes,withinGuard:projectedBytes<capacity.thresholdBytes,assumptions:{bitunixBytesPerBar:1024,binanceBytesPerBar:512,extraReserveBytes:128*1024*1024},estimateOnly:true};
+}
+export async function inspectExpansionCapacity(db,preflight){
+ const exists=await db.query("SELECT to_regclass('public.cj_older_history_windows') AS older,to_regclass('public.cj_binance_um_archive_queue') AS binance");
+ if(!exists.rows[0]?.older||!exists.rows[0]?.binance)return {status:'QUEUE_COUNTS_UNAVAILABLE',withinGuard:false};
+ const q=await db.query("SELECT (SELECT coalesce(sum(bars),0)::bigint FROM cj_older_history_windows WHERE status<>'VERIFIED') AS older_remaining,(SELECT coalesce(sum(bars),0)::bigint FROM cj_binance_um_archive_queue WHERE status<>'VERIFIED') AS binance_remaining");
+ const p=capacityProjection(preflight.capacity,{expectedNewBars:preflight.expectedNewBars,olderRemaining:Number(q.rows[0]?.older_remaining),binanceRemaining:Number(q.rows[0]?.binance_remaining)});
+ return {status:p.withinGuard?'PROJECTED_WITHIN_GUARD':'PROJECTED_CAPACITY_REVIEW_REQUIRED',...p};
+}
+export async function runExpansionPreflight(db){
+ if(process.memoryUsage().rss>350*1024*1024)return {status:'PAUSED_MEMORY',noHistoryWrites:true};
+ const result=await preflightExpansion({db}),projection=await inspectExpansionCapacity(db,result);
+ return {...result,projection,admissionReady:result.status==='PREFLIGHT_READY_FOR_ADMISSION_REVIEW'&&projection.withinGuard&&result.candidates.every(c=>c.status==='METADATA_VALID'&&c.targets.length===5&&c.targets.every(t=>t.status==='AWAITING_DOUBLE_READ')),noHistoryWrites:true};
+}
 export async function preflightExpansion({db,fetchImpl=fetch}){
  const url=new URL(ENDPOINT);url.searchParams.set('symbols',CANDIDATES.join(','));
  const read=async()=>{const r=await fetchImpl(url.href,{method:'GET',cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(18000)});need(r.ok,'METADATA_HTTP');return normalizeContracts(await r.json());};
