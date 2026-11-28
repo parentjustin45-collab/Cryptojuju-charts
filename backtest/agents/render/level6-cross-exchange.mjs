@@ -49,6 +49,22 @@ export async function loadMatchedBinanceDaily(db,{symbol,startMs,endMs}){
  need(q.rows.length===proofs.size&&q.rows.every(x=>proofs.get(Number(x.open_ms))===x.fingerprint),'BINANCE_ARCHIVE_DB_MISMATCH');
  return verifyBinanceRows(q.rows,{symbol,timeframe,startMs,endMs});
 }
+// Strict diagnostic only: do not rewrite the baseline or waive a mismatch.
+export function baselineDifference(archived,recalculated){
+ const differences=[];let count=0;
+ function walk(a,b,path){
+  if(Object.is(a,b))return;
+  if(a!==null&&b!==null&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)){
+   const keys=new Set([...Object.keys(a),...Object.keys(b)]);
+   for(const k of keys)walk(a[k],b[k],path+'.'+k);
+   return;
+  }
+  count++;
+  if(differences.length<12)differences.push({path,archived:a===undefined?'MISSING':a,recalculated:b===undefined?'MISSING':b});
+ }
+ walk(archived,recalculated,'report');
+ return {count,differences: differences.map(x=>({...x,archived:typeof x.archived==='object'&&x.archived!==null?'OBJECT':x.archived,recalculated:typeof x.recalculated==='object'&&x.recalculated!==null?'OBJECT':x.recalculated})),semanticEqual:count===0};
+}
 export function matchedReport(bitunix,binance,{baselineSha,priceStep}){
  need(bitunix.market.exchange==='Bitunix'&&binance.market.exchange==='Binance'&&bitunix.market.symbol===binance.market.symbol&&bitunix.market.timeframe===binance.market.timeframe&&bitunix.historyWindow.startTime===binance.historyWindow.startTime&&bitunix.historyWindow.endTime===binance.historyWindow.endTime&&bitunix.sequenceSha256!==binance.sequenceSha256,'EXCHANGE_PAIR_MISMATCH');
  const target=historicalTargetFor(bitunix.market.symbol,bitunix.market.timeframe);
@@ -77,6 +93,12 @@ export async function runCrossExchangePilot(db){
   need(raw.length===Number(row.raw_bytes)&&sha(raw)===row.sha,'BASELINE_REPORT_SHA');
   const baseline=JSON.parse(raw.toString()),bitunix=await loadHistoricalPeriod(db,{symbol,timeframe,startMs,endMs});
   need(bitunix.sequenceSha256===row.source_sha&&baseline.sourceSequenceSha256===row.source_sha,'BASELINE_SOURCE_SHA');
+  const fresh=studyContinuousHistoricalPeriod(bitunix,{priceStep:baseline.priceStep});
+  const replaySha=sha(JSON.stringify(fresh));
+  if(replaySha!==row.sha){
+   const difference=baselineDifference(baseline,fresh);
+   return {status:'BASELINE_REPLAY_MISMATCH_DIAGNOSTIC',symbol,timeframe,sourceSha256:row.source_sha,baselineSha:row.sha,replaySha,...difference,archivedSignalCounts:Object.fromEntries(Object.entries(baseline.indicators??{}).map(([k,v])=>[k,v.signalCount])),freshSignalCounts:Object.fromEntries(Object.entries(fresh.indicators).map(([k,v])=>[k,v.signalCount])),noComparisonPersisted:true,noTrading:true,noPromotion:true};
+  }
   const report=matchedReport(bitunix,binance,{baselineSha:row.sha,priceStep:baseline.priceStep});
   const body=Buffer.from(JSON.stringify(report));need(body.length<=16*1024*1024,'REPORT_LIMIT');
   const zipped=gzipSync(body,{level:6}),digest=sha(body),client=await db.connect();
