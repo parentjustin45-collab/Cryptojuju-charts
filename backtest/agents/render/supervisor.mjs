@@ -29,6 +29,7 @@ import {runExpansionBatch} from './level6-expansion-worker.mjs';
 import {runCrossExchangePilot} from './level6-cross-exchange.mjs';
 import {runAdvancedPilot} from './level6-advanced-pilot.mjs';
 import {runThresholdPilot} from './level6-threshold-pilot.mjs';
+import {runConfluencePilot} from './level6-confluence-pilot.mjs';
 
 const ROOT=fileURLToPath(new URL('../../../',import.meta.url));
 const RESEARCH_SOURCE_COMMIT=(()=>{
@@ -438,6 +439,10 @@ export async function main(){
         try{console.log('CJ_L6_THRESHOLD_PILOT '+JSON.stringify(await runThresholdPilot(db)));}
         catch(e){console.error('CJ_L6_THRESHOLD_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'THRESHOLD_PILOT_BLOCKED'));}
       }
+      if(process.env.CJ_L6_CONFLUENCE_ENABLED==='1'&&r.completed.length===0&&[29,41,51].includes(new Date().getUTCMinutes())){
+        try{console.log('CJ_L6_CONFLUENCE '+JSON.stringify(await runConfluencePilot(db)));}
+        catch(e){console.error('CJ_L6_CONFLUENCE_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'CONFLUENCE_BLOCKED'));}
+      }
       // Separate source, staggered between specialist slots; one busy gate.
       if(process.env.CJ_BINANCE_ARCHIVES_ENABLED==='1' && r.completed.length===0 && new Date().getUTCMinutes()%10===7){
         try{console.log('CJ_BINANCE_ARCHIVES '+JSON.stringify(await runBinanceBatch(db)));}
@@ -575,6 +580,12 @@ export async function main(){
     busy=true;
     try{console.log('CJ_L6_THRESHOLD_PILOT_BOOTSTRAP '+JSON.stringify(await runThresholdPilot(db)));}
     catch(e){console.error('CJ_L6_THRESHOLD_PILOT_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'THRESHOLD_PILOT_BLOCKED'));}
+    finally{busy=false;}
+  }
+  if(process.env.CJ_L6_CONFLUENCE_ENABLED==='1'&&!busy&&![1,7,9,10,11,12,13,17,21,22,23,24,25,26,27,31,33,35,37,39,43,45,47,49,53,54,55,56,57].includes(new Date().getUTCMinutes())){
+    busy=true;
+    try{console.log('CJ_L6_CONFLUENCE_BOOTSTRAP '+JSON.stringify(await runConfluencePilot(db)));}
+    catch(e){console.error('CJ_L6_CONFLUENCE_ERROR '+(/^[A-Z0-9_]+$/.test(e.message)?e.message:'CONFLUENCE_BLOCKED'));}
     finally{busy=false;}
   }
   const stop=async()=>{clearInterval(timer);http?.close();await db.end();};
