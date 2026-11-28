@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {verifiedParent} from './adaptive-research.mjs';
 import {buildPacket,validateProposal,requestBody} from './llm-research.mjs';
-import {compileRule,validateNewRule,readFeedback} from './level5-rule-contract.mjs';
+import {compileRule,validateRule,validateNewRule,readFeedback} from './level5-rule-contract.mjs';
 import {generate,experimentChannel} from './autonomous-rule-candidates.mjs';
 import {stratifyFold,evaluate} from './level5-vector-diagnostic.mjs';
 import {atr14,findPivots} from './state-pivot-observer.mjs';
@@ -21,8 +21,11 @@ export function verifyStructuredResult(row,packet,liveFeedback=[]){
  need(hash(row.result)===trim(row.result_sha)&&hash(row.packet)===trim(row.packet_sha)&&hash(JSON.stringify(packet))===trim(row.packet_sha),'RESULT_PROVENANCE');
  const result=JSON.parse(row.result),proposal=validateProposal(result.proposal);
  need(result.packetSha256===trim(row.packet_sha)&&result.source===packet.source&&result.channel===packet.channel&&result.status==='HUMAN_REVIEW_ONLY'&&result.noExecution===true&&result.noPromotion===true&&result.noTrading===true&&Array.isArray(result.feedback),'RESULT_POLICY');
+ const advanced=result.ruleGrammar==='CJ_L6_RULE_CONTRACT_V2';
+ need(result.ruleGrammar===undefined||advanced,'RULE_GRAMMAR_VERSION');
+ validateRule(result.experimentRule,{advanced});
  const review=validateNewRule(result.experimentRule,packet,result.feedback);
- need(same(review,result.ruleReview)&&hash(JSON.stringify(requestBody(packet,{structured:true,feedback:result.feedback})))===result.requestSha256,'REVIEW_PROVENANCE');
+ need(same(review,result.ruleReview)&&hash(JSON.stringify(requestBody(packet,{structured:true,feedback:result.feedback,advanced})))===result.requestSha256,'REVIEW_PROVENANCE');
  need(review.rule.kind==='NONE'||proposal.kind==='DIAGNOSTIC_ONLY','DIAGNOSTIC_ONLY');
  if(Number(row.cycle_round??0)>0){
   const identity=followupIdentity(packet.parentId,trim(row.prior_attempt_id),trim(row.prior_report_sha),Number(row.cycle_round)-1);
@@ -73,7 +76,7 @@ export async function runStructuredExecution(db){
   need(archive.holdoutStartTime===src.candles[n].time,'TRAIN_BOUNDARY');
   need(JSON.stringify(experimentChannel(packet.channel,src.candles,archive))===JSON.stringify(e.experiment),'PARENT_REPLAY');
   const diagnostic=runDiagnostic({channel:packet.channel,bars,priceStep:archive.priceStep,rule:review.rule});
-  const report={version:VERSION,attemptId,...(Number(row.cycle_round)>0?{refinement:JSON.parse(row.result).refinement}:{}),proposalSha256:row.result_sha,packetSha256:row.packet_sha,ruleId:review.ruleId,rule:review.rule,source:packet.source,sourceSha256:packet.sourceSha256,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,...diagnostic};
+  const report={version:VERSION,attemptId,...(Number(row.cycle_round)>0?{refinement:JSON.parse(row.result).refinement}:{}),proposalSha256:row.result_sha,packetSha256:row.packet_sha,ruleId:review.ruleId,rule:review.rule,...(JSON.parse(row.result).ruleGrammar?{ruleGrammar:JSON.parse(row.result).ruleGrammar}:{}),source:packet.source,sourceSha256:packet.sourceSha256,channel:packet.channel,symbol:packet.symbol,timeframe:packet.timeframe,trainingBars:n,holdoutBars:src.barCount-n,...diagnostic};
   const body=JSON.stringify(report),sha=hash(body);need(Buffer.byteLength(body)<1000000,'REPORT_TOO_LARGE');
   const size=await c.query('SELECT pg_database_size(current_database())::bigint AS bytes');need(!storageState(Number(size.rows[0]?.bytes),undefined,Buffer.byteLength(body)).warning,'CAPACITY_GUARD');
   await c.query("INSERT INTO cj_llm_structured_executions(attempt_id,rule_id,status,report,report_sha256) VALUES($1,$2,'COMPLETED',$3,$4)",[attemptId,review.ruleId,body,sha]);
