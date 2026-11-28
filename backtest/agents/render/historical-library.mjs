@@ -6,7 +6,8 @@
  */
 import {createHash} from 'node:crypto';
 import {gunzipSync,gzipSync} from 'node:zlib';
-import {FIVE_CASES} from './five-by-five.mjs';
+import {FIVE_CASES,FIVE_TIMEFRAMES} from './five-by-five.mjs';
+import {CANDIDATES,RANGE} from './level6-expansion-plan.mjs';
 import {VERIFIED_INTERVALS} from '../research-batch.mjs';
 
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -16,10 +17,11 @@ const SOURCE_PREFIX='hourly-bitunix|';
 import {DEFAULT_STORAGE_BUDGET,storageBudget,storageState} from './storage-policy.mjs';
 export const STORAGE_BUDGET=DEFAULT_STORAGE_BUDGET;
 const FIELDS=['open','high','low','close','volume'];
-export function validateHistoricalSource(first,repeat){
+export function validateHistoricalSource(first,repeat,{expansionOnly=false}={}){
   const m=first?.market??{},p=first?.provenance??{},w=first?.historyWindow??{};
   const bars=first?.acceptedCandles;
-  if(!valid(m.symbol,m.timeframe)||m.exchange!=='Bitunix'||
+  const expansion=expansionOnly===true&&CANDIDATES.includes(m.symbol)&&FIVE_TIMEFRAMES.includes(m.timeframe)&&w.startTime>=RANGE.startMs&&w.endTime<=RANGE.endMs;
+  if(!(valid(m.symbol,m.timeframe)||expansion)||m.exchange!=='Bitunix'||
     m.priceType!=='LAST_PRICE'||first.status!=='DATA_READY_FOR_RESEARCH_ONLY'||
     p.source!=='Bitunix public Futures REST'||p.priceType!=='LAST_PRICE'||
     p.formingBarExcluded!==true||first.role1?.status!=='PASS'||
@@ -87,10 +89,11 @@ export async function initializeHistoricalLibrary(db){
     "created_at timestamptz NOT NULL DEFAULT now())");
 }
 export async function ingestVerifiedHistoricalSource(db,{first,repeat,sourceKey,
-  diskBudgetBytes=storageBudget(),archiveEvidence=false}={}){
+  diskBudgetBytes=storageBudget(),archiveEvidence=false,expansionOnly=false}={}){
   if(typeof sourceKey!=='string'||sourceKey.length>220||sourceKey.length<10||
     !/^[A-Za-z0-9|:._/-]+$/.test(sourceKey))throw Error('INVALID_HISTORICAL_SOURCE_KEY');
-  const v=validateHistoricalSource(first,repeat);
+  const v=validateHistoricalSource(first,repeat,{expansionOnly});
+  if(expansionOnly&&(!CANDIDATES.includes(v.symbol)||!archiveEvidence||sourceKey!=='level6-bitunix|'+v.symbol+'|'+v.timeframe+'|'+v.startMs))throw Error('INVALID_EXPANSION_INGEST_SCOPE');
   if(!Number.isSafeInteger(diskBudgetBytes)||diskBudgetBytes<1e6)
     throw Error('INVALID_STORAGE_BUDGET');
   const client=await db.connect();
