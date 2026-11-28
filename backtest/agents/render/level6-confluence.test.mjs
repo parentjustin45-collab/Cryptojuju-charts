@@ -35,5 +35,5 @@ test('same training folds compare five individual agents, union and quorums with
  assert.equal(r.folds.length,3);assert.equal(r.prefixChecks,2);assert.equal(r.noPromotion,true);assert.equal(r.holdoutUsed,false);
  assert.equal(Object.keys(r.pooled).length,8);
  for(const v of Object.values(r.pooled)){assert.equal(v.samples,v.eligible);assert.equal(v.matched+v.missed,v.pivots);assert.ok(v.precision===null||v.precision>=0&&v.precision<=1);}
- assert.throws(()=>studyConfluence(bars,{...archive,indicators:{...archive.indicators,vector:{signals:[]}}}),/CONFLUENCE_ARCHIVE_PARITY/);
+ assert.throws(()=>studyConfluence(bars,{...archive,indicators:{...archive.indicators,vector:{signals:[...archive.indicators.vector.signals,{time:bars[0].time,side:'long',tag:'deliberately_corrupt_fixture'}]}}}),/CONFLUENCE_ARCHIVE_PARITY/);
 });
