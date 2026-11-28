@@ -4,6 +4,20 @@ import {atr14} from './state-pivot-observer.mjs';
 import {calculateCjCipherWaveTrend} from '../cj-cipher-wavetrend-v1.mjs';
 export const ADVANCED_FEATURES=Object.freeze(['RSI14','EMA8_21_SPREAD','ATR14_PCT','WAVETREND_DIFFERENCE','VOLUME_RATIO20']);
 export const ADVANCED_VERSION='CJ_L6_RULE_CONTRACT_V2';
+export const THRESHOLD_VERSION='CJ_L6_RULE_CONTRACT_V3';
+export const THRESHOLD_LEVELS=Object.freeze({
+ RSI14:Object.freeze([30,50,70]),
+ EMA8_21_SPREAD:Object.freeze([-.5,0,.5]),
+ ATR14_PCT:Object.freeze([.5,1,2]),
+ WAVETREND_DIFFERENCE:Object.freeze([-5,0,5]),
+ VOLUME_RATIO20:Object.freeze([.8,1,1.5])
+});
+export const THRESHOLD_OPS=Object.freeze(['LT_LOW','GT_LOW','LT_MID','GT_MID','LT_HIGH','GT_HIGH']);
+export function thresholdFor(rule){
+ const m=/^(LT|GT)_(LOW|MID|HIGH)$/.exec(rule.operator);
+ if(!m||!Object.hasOwn(THRESHOLD_LEVELS,rule.feature))return null;
+ return THRESHOLD_LEVELS[rule.feature][['LOW','MID','HIGH'].indexOf(m[2])];
+}
 const valid=b=>b&&[b.open,b.high,b.low,b.close,b.volume].every(Number.isFinite)&&b.low>0&&b.open>0&&b.close>0&&b.low<=Math.min(b.open,b.close)&&b.high>=Math.max(b.open,b.close)&&b.volume>=0;
 function ema(src,n){let p=null;const a=2/(n+1);return src.map(x=>(p=p===null?x:a*x+(1-a)*p));}
 function rsi(closes){
@@ -38,8 +52,8 @@ export function compileAdvancedRule(r){
  return (bars,i,side)=>{
   if(!Array.isArray(bars)||!Number.isInteger(i)||i<1||i>=bars.length||!['long','short'].includes(side))return 'unclassified';
   let v=cache.get(bars);if(!v){v=advancedSeries(r.feature,bars);cache.set(bars,v);}
-  const a=v[i],b=v[i-1];
+  const a=v[i],threshold=thresholdFor(r),b=threshold===null?v[i-1]:threshold;
   if(!Number.isFinite(a)||!Number.isFinite(b))return 'unclassified';
-  return (r.operator==='LT_PREVIOUS'?a<b:a>b)?'tagged':'untagged';
+  return (r.operator.startsWith('LT_')?a<b:a>b)?'tagged':'untagged';
  };
 }
