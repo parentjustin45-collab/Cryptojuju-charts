@@ -101,7 +101,7 @@ export async function readFeedback(db,scope){
  }
  if(exists.rows[0]?.structured){
   const channels=family(scope.channel)==='frank'?['frank_cross','frank_divergence']:[scope.channel];
-  // All exact-scope completed rules (only eight possible in this grammar),
+  // All exact-scope completed rules (18 distinct tags across V1 and V2),
   // plus a bounded recent sample from other scopes of the same specialist.
   const q=await db.query(structuredSelect+" AND l.channel=ANY($1::text[]) AND l.packet::jsonb->>'sourceSha256'=$2 AND l.packet::jsonb->>'symbol'=$3 AND l.packet::jsonb->>'timeframe'=$4 AND l.channel=$5 ORDER BY x.created_at DESC,x.attempt_id LIMIT 19",[channels,scope.sourceSha256,scope.symbol,scope.timeframe,scope.channel]);
   need(q.rowCount<=18,'MEMORY_SCOPE_OVERFLOW');
